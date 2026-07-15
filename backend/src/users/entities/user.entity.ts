@@ -19,45 +19,47 @@ export enum Language {
 @Entity('users')
 export class User {
   @PrimaryGeneratedColumn()
-  user_id: number;
+  user_id!: number;
 
   @Column()
-  name: string;
+  name!: string;
 
   @Column({
     unique: true,
   })
-  phone: string;
+  phone!: string;
 
-  @Column()
-  password_hash: string;
+  @Column({
+  nullable: true,
+  })
+  password_hash?: string;
 
   @Column({
     type: 'enum',
     enum: UserRole,
   })
-  role: UserRole;
+  role!: UserRole;
 
   @Column({
     nullable: true,
   })
-  village: string;
+  village!: string;
 
   @Column({
     nullable: true,
   })
-  province: string;
+  province!: string;
 
   @Column({
     type: 'enum',
     enum: Language,
     default: Language.KM,
   })
-  language_pref: Language;
+  language_pref!: Language;
 
   @CreateDateColumn()
-  created_at: Date;
+  created_at!: Date;
 
   @UpdateDateColumn()
-  updated_at: Date;
+  updated_at!: Date;
 }
