@@ -1,66 +1,36 @@
 import 'package:flutter/material.dart';
+import 'package:frontend/services/storage_service.dart';
 import 'package:go_router/go_router.dart';
 import '../../services/auth_service.dart';
 
-class LoginScreen extends StatefulWidget {
-  final String languageCode;
+class LoginOtpScreen extends StatefulWidget {
+  final String phone;
 
-  const LoginScreen({super.key, required this.languageCode});
+  const LoginOtpScreen({super.key, required this.phone});
 
   @override
-  State<LoginScreen> createState() => _LoginScreenState();
+  State<LoginOtpScreen> createState() => _LoginOtpScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
-  final phoneController = TextEditingController();
+class _LoginOtpScreenState extends State<LoginOtpScreen> {
+  final otpController = TextEditingController();
   final authService = AuthService();
   bool loading = false;
 
-  // Design Theme Constants
+  // Premium UI Design Theme Constants
   static const Color backgroundLight = Color(0xFFF8FAFC);
   static const Color brandDarkGreen = Color(0xFF034418);
   static const Color brandHeaderGreen = Color(0xFF0D6E28);
   static const Color textDarkBlue = Color(0xFF0A1C33);
   static const Color textGrey = Color(0xFF5A6B82);
 
-  // Localization Map matching your setup
-  final Map<String, Map<String, String>> _localizedValues = {
-    'en': {
-      'subtitle':
-          'Enter your contact number to receive a secure login verification key.',
-      'label_phone': 'Phone Number',
-      'hint_phone': '85512345678',
-      'btn_send': 'Send OTP',
-      'footer_text': "Don't have an account? ",
-      'footer_link': 'Register',
-      'err_phone': 'Please enter phone number',
-      'err_failed': 'Failed: ',
-    },
-    'km': {
-      'subtitle':
-          'សូមបញ្ចូលលេខទូរស័ព្ទរបស់អ្នក ដើម្បីទទួលលេខកូដផ្ទៀងផ្ទាត់ចូលប្រព័ន្ធដែលមានសុវត្ថិភាព។',
-      'label_phone': 'លេខទូរស័ព្ទ',
-      'hint_phone': '85512345678',
-      'btn_send': 'ផ្ញើលេខកូដ OTP',
-      'footer_text': 'មិនទាន់មានគណនីមែនទេ? ',
-      'footer_link': 'ចុះឈ្មោះ',
-      'err_phone': 'សូមបញ្ចូលលេខទូរស័ព្ទរបស់អ្នក',
-      'err_failed': 'បរាជ័យ: ',
-    },
-  };
+  Future<void> verifyOtp() async {
+    final otp = otpController.text.trim();
 
-  String _getText(String key) {
-    return _localizedValues[widget.languageCode]?[key] ??
-        _localizedValues['en']![key]!;
-  }
-
-  Future<void> sendOtp() async {
-    final phone = phoneController.text.trim();
-
-    if (phone.isEmpty) {
+    if (otp.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(_getText('err_phone')),
+        const SnackBar(
+          content: Text("Please enter OTP"),
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -72,16 +42,33 @@ class _LoginScreenState extends State<LoginScreen> {
         loading = true;
       });
 
-      final result = await authService.sendOtp(phone);
+      final result = await authService.verifyOtp(widget.phone, otp);
+
+      await StorageService.saveToken(result["access_token"]);
+      await StorageService.saveUser(result["user"]);
+
       print(result);
 
       if (!mounted) return;
 
-      context.go("/login-otp", extra: phone);
+      // User routing routing logic
+      if (result["user"] == null) {
+        // New user
+        context.go("/register/farmer/en");
+      } else {
+        // Existing user
+        final role = result["user"]["role"];
+
+        if (role == "farmer") {
+          context.go("/farmer-dashboard");
+        } else if (role == "vet") {
+          context.go("/vet-dashboard");
+        }
+      }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text("${_getText('err_failed')}$e"),
+          content: Text("Verification failed: $e"),
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -98,6 +85,35 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: backgroundLight,
+      appBar: AppBar(
+        backgroundColor: backgroundLight,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(
+            Icons.arrow_back_ios_new,
+            color: textDarkBlue,
+            size: 22,
+          ),
+          onPressed: () {
+            // Check if there is a valid history stack before popping
+            if (context.canPop()) {
+              context.pop();
+            } else {
+              // Fallback redirection to prevent the GoError crash
+              context.go('/');
+            }
+          },
+        ),
+        title: const Text(
+          "Verify Security Key",
+          style: TextStyle(
+            color: textDarkBlue,
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        centerTitle: true,
+      ),
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -110,40 +126,19 @@ class _LoginScreenState extends State<LoginScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // Minimal Header Branding Row
-                Center(
-                  child: Text(
-                    'VacTracker',
-                    style: TextStyle(
-                      color: brandHeaderGreen,
-                      fontSize: 36,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 0.5,
-                      shadows: [
-                        Shadow(
-                          color: Colors.black.withOpacity(0.05),
-                          offset: const Offset(0, 4),
-                          blurRadius: 10,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 48),
-
-                // Form Welcome Texts
-                Text(
-                  widget.languageCode == 'km' ? 'ស្វាគមន៍' : 'Welcome Back',
-                  style: const TextStyle(
+                // Top Heading Section
+                const Text(
+                  "Enter Verification Code",
+                  style: TextStyle(
                     color: brandDarkGreen,
-                    fontSize: 28,
+                    fontSize: 26,
                     fontWeight: FontWeight.bold,
                     letterSpacing: 0.2,
                   ),
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  _getText('subtitle'),
+                  "We have transmitted a 6-digit secure authentication key via SMS text message directly to ${widget.phone}.",
                   style: const TextStyle(
                     color: textGrey,
                     fontSize: 15,
@@ -152,33 +147,48 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 const SizedBox(height: 36),
 
-                // Premium Input Matrix Field
-                Padding(
+                // Premium Input Matrix Field Label
+                const Padding(
                   padding: const EdgeInsets.only(left: 4.0, bottom: 8.0),
                   child: Text(
-                    _getText('label_phone'),
-                    style: const TextStyle(
+                    "One-Time Password (OTP)",
+                    style: TextStyle(
                       color: textDarkBlue,
                       fontSize: 15,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
                 ),
+
+                // Styled TextFormField Block
                 TextField(
-                  controller: phoneController,
-                  keyboardType: TextInputType.phone,
-                  style: const TextStyle(color: textDarkBlue, fontSize: 16),
+                  controller: otpController,
+                  keyboardType: TextInputType.number,
+                  maxLength: 6,
+                  style: const TextStyle(
+                    color: textDarkBlue,
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing:
+                        8.0, // Clean spatial code presentation styling
+                  ),
+                  textAlign: TextAlign.center,
                   enabled: !loading,
                   decoration: InputDecoration(
-                    hintText: _getText('hint_phone'),
+                    counterText: "", // Hides messy default counter labels
+                    hintText: "••••••",
                     hintStyle: TextStyle(
-                      color: textGrey.withOpacity(0.4),
-                      fontSize: 15,
+                      color: textGrey.withOpacity(0.3),
+                      fontSize: 20,
+                      letterSpacing: 8.0,
                     ),
-                    prefixIcon: Icon(
-                      Icons.phone_outlined,
-                      color: textGrey.withOpacity(0.7),
-                      size: 22,
+                    prefixIcon: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 12.0),
+                      child: Icon(
+                        Icons.lock_person_outlined,
+                        color: textGrey.withOpacity(0.7),
+                        size: 22,
+                      ),
                     ),
                     filled: true,
                     fillColor: Colors.white,
@@ -211,7 +221,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 const SizedBox(height: 24),
 
-                // Brand Graphic Banner Card Accent
+                // Design System Branding Section Card Decorator
                 Container(
                   width: double.infinity,
                   height: 140,
@@ -232,12 +242,12 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 const SizedBox(height: 36),
 
-                // Secure OTP Submission Action Button
+                // Core Verification Action Button Submission Layout
                 SizedBox(
                   width: double.infinity,
                   height: 56,
                   child: ElevatedButton(
-                    onPressed: loading ? null : sendOtp,
+                    onPressed: loading ? null : verifyOtp,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: brandDarkGreen,
                       foregroundColor: Colors.white,
@@ -256,50 +266,27 @@ class _LoginScreenState extends State<LoginScreen> {
                               strokeWidth: 2.5,
                             ),
                           )
-                        : Row(
+                        : const Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               Text(
-                                _getText('btn_send'),
-                                style: const TextStyle(
+                                "Verify & Continue",
+                                style: TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.bold,
                                   letterSpacing: 0.5,
                                 ),
                               ),
-                              const SizedBox(width: 8),
-                              const Icon(Icons.arrow_forward_rounded, size: 20),
+                              SizedBox(width: 8),
+                              Icon(
+                                Icons.check_circle_outline_rounded,
+                                size: 20,
+                              ),
                             ],
                           ),
                   ),
                 ),
-                const SizedBox(height: 28),
-
-                // Navigation Link Footer Element
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      _getText('footer_text'),
-                      style: const TextStyle(color: textGrey, fontSize: 15),
-                    ),
-                    GestureDetector(
-                      onTap: () {
-                        if (!loading) {
-                          context.go("/register");
-                        }
-                      },
-                      child: Text(
-                        _getText('footer_link'),
-                        style: const TextStyle(
-                          color: brandHeaderGreen,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 15,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
+                const SizedBox(height: 20),
               ],
             ),
           ),
@@ -310,7 +297,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   void dispose() {
-    phoneController.dispose();
+    otpController.dispose();
     super.dispose();
   }
 }

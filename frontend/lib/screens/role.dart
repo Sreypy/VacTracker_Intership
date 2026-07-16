@@ -1,28 +1,58 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 class RoleSelectionPage extends StatefulWidget {
-  const RoleSelectionPage({super.key});
+  final String languageCode;
+
+  const RoleSelectionPage({super.key, required this.languageCode});
 
   @override
   State<RoleSelectionPage> createState() => _RoleSelectionPageState();
 }
 
 class _RoleSelectionPageState extends State<RoleSelectionPage> {
-  // Track the selected role: 'farmer', 'veterinarian', or null
   String? _selectedRole;
+
+  final Map<String, Map<String, String>> _localizedValues = {
+    'en': {
+      'title': 'Choose Your Role',
+      'subtitle':
+          'Select your account type to access your personalized dashboard.',
+      'farmer_title': 'Farmer',
+      'farmer_desc': 'Manage your flocks and track vaccinations.',
+      'vet_title': 'Veterinarian',
+      'vet_desc': 'Monitor farm health and manage client flocks.',
+      'continue': 'Continue',
+      'help': 'Need help? ',
+      'support': 'Contact Support',
+    },
+    'km': {
+      'title': 'ជ្រើសរើសតួនាទីរបស់អ្នក',
+      'subtitle':
+          'ជ្រើសរើសប្រភេទគណនីរបស់អ្នក ដើម្បីចូលទៅកាន់ផ្ទាំងគ្រប់គ្រងផ្ទាល់ខ្លួន។',
+      'farmer_title': 'កសិករ',
+      'farmer_desc': 'គ្រប់គ្រងហ្វូងបក្សីរបស់អ្នក និងតាមដានការចាក់វ៉ាក់សាំង។',
+      'vet_title': 'បសុពេទ្យ',
+      'vet_desc': 'តាមដានសុខភាពកសិដ្ឋាន និងគ្រប់គ្រងហ្វូងបក្សីរបស់អតិថិជន។',
+      'continue': 'បន្តទៅមុខទៀត',
+      'help': 'ត្រូវការជំនួយទេ? ',
+      'support': 'ទាក់ទងផ្នែកគាំទ្រ',
+    },
+  };
+
+  String _getText(String key) {
+    return _localizedValues[widget.languageCode]?[key] ??
+        _localizedValues['en']![key]!;
+  }
 
   @override
   Widget build(BuildContext context) {
-    // Styling Colors matching UI Design
     const Color backgroundLight = Color(0xFFF7F9FC);
     const Color brandGreen = Color(0xFF0D6E28);
     const Color textDarkBlue = Color(0xFF0A1C33);
     const Color textGrey = Color(0xFF5A6B82);
-    const Color activeBorderColor = Color(0xFF0D6E28);
-    const Color inactiveButtonColor = Color(
-      0xFF9E9E9E,
-    ); // Disabled look from screenshot
+    const Color inactiveButtonColor = Color(0xFFB0B8C4);
 
     return Scaffold(
       backgroundColor: backgroundLight,
@@ -32,14 +62,17 @@ class _RoleSelectionPageState extends State<RoleSelectionPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // 1. Top Bar / App Logo + Title
               Row(
                 children: [
-                  const Icon(
-                    Icons.vaccines, // Replace with your custom SVG icon
-                    color: brandGreen,
-                    size: 28,
+                  IconButton(
+                    icon: const Icon(
+                      Icons.arrow_back_ios,
+                      color: textDarkBlue,
+                      size: 20,
+                    ),
+                    onPressed: () => context.pop(),
                   ),
+                  const Icon(Icons.vaccines, color: brandGreen, size: 28),
                   const SizedBox(width: 8),
                   const Text(
                     'VacTracker',
@@ -51,69 +84,57 @@ class _RoleSelectionPageState extends State<RoleSelectionPage> {
                   ),
                 ],
               ),
-              const SizedBox(height: 36),
-
-              // 2. Heading Texts
-              const Text(
-                'Choose Your Role',
-                style: TextStyle(
+              const SizedBox(height: 24),
+              Text(
+                _getText('title'),
+                style: const TextStyle(
                   color: textDarkBlue,
-                  fontSize: 26,
+                  fontSize: 24,
                   fontWeight: FontWeight.bold,
                 ),
               ),
               const SizedBox(height: 8),
-              const Text(
-                'Select your account type to access your personalized dashboard.',
-                style: TextStyle(color: textGrey, fontSize: 16, height: 1.4),
+              Text(
+                _getText('subtitle'),
+                style: const TextStyle(
+                  color: textGrey,
+                  fontSize: 16,
+                  height: 1.4,
+                ),
               ),
               const SizedBox(height: 24),
-
-              // 3. Farmer Role Selection Card
               _buildRoleCard(
                 id: 'farmer',
-                title: 'Farmer',
-                description: 'Manage your flocks and track vaccinations.',
-                iconData:
-                    Icons.agriculture, // Using material icon approximation
+                title: _getText('farmer_title'),
+                description: _getText('farmer_desc'),
+                iconData: Icons.agriculture,
                 iconBgColor: const Color(0xFF1E7E34),
                 isSelected: _selectedRole == 'farmer',
-                onTap: () {
-                  setState(() => _selectedRole = 'farmer');
-                },
+                onTap: () => setState(() => _selectedRole = 'farmer'),
               ),
               const SizedBox(height: 16),
-
-              // 4. Veterinarian Role Selection Card
               _buildRoleCard(
                 id: 'veterinarian',
-                title: 'Veterinarian',
-                description: 'Monitor farm health and manage client flocks.',
+                title: _getText('vet_title'),
+                description: _getText('vet_desc'),
                 iconData: Icons.medical_services_outlined,
-                iconBgColor: const Color(0xFF76D787),
+                iconBgColor: const Color(0xFF6EBA7C),
                 isSelected: _selectedRole == 'veterinarian',
-                onTap: () {
-                  setState(() => _selectedRole = 'veterinarian');
-                },
+                onTap: () => setState(() => _selectedRole = 'veterinarian'),
               ),
               const SizedBox(height: 24),
-
-              // 5. Illustration Asset Image
               Container(
                 width: double.infinity,
                 height: 230,
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(28),
                   image: const DecorationImage(
-                    // Note: Update pubspec.yaml and name your uploaded asset accordingly
                     image: AssetImage('assets/welcome/role pic.png'),
                     fit: BoxFit.cover,
                   ),
                 ),
               ),
               const SizedBox(height: 24),
-
-              // 6. Action Button
               Center(
                 child: SizedBox(
                   width: double.infinity,
@@ -121,9 +142,18 @@ class _RoleSelectionPageState extends State<RoleSelectionPage> {
                   child: ElevatedButton(
                     onPressed: _selectedRole != null
                         ? () {
-                            // Navigate forward based on _selectedRole value
+                            if (_selectedRole == 'farmer') {
+                              context.push(
+                                '/auth-choice/farmer/${widget.languageCode}',
+                              );
+                            } else if (_selectedRole == 'veterinarian') {
+                              context.push(
+                                '/auth-choice/veterinarian/${widget.languageCode}',
+                              );
+                            }
+                            // Hand over configuration to dashboard deep linking paths later: context.push('/register/${widget.languageCode}/$_selectedRole');
                           }
-                        : null, // Disabled when no selection is made
+                        : null,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: brandGreen,
                       disabledBackgroundColor: inactiveButtonColor,
@@ -133,43 +163,38 @@ class _RoleSelectionPageState extends State<RoleSelectionPage> {
                         borderRadius: BorderRadius.circular(27),
                       ),
                     ),
-                    child: const Row(
+                    child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Text(
-                          'Continue',
-                          style: TextStyle(
+                          _getText('continue'),
+                          style: const TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
-                        SizedBox(width: 8),
-                        Icon(Icons.arrow_forward, size: 20),
+                        const SizedBox(width: 8),
+                        const Icon(Icons.arrow_forward, size: 20),
                       ],
                     ),
                   ),
                 ),
               ),
               const SizedBox(height: 16),
-
-              // 7. Support Footer Link
               Center(
                 child: RichText(
                   text: TextSpan(
-                    text: 'Need help? ',
+                    text: _getText('help'),
                     style: const TextStyle(color: textDarkBlue, fontSize: 14),
                     children: [
                       TextSpan(
-                        text: 'Contact Support',
+                        text: _getText('support'),
                         style: const TextStyle(
                           color: brandGreen,
                           fontWeight: FontWeight.bold,
                           decoration: TextDecoration.underline,
                         ),
-                        recognizer: TapGestureRecognizer()
-                          ..onTap = () {
-                            // Handle context support action
-                          },
+                        recognizer: TapGestureRecognizer()..onTap = () {},
                       ),
                     ],
                   ),
@@ -182,7 +207,6 @@ class _RoleSelectionPageState extends State<RoleSelectionPage> {
     );
   }
 
-  // Reusable Role Card Component Builder
   Widget _buildRoleCard({
     required String id,
     required String title,
@@ -214,7 +238,6 @@ class _RoleSelectionPageState extends State<RoleSelectionPage> {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Icon Square Box
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
@@ -224,7 +247,6 @@ class _RoleSelectionPageState extends State<RoleSelectionPage> {
               child: Icon(iconData, color: Colors.white, size: 26),
             ),
             const SizedBox(width: 16),
-            // Card Texts
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
