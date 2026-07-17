@@ -1,7 +1,7 @@
-import 'package:dio/dio.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../../services/auth_service.dart';
 
 class FarmerRegisterPage extends StatefulWidget {
   final String languageCode; // Router parameter passing down 'en' or 'kh'
@@ -21,6 +21,7 @@ class _FarmerRegisterPageState extends State<FarmerRegisterPage> {
   final _passwordController = TextEditingController();
   final _villageController = TextEditingController();
   final _provinceController = TextEditingController();
+  final authService = AuthService();
 
   // Premium Context Translation Dictionary
   final Map<String, Map<String, String>> _localizedValues = {
@@ -190,7 +191,13 @@ class _FarmerRegisterPageState extends State<FarmerRegisterPage> {
                         color: textDarkBlue,
                         size: 26,
                       ),
-                      onPressed: () => context.pop(),
+                      onPressed: () {
+                        if (context.canPop()) {
+                          context.pop();
+                        } else {
+                          context.go('/');
+                        }
+                      },
                     ),
                     const Text(
                       'VacTracker',
@@ -318,8 +325,6 @@ class _FarmerRegisterPageState extends State<FarmerRegisterPage> {
                             ? 'km'
                             : 'en';
 
-                        final dio = Dio();
-
                         final registrationPayload = {
                           "name": _nameController.text.trim(),
                           "phone": _phoneController.text.trim(),
@@ -335,17 +340,16 @@ class _FarmerRegisterPageState extends State<FarmerRegisterPage> {
                         };
 
                         try {
-                          final response = await dio.post(
-                            "http://localhost:3100/users",
-                            data: registrationPayload,
+                          final result = await authService.register(
+                            registrationPayload,
                           );
 
-                          if (response.statusCode == 201) {
-                            print("Register success");
-                            print(response.data);
+                          print("Farmer Register success");
+                          print(result);
 
-                            // Navigate to login or OTP verification page
-                          }
+                          if (!mounted) return;
+
+                          context.go('/login/farmer/${widget.languageCode}');
                         } catch (e) {
                           print("Register failed: $e");
                         }
@@ -394,7 +398,9 @@ class _FarmerRegisterPageState extends State<FarmerRegisterPage> {
                           ),
                           recognizer: TapGestureRecognizer()
                             ..onTap = () {
-                              // Link to your login string route pattern inside GoRouter later
+                              context.go(
+                                '/login/farmer/${widget.languageCode}',
+                              );
                             },
                         ),
                       ],

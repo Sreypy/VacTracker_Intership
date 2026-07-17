@@ -70,7 +70,13 @@ class _RoleSelectionPageState extends State<RoleSelectionPage> {
                       color: textDarkBlue,
                       size: 20,
                     ),
-                    onPressed: () => context.pop(),
+                    onPressed: () {
+                      if (context.canPop()) {
+                        context.pop();
+                      } else {
+                        context.go('/');
+                      }
+                    },
                   ),
                   const Icon(Icons.vaccines, color: brandGreen, size: 28),
                   const SizedBox(width: 8),

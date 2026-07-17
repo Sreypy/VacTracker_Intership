@@ -3,9 +3,14 @@ import 'package:go_router/go_router.dart';
 import '../../services/auth_service.dart';
 
 class LoginScreen extends StatefulWidget {
+  final String role;
   final String languageCode;
 
-  const LoginScreen({super.key, required this.languageCode});
+  const LoginScreen({
+    super.key,
+    required this.role,
+    required this.languageCode,
+  });
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -72,12 +77,31 @@ class _LoginScreenState extends State<LoginScreen> {
         loading = true;
       });
 
+      final exists = await authService.checkPhone(phone);
+      if (!mounted) return;
+      if (!exists) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              widget.role == 'farmer'
+                  ? 'Phone number not registered. Please register first.'
+                  : 'Phone number not registered. Please register first.',
+            ),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        return;
+      }
+
       final result = await authService.sendOtp(phone);
       print(result);
 
       if (!mounted) return;
 
-      context.go("/login-otp", extra: phone);
+      context.go(
+        "/login-otp",
+        extra: {'phone': phone, 'lang': widget.languageCode},
+      );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -286,7 +310,10 @@ class _LoginScreenState extends State<LoginScreen> {
                     GestureDetector(
                       onTap: () {
                         if (!loading) {
-                          context.go("/register");
+                          final registerPath = widget.role == 'farmer'
+                              ? '/register/farmer/${widget.languageCode}'
+                              : '/register/vet/${widget.languageCode}';
+                          context.go(registerPath);
                         }
                       },
                       child: Text(

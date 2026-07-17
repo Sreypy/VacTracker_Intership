@@ -2,9 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:frontend/screens/auth/auth_choice_page.dart';
 import 'package:frontend/screens/auth/login_otp_screen.dart';
 import 'package:frontend/screens/auth/login_screen.dart';
+import 'package:frontend/models/flock.dart';
+import 'package:frontend/screens/farmer/add_flock_page.dart';
+import 'package:frontend/screens/farmer/farmer_dashboard_page.dart';
 import 'package:frontend/screens/farmer/farmer_register_page.dart';
 import 'package:frontend/screens/language_page.dart';
 import 'package:frontend/screens/role.dart';
+import 'package:frontend/screens/vet/vet_dashboard_page.dart';
 import 'package:frontend/screens/vet/vet_register_page.dart';
 import 'package:frontend/screens/welcome_page.dart';
 import 'package:go_router/go_router.dart';
@@ -37,20 +41,55 @@ final GoRouter _router = GoRouter(
       },
     ),
     GoRoute(
-      path: '/login/:lang',
+      path: '/login/:role/:lang',
       builder: (context, state) {
+        final role = state.pathParameters['role'] ?? 'farmer';
         final language = state.pathParameters['lang'] ?? 'en';
 
-        return LoginScreen(languageCode: language);
+        return LoginScreen(role: role, languageCode: language);
       },
     ),
     GoRoute(
       path: '/login-otp',
-
       builder: (context, state) {
-        final phone = (state.extra as String?) ?? '';
+        final extra = state.extra;
+        var phone = '';
+        var language = 'en';
 
-        return LoginOtpScreen(phone: phone);
+        if (extra is Map<String, String>) {
+          phone = extra['phone'] ?? '';
+          language = extra['lang'] ?? 'en';
+        } else if (extra is String) {
+          phone = extra;
+        }
+
+        return LoginOtpScreen(phone: phone, languageCode: language);
+      },
+    ),
+    GoRoute(
+      path: '/farmer-dashboard',
+      builder: (context, state) {
+        final language = state.uri.queryParameters['lang'] ?? 'en';
+        final showSaved = state.uri.queryParameters['saved'] == 'true';
+        return FarmerDashboardPage(
+          languageCode: language,
+          showSavedMessage: showSaved,
+        );
+      },
+    ),
+    GoRoute(
+      path: '/vet-dashboard',
+      builder: (context, state) {
+        final language = state.uri.queryParameters['lang'] ?? 'en';
+        return VetDashboardPage(languageCode: language);
+      },
+    ),
+    GoRoute(
+      path: '/add-flock/:lang',
+      builder: (context, state) {
+        final language = state.pathParameters['lang'] ?? 'en';
+        final editingFlock = state.extra is Flock ? state.extra as Flock : null;
+        return AddFlockPage(languageCode: language, editingFlock: editingFlock);
       },
     ),
 

@@ -127,7 +127,7 @@ class AuthChoicePage extends StatelessWidget {
                   height: 58,
                   child: ElevatedButton(
                     onPressed: () {
-                      context.push('/login/$languageCode');
+                      context.push('/login/$role/$languageCode');
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: brandDarkGreen,

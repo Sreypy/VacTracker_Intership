@@ -35,8 +35,13 @@ class _LanguagePageState extends State<LanguagePage> {
                       color: textDarkBlue,
                       size: 20,
                     ),
-                    onPressed: () =>
-                        context.pop(), // GoRouter popping back standard stack
+                    onPressed: () {
+                      if (context.canPop()) {
+                        context.pop();
+                      } else {
+                        context.go('/');
+                      }
+                    },
                   ),
                   const Icon(Icons.vaccines, color: brandGreen, size: 28),
                   const SizedBox(width: 8),

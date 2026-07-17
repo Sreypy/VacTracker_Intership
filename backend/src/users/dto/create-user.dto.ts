@@ -8,9 +8,8 @@ export class CreateUserDto {
   @IsString()
   phone!: string;
 
-  @IsOptional()
   @IsString()
-  password_hash?: string;
+  password!: string;
 
   @IsEnum(UserRole)
   role!: UserRole;

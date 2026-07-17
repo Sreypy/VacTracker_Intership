@@ -5,8 +5,13 @@ import '../../services/auth_service.dart';
 
 class LoginOtpScreen extends StatefulWidget {
   final String phone;
+  final String languageCode;
 
-  const LoginOtpScreen({super.key, required this.phone});
+  const LoginOtpScreen({
+    super.key,
+    required this.phone,
+    required this.languageCode,
+  });
 
   @override
   State<LoginOtpScreen> createState() => _LoginOtpScreenState();
@@ -44,26 +49,30 @@ class _LoginOtpScreenState extends State<LoginOtpScreen> {
 
       final result = await authService.verifyOtp(widget.phone, otp);
 
-      await StorageService.saveToken(result["access_token"]);
-      await StorageService.saveUser(result["user"]);
-
       print(result);
+
+      await StorageService.saveToken(result["access_token"]);
+
+      await StorageService.saveUser(result["user"]);
 
       if (!mounted) return;
 
-      // User routing routing logic
-      if (result["user"] == null) {
-        // New user
-        context.go("/register/farmer/en");
-      } else {
-        // Existing user
-        final role = result["user"]["role"];
+      final user = result["user"];
 
-        if (role == "farmer") {
-          context.go("/farmer-dashboard");
-        } else if (role == "vet") {
-          context.go("/vet-dashboard");
-        }
+      if (user == null) {
+        throw Exception("User data not found");
+      }
+
+      final role = user["role"];
+
+      if (role == "farmer") {
+        context.go("/farmer-dashboard?lang=${widget.languageCode}");
+      } else if (role == "veterinarian") {
+        context.go("/vet-dashboard?lang=${widget.languageCode}");
+      } else {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text("Unknown user role")));
       }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(

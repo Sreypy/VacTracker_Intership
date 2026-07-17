@@ -1,7 +1,7 @@
-import 'package:dio/dio.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../../services/auth_service.dart';
 
 class VetRegisterPage extends StatefulWidget {
   final String languageCode; // Router path flag passing 'en' or 'km'
@@ -21,6 +21,7 @@ class _VetRegisterPageState extends State<VetRegisterPage> {
   final _passwordController = TextEditingController();
   final _villageController = TextEditingController();
   final _provinceController = TextEditingController();
+  final authService = AuthService();
 
   // Premium Localized Context Maps
   final Map<String, Map<String, String>> _localizedValues = {
@@ -314,9 +315,6 @@ class _VetRegisterPageState extends State<VetRegisterPage> {
                   child: ElevatedButton(
                     onPressed: () async {
                       if (_formKey.currentState!.validate()) {
-                        final dio =
-                            Dio(); // Ensure Dio is imported and initialized
-
                         final registrationPayload = {
                           "name": _nameController.text.trim(),
                           "phone": _phoneController.text.trim(),
@@ -336,20 +334,18 @@ class _VetRegisterPageState extends State<VetRegisterPage> {
                         );
 
                         try {
-                          final response = await dio.post(
-                            "http://localhost:3100/users",
-                            data: registrationPayload,
+                          final result = await authService.register(
+                            registrationPayload,
                           );
 
-                          if (response.statusCode == 201) {
-                            print("Vet registration successful");
-                            print(response.data);
+                          print("Vet registration successful");
+                          print(result);
 
-                            // Navigate to OTP verification page
-                            context.push(
-                              "/verify-otp/${_phoneController.text.trim()}",
-                            );
-                          }
+                          if (!mounted) return;
+
+                          context.go(
+                            '/login/veterinarian/${widget.languageCode}',
+                          );
                         } catch (error) {
                           print("Registration failed: $error");
                         }
@@ -398,7 +394,9 @@ class _VetRegisterPageState extends State<VetRegisterPage> {
                           ),
                           recognizer: TapGestureRecognizer()
                             ..onTap = () {
-                              // Deep links downstream inside GoRouter stack
+                              context.go(
+                                '/login/veterinarian/${widget.languageCode}',
+                              );
                             },
                         ),
                       ],
