@@ -6,6 +6,6 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   app.enableCors(); // required for Flutter to call this API
   app.useGlobalPipes(new ValidationPipe());
-  await app.listen(process.env.PORT ?? 3100);
+  await app.listen(process.env.PORT ?? 3100, '0.0.0.0');
 }
 bootstrap();
