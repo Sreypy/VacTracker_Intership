@@ -23,5 +23,19 @@ services:
     env_file:
       - .env
 
+  frontend:
+    build:
+      context: ../frontend
+
+    container_name: vactracker-frontend
+
+    restart: unless-stopped
+
+    ports:
+      - "8090:80"
+
+    depends_on:
+      - backend
+
 volumes:
   postgres_data:
