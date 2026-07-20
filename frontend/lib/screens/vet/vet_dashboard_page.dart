@@ -24,7 +24,7 @@ class _VetDashboardPageState extends State<VetDashboardPage> {
   static const Color textGrey = Color(0xFF5A6B82);
 
   static const Color statusGreen = Color(0xFF0D6E28);
-  static const Color statusGreenBg = Color(0xFFE2F6EA);
+  // static const Color statusGreenBg = Color(0xFFE2F6EA);
   static const Color statusRed = Color(0xFFA80000);
   static const Color statusRedBg = Color(0xFFFDE8E8);
   static const Color textGreyLight = Color(0xFFE2E8F0);
@@ -72,6 +72,7 @@ class _VetDashboardPageState extends State<VetDashboardPage> {
       radius: 18,
       backgroundColor: hasAvatar
           ? Colors.transparent
+          // ignore: deprecated_member_use, deprecated_member_uses
           : brandHeaderGreen.withOpacity(0.15),
       backgroundImage: hasAvatar ? NetworkImage(avatarUrl) : null,
       child: hasAvatar
@@ -233,6 +234,7 @@ class _VetDashboardPageState extends State<VetDashboardPage> {
                     child: Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
+                        // ignore: deprecated_member_use
                         color: textGreyLight.withOpacity(0.5),
                         borderRadius: BorderRadius.circular(14),
                       ),

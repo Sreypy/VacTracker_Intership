@@ -165,7 +165,7 @@ class _VetRegisterPageState extends State<VetRegisterPage> {
     const Color textDarkBlue = Color(0xFF0A1C33);
     const Color textGrey = Color(0xFF5A6B82);
 
-    final isKhmer = widget.languageCode == 'km';
+    // final isKhmer = widget.languageCode == 'km';
 
     return Scaffold(
       backgroundColor: backgroundLight,
