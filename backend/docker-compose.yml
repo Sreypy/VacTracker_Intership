@@ -10,7 +10,7 @@ services:
     ports:
       - "5433:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - vactracker_postgres_data:/var/lib/postgresql/data
 
   backend:
     build: .
@@ -38,4 +38,4 @@ services:
       - backend
 
 volumes:
-  postgres_data:
+  vactracker_postgres_data:
