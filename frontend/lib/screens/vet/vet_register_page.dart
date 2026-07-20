@@ -119,10 +119,14 @@ class _VetRegisterPageState extends State<VetRegisterPage> {
           decoration: InputDecoration(
             hintText: hint,
             hintStyle: TextStyle(
-              color: textGrey.withOpacity(0.5),
+              color: textGrey.withValues(alpha: 0.5),
               fontSize: 15,
             ),
-            prefixIcon: Icon(icon, color: textGrey.withOpacity(0.8), size: 22),
+            prefixIcon: Icon(
+              icon,
+              color: textGrey.withValues(alpha: 0.8),
+              size: 22,
+            ),
             filled: true,
             fillColor: Colors.white,
             contentPadding: const EdgeInsets.symmetric(
@@ -299,7 +303,7 @@ class _VetRegisterPageState extends State<VetRegisterPage> {
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.04),
+                        color: Colors.black.withValues(alpha: 0.04),
                         blurRadius: 10,
                         offset: const Offset(0, 4),
                       ),
@@ -329,7 +333,8 @@ class _VetRegisterPageState extends State<VetRegisterPage> {
                           "language_pref": widget.languageCode,
                         };
 
-                        print(
+                        final router = GoRouter.of(context);
+                        debugPrint(
                           "Clean TypeORM Structured Vet JSON Ready: $registrationPayload",
                         );
 
@@ -338,16 +343,15 @@ class _VetRegisterPageState extends State<VetRegisterPage> {
                             registrationPayload,
                           );
 
-                          print("Vet registration successful");
-                          print(result);
+                          debugPrint("Vet registration successful");
+                          debugPrint(result.toString());
 
                           if (!mounted) return;
-
-                          context.go(
+                          router.go(
                             '/login/veterinarian/${widget.languageCode}',
                           );
                         } catch (error) {
-                          print("Registration failed: $error");
+                          debugPrint("Registration failed: $error");
                         }
                       }
                     },
@@ -355,7 +359,7 @@ class _VetRegisterPageState extends State<VetRegisterPage> {
                       backgroundColor: brandDarkGreen,
                       foregroundColor: Colors.white,
                       elevation: 2,
-                      shadowColor: brandDarkGreen.withOpacity(0.3),
+                      shadowColor: brandDarkGreen.withValues(alpha: 0.3),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(28),
                       ),
