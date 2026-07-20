@@ -119,10 +119,14 @@ class _FarmerRegisterPageState extends State<FarmerRegisterPage> {
           decoration: InputDecoration(
             hintText: hint,
             hintStyle: TextStyle(
-              color: textGrey.withOpacity(0.6),
+              color: textGrey.withValues(alpha: 0.6),
               fontSize: 15,
             ),
-            prefixIcon: Icon(icon, color: textGrey.withOpacity(0.8), size: 22),
+            prefixIcon: Icon(
+              icon,
+              color: textGrey.withValues(alpha: 0.8),
+              size: 22,
+            ),
             filled: true,
             fillColor: Colors.white,
             contentPadding: const EdgeInsets.symmetric(
@@ -305,7 +309,7 @@ class _FarmerRegisterPageState extends State<FarmerRegisterPage> {
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.04),
+                        color: Colors.black.withValues(alpha: 0.04),
                         blurRadius: 10,
                         offset: const Offset(0, 4),
                       ),
@@ -339,19 +343,19 @@ class _FarmerRegisterPageState extends State<FarmerRegisterPage> {
                           "language_pref": backendLangPref,
                         };
 
+                        final router = GoRouter.of(context);
                         try {
                           final result = await authService.register(
                             registrationPayload,
                           );
 
-                          print("Farmer Register success");
-                          print(result);
+                          debugPrint("Farmer Register success");
+                          debugPrint(result.toString());
 
                           if (!mounted) return;
-
-                          context.go('/login/farmer/${widget.languageCode}');
+                          router.go('/login/farmer/${widget.languageCode}');
                         } catch (e) {
-                          print("Register failed: $e");
+                          debugPrint("Register failed: $e");
                         }
                       }
                     },
@@ -359,7 +363,7 @@ class _FarmerRegisterPageState extends State<FarmerRegisterPage> {
                       backgroundColor: brandDarkGreen,
                       foregroundColor: Colors.white,
                       elevation: 2,
-                      shadowColor: brandDarkGreen.withOpacity(0.3),
+                      shadowColor: brandDarkGreen.withValues(alpha: 0.3),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(28),
                       ),
