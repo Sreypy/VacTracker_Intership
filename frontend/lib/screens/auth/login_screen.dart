@@ -94,7 +94,7 @@ class _LoginScreenState extends State<LoginScreen> {
       }
 
       final result = await authService.sendOtp(phone);
-      print(result);
+      debugPrint('OTP send result: $result');
 
       if (!mounted) return;
 
@@ -145,7 +145,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       letterSpacing: 0.5,
                       shadows: [
                         Shadow(
-                          color: Colors.black.withOpacity(0.05),
+                          color: Colors.black.withValues(alpha: 0.05),
                           offset: const Offset(0, 4),
                           blurRadius: 10,
                         ),
@@ -196,12 +196,12 @@ class _LoginScreenState extends State<LoginScreen> {
                   decoration: InputDecoration(
                     hintText: _getText('hint_phone'),
                     hintStyle: TextStyle(
-                      color: textGrey.withOpacity(0.4),
+                      color: textGrey.withValues(alpha: 0.4),
                       fontSize: 15,
                     ),
                     prefixIcon: Icon(
                       Icons.phone_outlined,
-                      color: textGrey.withOpacity(0.7),
+                      color: textGrey.withValues(alpha: 0.7),
                       size: 22,
                     ),
                     filled: true,
@@ -247,7 +247,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.03),
+                        color: Colors.black.withValues(alpha: 0.03),
                         blurRadius: 15,
                         offset: const Offset(0, 6),
                       ),
@@ -265,7 +265,9 @@ class _LoginScreenState extends State<LoginScreen> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: brandDarkGreen,
                       foregroundColor: Colors.white,
-                      disabledBackgroundColor: brandDarkGreen.withOpacity(0.6),
+                      disabledBackgroundColor: brandDarkGreen.withValues(
+                        alpha: 0.6,
+                      ),
                       elevation: 0,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(16),
