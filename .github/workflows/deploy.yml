@@ -152,6 +152,16 @@ jobs:
       # Docker Compose Test
       #################################
 
+      - name: Create .env for CI
+        working-directory: backend
+        run: |
+          echo "PORT=3100" >> .env
+          echo "DB_HOST=postgres" >> .env
+          echo "DB_PORT=5433" >> .env
+          echo "DB_USERNAME=${{ secrets.DB_USERNAME }}" >> .env
+          echo "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" >> .env
+          echo "DB_DATABASE=${{ secrets.DB_DATABASE }}" >> .env
+
       - name: Start Containers
         working-directory: backend
         run: docker compose up -d
