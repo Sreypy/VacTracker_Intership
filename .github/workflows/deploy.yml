@@ -72,7 +72,7 @@ jobs:
         working-directory: frontend
         run: |
           flutter build web --release \
-          --dart-define=API_URL=http://129.212.230.134:3100
+            --dart-define=API_URL=http://129.212.230.134:3100
 
 
 
