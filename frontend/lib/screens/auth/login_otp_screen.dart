@@ -49,7 +49,7 @@ class _LoginOtpScreenState extends State<LoginOtpScreen> {
 
       final result = await authService.verifyOtp(widget.phone, otp);
 
-      print(result);
+      debugPrint('OTP verify result: $result');
 
       await StorageService.saveToken(result["access_token"]);
 
@@ -158,7 +158,7 @@ class _LoginOtpScreenState extends State<LoginOtpScreen> {
 
                 // Premium Input Matrix Field Label
                 const Padding(
-                  padding: const EdgeInsets.only(left: 4.0, bottom: 8.0),
+                  padding: EdgeInsets.only(left: 4.0, bottom: 8.0),
                   child: Text(
                     "One-Time Password (OTP)",
                     style: TextStyle(
@@ -187,7 +187,7 @@ class _LoginOtpScreenState extends State<LoginOtpScreen> {
                     counterText: "", // Hides messy default counter labels
                     hintText: "••••••",
                     hintStyle: TextStyle(
-                      color: textGrey.withOpacity(0.3),
+                      color: textGrey.withValues(alpha: 0.3),
                       fontSize: 20,
                       letterSpacing: 8.0,
                     ),
@@ -195,7 +195,7 @@ class _LoginOtpScreenState extends State<LoginOtpScreen> {
                       padding: const EdgeInsets.symmetric(horizontal: 12.0),
                       child: Icon(
                         Icons.lock_person_outlined,
-                        color: textGrey.withOpacity(0.7),
+                        color: textGrey.withValues(alpha: 0.7),
                         size: 22,
                       ),
                     ),
@@ -242,7 +242,7 @@ class _LoginOtpScreenState extends State<LoginOtpScreen> {
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.03),
+                        color: Colors.black.withValues(alpha: 0.03),
                         blurRadius: 15,
                         offset: const Offset(0, 6),
                       ),
@@ -260,7 +260,9 @@ class _LoginOtpScreenState extends State<LoginOtpScreen> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: brandDarkGreen,
                       foregroundColor: Colors.white,
-                      disabledBackgroundColor: brandDarkGreen.withOpacity(0.6),
+                      disabledBackgroundColor: brandDarkGreen.withValues(
+                        alpha: 0.6,
+                      ),
                       elevation: 0,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(16),
