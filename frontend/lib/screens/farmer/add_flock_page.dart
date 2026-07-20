@@ -825,7 +825,7 @@ class _AddFlockPageState extends State<AddFlockPage> {
       decoration: BoxDecoration(
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withValues(alpha: 0.04),
             blurRadius: 10,
             offset: const Offset(0, -2),
           ),
@@ -841,7 +841,7 @@ class _AddFlockPageState extends State<AddFlockPage> {
         type: BottomNavigationBarType.fixed,
         backgroundColor: Colors.white,
         selectedItemColor: brandDarkGreen,
-        unselectedItemColor: textGrey.withOpacity(0.6),
+        unselectedItemColor: textGrey.withValues(alpha: 0.6),
         showSelectedLabels: false,
         showUnselectedLabels: false,
         items: [
@@ -857,7 +857,7 @@ class _AddFlockPageState extends State<AddFlockPage> {
             icon: Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
               decoration: BoxDecoration(
-                color: brandDarkGreen.withOpacity(0.12),
+                color: brandDarkGreen.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(100),
               ),
               child: const Icon(
