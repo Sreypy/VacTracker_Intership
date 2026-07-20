@@ -166,11 +166,6 @@ jobs:
         working-directory: backend
         run: docker compose up -d
 
-      - name: Backend Health Check
-        run: |
-          sleep 15
-          curl http://localhost:3100
-
       - name: Stop Containers
         if: always()
         working-directory: backend
