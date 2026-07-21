@@ -26,6 +26,8 @@ services:
   frontend:
     build:
       context: ../frontend
+      args:
+        API_URL: ${API_URL:-http://localhost:3100}
 
     container_name: vactracker-frontend
 

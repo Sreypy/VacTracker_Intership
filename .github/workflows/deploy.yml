@@ -204,12 +204,14 @@ jobs:
 
               cd ~/projects/VacTracker_Intership/backend
 
-              echo "PORT=3000" > .env
+              echo "PORT=3100" > .env
               echo "DB_HOST=postgres" >> .env
               echo "DB_PORT=5433" >> .env
               echo "DB_USERNAME=${{ secrets.DB_USERNAME }}" >> .env
               echo "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" >> .env
               echo "DB_DATABASE=${{ secrets.DB_DATABASE }}" >> .env
+
+              export API_URL=http://129.212.230.134:3100
 
               docker compose down
 

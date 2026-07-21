@@ -9,7 +9,8 @@ RUN flutter pub get
 
 COPY . .
 
-RUN flutter build web --release
+ARG API_URL=http://localhost:3100
+RUN flutter build web --release --dart-define=API_URL=$API_URL
 
 # Serve with Nginx
 FROM nginx:alpine
