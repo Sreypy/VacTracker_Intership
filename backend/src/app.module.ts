@@ -6,6 +6,10 @@ import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
 import { SmsModule } from './sms/sms.module';
 import { FlocksModule } from './flocks/flocks.module';
+import { VaccinesModule } from './vaccines/vaccines.module';
+import { VaccinationsModule } from './vaccinations/vaccinations.module';
+import { RemindersModule } from './reminders/reminders.module';
+import { ScheduleModule } from '@nestjs/schedule';
 
 @Module({
   imports: [
@@ -32,6 +36,7 @@ import { FlocksModule } from './flocks/flocks.module';
 
       }),
     }),
+    ScheduleModule.forRoot(),
 
     UsersModule,
 
@@ -40,6 +45,12 @@ import { FlocksModule } from './flocks/flocks.module';
     SmsModule,
 
     FlocksModule,
+
+    VaccinesModule,
+
+    VaccinationsModule,
+
+    RemindersModule,
   ],
 })
 export class AppModule {}

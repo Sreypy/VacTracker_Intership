@@ -13,6 +13,12 @@ class StorageService {
     return prefs.getString("access_token");
   }
 
+  static Future<String?> getName() async {
+    final prefs = await SharedPreferences.getInstance();
+
+    return prefs.getString("name");
+  }
+
   static Future<void> saveUser(Map<String, dynamic> user) async {
     final prefs = await SharedPreferences.getInstance();
 

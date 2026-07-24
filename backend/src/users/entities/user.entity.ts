@@ -4,7 +4,9 @@ import {
   Column,
   CreateDateColumn,
   UpdateDateColumn,
+  OneToMany,
 } from 'typeorm';
+import { Flock } from '../../flocks/entities/flock.entity';
 
 export enum UserRole {
   FARMER = 'farmer',
@@ -32,7 +34,7 @@ export class User {
   @Column({
   nullable: true,
   })
-  password_hash?: string;
+  password_hash!: string;
 
   @Column({
     type: 'enum',
@@ -62,4 +64,7 @@ export class User {
 
   @UpdateDateColumn()
   updated_at!: Date;
+
+  @OneToMany(() => Flock, (flock) => flock.farmer)
+  flocks!: Flock[];
 }
