@@ -28,4 +28,9 @@ class StorageService {
 
     await prefs.setString("name", user["name"] ?? "");
   }
+
+  static Future<void> clearAll() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.clear();
+  }
 }

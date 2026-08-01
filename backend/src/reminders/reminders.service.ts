@@ -50,7 +50,7 @@ export class RemindersService {
 
     title: 'Vaccination Reminder',
 
-    message: `${vaccination.flock.batch_name} is due for ${vaccination.vaccine.name} vaccination tomorrow.`,
+    message: `${vaccination.flock.batch_name} is due for ${vaccination.vaccine.name_en} vaccination tomorrow.`,
 
     scheduled_date: vaccination.next_due_date!,
 

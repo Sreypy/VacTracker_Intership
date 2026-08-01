@@ -102,7 +102,7 @@ class _FarmerDashboardPageState extends State<FarmerDashboardPage> {
       'vet_tap': 'ប៉ះដើម្បីភ្ជាប់ទំនាក់ទំនង',
       'section_title': 'ហ្វូងបក្សីរបស់អ្នក',
       'view_history': 'មើលប្រវត្តិ',
-      'up_to_date': 'ទាន់សម័យ',
+      'up_to_date': 'ទាន់ពេល',
       'due_tomorrow': 'ជិតដល់',
       'overdue_status': 'ហួសកំណត់',
       'broilers': 'មាន់សាច់',
@@ -207,19 +207,19 @@ class _FarmerDashboardPageState extends State<FarmerDashboardPage> {
         }
 
         // Get recent vaccinations (last 5)
-        if (recentVaccinations.length < 5) {
-          final dateGiven = v['date_given'] != null
-              ? DateTime.tryParse(v['date_given'])
-              : null;
-          if (dateGiven != null) {
-            recentVaccinations.add({
-              'date': dateGiven,
-              'flock_name': v['flock']?['batch_name'] ?? 'Unknown Fllock',
-              'vaccine_name': v['vaccine']?['name'] ?? 'Unknown Vaccine',
-              'status': v['status'] ?? 'on_time',
-            });
-          }
-        }
+        // if (recentVaccinations.length < 5) {
+        //   final dateGiven = v['date_given'] != null
+        //       ? DateTime.tryParse(v['date_given'])
+        //       : null;
+        //   if (dateGiven != null) {
+        //     recentVaccinations.add({
+        //       'date': dateGiven,
+        //       'flock_name': v['flock']?['batch_name'] ?? 'Unknown Fllock',
+        //       'vaccine_name': v['vaccine']?['name'] ?? 'Unknown Vaccine',
+        //       'status': v['status'] ?? 'on_time',
+        //     });
+        //   }
+        // }
       }
 
       // Sort recent vaccinations by date (most recent first)
@@ -315,7 +315,7 @@ class _FarmerDashboardPageState extends State<FarmerDashboardPage> {
   }
 
   void _navigateToFlockDetail(Flock flock) {
-    context.push('/flock-detail/${widget.languageCode}', extra: flock);
+    context.push('/flock-detail/${flock.flockId}/${widget.languageCode}');
   }
 
   String _getFlockStatus(Flock flock) {
@@ -930,7 +930,7 @@ class _FarmerDashboardPageState extends State<FarmerDashboardPage> {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        '${flock.birdCount} ${_getText('birds')} • ${_getText('day')} $flock.ageInDays',
+                        '${flock.birdCount} ${_getText('birds')} • ${_getText('day')} ${flock.ageInDays}',
                         style: const TextStyle(color: textGrey, fontSize: 12),
                       ),
                     ],
@@ -1004,6 +1004,10 @@ class _FarmerDashboardPageState extends State<FarmerDashboardPage> {
           }
           if (index == 0) {
             context.push('/notifications/${widget.languageCode}');
+            return;
+          }
+          if (index == 3) {
+            context.push('/vaccine-library/${widget.languageCode}');
             return;
           }
           setState(() => _currentIndex = index);

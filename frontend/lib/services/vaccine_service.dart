@@ -1,27 +1,33 @@
-import 'package:dio/dio.dart';
-import 'package:frontend/config/api_config.dart';
-import 'package:frontend/models/vaccine.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+
+import '../config/api_config.dart';
+import '../models/vaccine.dart';
 
 class VaccineService {
-  final Dio _dio = Dio(BaseOptions(baseUrl: ApiConfig.baseUrl));
-
   Future<List<Vaccine>> fetchVaccines() async {
-    final resp = await _dio.get('/vaccines');
-    final data = resp.data;
-    if (data is List) {
-      return data
-          .map((e) => Vaccine.fromJson(e as Map<String, dynamic>))
-          .toList();
+    final response = await http.get(Uri.parse('${ApiConfig.baseUrl}/vaccines'));
+
+    if (response.statusCode == 200) {
+      final List data = jsonDecode(response.body);
+
+      return data.map((json) => Vaccine.fromJson(json)).toList();
+    } else {
+      throw Exception("Failed to load vaccines");
     }
-    throw Exception('Unexpected vaccines response');
   }
 
-  Future<Vaccine> fetchVaccine(int id) async {
-    final resp = await _dio.get('/vaccines/$id');
-    final data = resp.data;
-    if (data is Map<String, dynamic>) {
+  Future<Vaccine> fetchVaccineById(int id) async {
+    final response = await http.get(
+      Uri.parse('${ApiConfig.baseUrl}/vaccines/$id'),
+    );
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+
       return Vaccine.fromJson(data);
+    } else {
+      throw Exception('Failed to load vaccine');
     }
-    throw Exception('Unexpected vaccine response');
   }
 }

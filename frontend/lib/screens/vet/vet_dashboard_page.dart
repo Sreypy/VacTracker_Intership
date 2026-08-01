@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 class VetDashboardPage extends StatefulWidget {
   final String languageCode; // 'en' or 'km'
@@ -497,7 +498,14 @@ class _VetDashboardPageState extends State<VetDashboardPage> {
       ),
       child: BottomNavigationBar(
         currentIndex: _currentIndex,
-        onTap: (index) => setState(() => _currentIndex = index),
+        onTap: (index) {
+          if (index == 3) {
+            // Navigate to vet profile page
+            context.push('/vet-profile/${widget.languageCode}');
+            return;
+          }
+          setState(() => _currentIndex = index);
+        },
         type: BottomNavigationBarType.fixed,
         backgroundColor: Colors.white,
         selectedItemColor: brandDarkGreen,

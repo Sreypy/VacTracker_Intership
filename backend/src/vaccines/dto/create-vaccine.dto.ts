@@ -1,16 +1,31 @@
-import { IsInt, IsOptional, IsString } from 'class-validator';
+import {
+  IsInt,
+  IsOptional,
+  IsString,
+} from 'class-validator';
 
 export class CreateVaccineDto {
-  @IsString()
-  name?: string;
 
   @IsString()
-  disease_target?: string;
+  name_en!: string;
+
+  @IsString()
+  name_km!: string;
+
+  @IsString()
+  disease_en!: string;
+
+  @IsString()
+  disease_km!: string;
 
   @IsInt()
-  interval_days?: number;
+  interval_days!: number;
 
   @IsOptional()
   @IsString()
-  notes?: string;
+  notes_en?: string;
+
+  @IsOptional()
+  @IsString()
+  notes_km?: string;
 }

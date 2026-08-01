@@ -30,7 +30,7 @@ export class AuthService {
     };
   }
 
-  // Send OTP only to registered users
+ // Send OTP only to registered users
   async sendOtp(phone: string) {
     const user = await this.userRepository.findOne({
       where: { phone },
@@ -40,9 +40,8 @@ export class AuthService {
       throw new BadRequestException('Phone number is not registered.');
     }
 
-    const otp = Math.floor(
-      100000 + Math.random() * 900000,
-    ).toString();
+    // Static OTP for testing/development
+    const otp = '123456';
 
     const hashedOtp = await bcrypt.hash(otp, 10);
 

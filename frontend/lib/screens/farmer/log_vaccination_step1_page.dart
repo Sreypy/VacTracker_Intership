@@ -357,11 +357,8 @@ class _LogVaccinationStep1PageState extends State<LogVaccinationStep1Page> {
                     );
 
                     // Navigate to Step 2 passing parameters (flockId and batchTitle as query params)
-                    final encodedName = Uri.encodeQueryComponent(
-                      selectedFlock.name,
-                    );
                     final url =
-                        '/log-vaccination-step2/$_currentLang?flockId=${selectedFlock.id}&batchTitle=$encodedName';
+                        '/log-vaccination-step2/$_currentLang?flockId=${selectedFlock.id}&batchTitle=${selectedFlock.name}';
                     debugPrint('Navigating to: $url');
                     try {
                       context.push(url);

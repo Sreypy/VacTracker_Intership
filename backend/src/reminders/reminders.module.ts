@@ -17,6 +17,6 @@ import { ReminderScheduler } from './reminder.scheduler';
     RemindersService,
     ReminderScheduler
     ],
-  exports: [RemindersService],
+  exports: [RemindersService, TypeOrmModule],
 })
 export class RemindersModule {}

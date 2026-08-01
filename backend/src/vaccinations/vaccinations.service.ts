@@ -13,6 +13,8 @@ import { User } from '../users/entities/user.entity';
 
 import { CreateVaccinationDto } from './dto/create-vaccination.dto';
 import { UpdateVaccinationDto } from './dto/update-vaccination.dto';
+import { Reminder } from 'src/reminders/entities/reminder.entity';
+import { RemindersService } from 'src/reminders/reminders.service';
 
 @Injectable()
 export class VaccinationsService {
@@ -28,6 +30,10 @@ export class VaccinationsService {
 
     @InjectRepository(User)
     private userRepository: Repository<User>,
+
+    @InjectRepository(Reminder)
+    private readonly remindersService: RemindersService,
+    
   ) {}
 
   // ===========================
@@ -90,9 +96,18 @@ export class VaccinationsService {
       photo_url: createVaccinationDto.photo_url,
     });
 
-    return await this.vaccinationRepository.save(
-      vaccination,
-    );
+
+    const savedVaccination =
+      await this.vaccinationRepository.save(vaccination);
+
+    if (savedVaccination.next_due_date) {
+      await this.remindersService.createReminder(savedVaccination);
+    }
+
+    // Create reminder if next due date exists
+    return savedVaccination;
+
+    
   }
 
   // ===========================

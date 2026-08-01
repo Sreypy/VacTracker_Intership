@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:frontend/models/flock.dart';
+import 'package:frontend/models/vaccine.dart';
 import 'package:go_router/go_router.dart';
 import 'package:frontend/services/flock_service.dart';
 import 'package:frontend/services/vaccine_service.dart';
@@ -107,33 +109,54 @@ class _LogVaccinationStep3PageState extends State<LogVaccinationStep3Page> {
   /// Fetch Summary Details from Backend API
   Future<void> _fetchSummaryDetails() async {
     try {
-      final vaccineFuture = _vaccineService.fetchVaccine(
+      final vaccineFuture = _vaccineService.fetchVaccineById(
         int.parse(widget.vaccineId),
       );
+
       final flockFuture = _flockService.fetchFlockById(
         int.parse(widget.flockId),
       );
+
       final results = await Future.wait([vaccineFuture, flockFuture]);
 
-      final vaccine = results[0] as dynamic;
-      final flock = results[1] as dynamic;
+      final vaccine = results[0] as Vaccine;
+
+      final flock = results[1] as Flock;
+
       final now = DateTime.now();
+
       final formattedDate =
-          '${now.day.toString().padLeft(2, '0')}/${now.month.toString().padLeft(2, '0')}/${now.year}';
-      final nextDate = now.add(Duration(days: vaccine.intervalDays));
+          '${now.day.toString().padLeft(2, '0')}/'
+          '${now.month.toString().padLeft(2, '0')}/'
+          '${now.year}';
+
+      DateTime nextDate = now.add(Duration(days: vaccine.intervalDays));
+
       final formattedNextDate =
-          '${nextDate.day.toString().padLeft(2, '0')}/${nextDate.month.toString().padLeft(2, '0')}/${nextDate.year}';
+          '${nextDate.day.toString().padLeft(2, '0')}/'
+          '${nextDate.month.toString().padLeft(2, '0')}/'
+          '${nextDate.year}';
 
       setState(() {
-        _vaccineName = vaccine.name ?? 'Vaccine';
-        _flockName = flock.batchName ?? widget.flockName;
+        _vaccineName = widget.languageCode == 'km'
+            ? vaccine.nameKm
+            : vaccine.nameEn;
+
+        _flockName = flock.batchName;
+
         _dateGiven = formattedDate;
+
         _nextVaccinationDate = formattedNextDate;
+
         _statusBadge = _getText('lbl_status_on_time');
+
         _photoUrl = null;
+
         _isLoading = false;
       });
     } catch (e) {
+      print("Summary error: $e");
+
       _useFallbackData();
     }
   }

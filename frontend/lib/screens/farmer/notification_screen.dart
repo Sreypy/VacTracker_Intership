@@ -1,22 +1,17 @@
 import 'package:flutter/material.dart';
-import 'package:frontend/services/reminder_service.dart';
 import 'package:go_router/go_router.dart';
 
 class NotificationScreen extends StatefulWidget {
   final String languageCode; // 'en' or 'km'
 
-  const NotificationScreen({
-    super.key,
-    required this.languageCode,
-  });
+  const NotificationScreen({super.key, required this.languageCode});
 
   @override
   State<NotificationScreen> createState() => _NotificationScreenState();
 }
 
 class _NotificationScreenState extends State<NotificationScreen> {
-  final ReminderService _reminderService = ReminderService();
-  bool _isLoading = true;
+  bool _isLoading = false;
   String? _errorMessage;
   List<Map<String, dynamic>> _notifications = [];
 
@@ -30,7 +25,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
   static const Color statusRed = Color(0xFFA80000);
   static const Color statusRedBg = Color(0xFFFDE8E8);
 
-  final Map<String, Map<String, String>> _localizedValues = const {
+  static const Map<String, Map<String, String>> _localizedValues = {
     'en': {
       'app_bar_title': 'Notifications',
       'subtitle': 'Stay updated with your flock health',
@@ -61,72 +56,97 @@ class _NotificationScreenState extends State<NotificationScreen> {
     _loadNotifications();
   }
 
-  Future<void> _loadNotifications() async {
-    try {
-      setState(() {
-        _isLoading = true;
-        _errorMessage = null;
-      });
+  void _loadNotifications() {
+    // Static dummy data simulating backend responses
+    final List<Map<String, dynamic>> staticReminders = [
+      {
+        'title': 'Overdue Newcastle Vaccine',
+        'message': 'Newcastle Disease Vaccine - Batch A1',
+        'scheduled_date': DateTime.now()
+            .subtract(const Duration(days: 3))
+            .toIso8601String(),
+        'status': 'sent',
+        'vaccination': {
+          'flock': {'flock_id': 'flock_101', 'batch_name': 'Layer Batch A1'},
+          'vaccine': {'vaccine_id': 'vac_01', 'name': 'Newcastle Disease (ND)'},
+        },
+      },
+      {
+        'title': 'Gumboro Due Soon',
+        'message': 'Gumboro (IBD) Vaccine - Batch B2',
+        'scheduled_date': DateTime.now()
+            .add(const Duration(days: 2))
+            .toIso8601String(),
+        'status': 'pending',
+        'vaccination': {
+          'flock': {'flock_id': 'flock_102', 'batch_name': 'Broiler Batch B2'},
+          'vaccine': {'vaccine_id': 'vac_02', 'name': 'Gumboro (IBD)'},
+        },
+      },
+      {
+        'title': 'Fowl Pox Scheduled',
+        'message': 'Fowl Pox Vaccine - Batch C3',
+        'scheduled_date': DateTime.now()
+            .add(const Duration(days: 5))
+            .toIso8601String(),
+        'status': 'pending',
+        'vaccination': {
+          'flock': {'flock_id': 'flock_103', 'batch_name': 'Breeder Batch C3'},
+          'vaccine': {'vaccine_id': 'vac_03', 'name': 'Fowl Pox'},
+        },
+      },
+    ];
 
-      final reminders = await _reminderService.fetchMyReminders();
+    final notifications = <Map<String, dynamic>>[];
 
-      final notifications = <Map<String, dynamic>>[];
+    for (var r in staticReminders) {
+      final scheduledDate = r['scheduled_date'] != null
+          ? DateTime.tryParse(r['scheduled_date'])
+          : null;
 
-      for (var r in reminders) {
-        final scheduledDate = r['scheduled_date'] != null 
-            ? DateTime.tryParse(r['scheduled_date']) 
-            : null;
-        
-        if (scheduledDate != null) {
-          final now = DateTime.now();
-          final daysUntil = scheduledDate.difference(now).inDays;
-          final vaccination = r['vaccination'] ?? {};
-          final flock = vaccination['flock'] ?? {};
-          final vaccine = vaccination['vaccine'] ?? {};
-          
-          final flockName = flock['batch_name'] ?? 'Unknown Flock';
-          final vaccineName = vaccine['name'] ?? 'Unknown Vaccine';
-          final flockId = flock['flock_id'];
-          final status = r['status'] ?? 'pending';
+      if (scheduledDate != null) {
+        final now = DateTime.now();
+        final daysUntil = scheduledDate.difference(now).inDays;
+        final vaccination = r['vaccination'] ?? {};
+        final flock = vaccination['flock'] ?? {};
+        final vaccine = vaccination['vaccine'] ?? {};
 
-          if (status == 'sent' || status == 'pending') {
-            notifications.add({
-              'type': daysUntil < 0 ? 'overdue' : 'upcoming',
-              'title': r['title'] ?? _getText('vaccination_due'),
-              'subtitle': r['message'] ?? '$vaccineName - $flockName',
-              'days': daysUntil < 0 ? daysUntil.abs() : daysUntil,
-              'due_date': scheduledDate,
-              'flock_id': flockId,
-              'vaccine_name': vaccineName,
-              'flock_name': flockName,
-              'icon': daysUntil < 0 ? Icons.warning_rounded : Icons.schedule_rounded,
-              'color': daysUntil < 0 ? statusRed : statusYellow,
-              'bg_color': daysUntil < 0 ? statusRedBg : statusYellowBg,
-            });
-          }
+        final flockName = flock['batch_name'] ?? 'Unknown Flock';
+        final vaccineName = vaccine['name'] ?? 'Unknown Vaccine';
+        final flockId = flock['flock_id'];
+        final status = r['status'] ?? 'pending';
+
+        if (status == 'sent' || status == 'pending') {
+          notifications.add({
+            'type': daysUntil < 0 ? 'overdue' : 'upcoming',
+            'title': r['title'] ?? _getText('vaccination_due'),
+            'subtitle': r['message'] ?? '$vaccineName - $flockName',
+            'days': daysUntil < 0 ? daysUntil.abs() : daysUntil,
+            'due_date': scheduledDate,
+            'flock_id': flockId,
+            'vaccine_id': vaccine['vaccine_id'],
+            'vaccine_name': vaccineName,
+            'flock_name': flockName,
+            'icon': daysUntil < 0
+                ? Icons.warning_rounded
+                : Icons.schedule_rounded,
+            'color': daysUntil < 0 ? statusRed : statusYellow,
+            'bg_color': daysUntil < 0 ? statusRedBg : statusYellowBg,
+          });
         }
       }
-
-      notifications.sort((a, b) {
-        if (a['type'] == 'overdue' && b['type'] != 'overdue') return -1;
-        if (a['type'] != 'overdue' && b['type'] == 'overdue') return 1;
-        return (a['days'] as int).compareTo(b['days'] as int);
-      });
-
-      if (!mounted) return;
-
-      setState(() {
-        _notifications = notifications;
-        _isLoading = false;
-      });
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _errorMessage = e.toString();
-          _isLoading = false;
-        });
-      }
     }
+
+    notifications.sort((a, b) {
+      if (a['type'] == 'overdue' && b['type'] != 'overdue') return -1;
+      if (a['type'] != 'overdue' && b['type'] == 'overdue') return 1;
+      return (a['days'] as int).compareTo(b['days'] as int);
+    });
+
+    setState(() {
+      _notifications = notifications;
+      _isLoading = false;
+    });
   }
 
   String _getText(String key) {
@@ -224,7 +244,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
                   ),
                   child: Row(
                     children: [
-                      Icon(
+                      const Icon(
                         Icons.notifications_active_outlined,
                         color: brandDarkGreen,
                         size: 20,
@@ -232,7 +252,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
                       const SizedBox(width: 8),
                       Text(
                         '${_notifications.length} notifications',
-                        style: TextStyle(
+                        style: const TextStyle(
                           color: brandDarkGreen,
                           fontSize: 14,
                           fontWeight: FontWeight.bold,
@@ -290,10 +310,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
           const SizedBox(height: 8),
           Text(
             _getText('no_notifications_subtitle'),
-            style: TextStyle(
-              color: textGrey,
-              fontSize: 14,
-            ),
+            style: const TextStyle(color: textGrey, fontSize: 14),
           ),
         ],
       ),
@@ -303,14 +320,16 @@ class _NotificationScreenState extends State<NotificationScreen> {
   Widget _buildNotificationCard(Map<String, dynamic> notification) {
     final type = notification['type'] as String;
     final isOverdue = type == 'overdue';
-    final vaccineName = notification['vaccine_name'] as String? ?? 'Unknown Vaccine';
+    final vaccineName =
+        notification['vaccine_name'] as String? ?? 'Unknown Vaccine';
     final flockName = notification['flock_name'] as String? ?? 'Unknown Flock';
 
     return InkWell(
       onTap: () {
         final flockId = notification['flock_id'];
+
         if (flockId != null) {
-          context.push('/log-vaccination-step1/${widget.languageCode}');
+          context.push('/flock-detail/$flockId/${widget.languageCode}');
         }
       },
       child: Container(
@@ -340,7 +359,6 @@ class _NotificationScreenState extends State<NotificationScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Header with icon and title
                 Row(
                   children: [
                     Container(
@@ -361,7 +379,9 @@ class _NotificationScreenState extends State<NotificationScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            isOverdue ? 'Take Action Now' : 'Upcoming Vaccination',
+                            isOverdue
+                                ? 'Take Action Now'
+                                : 'Upcoming Vaccination',
                             style: TextStyle(
                               color: notification['color'] as Color,
                               fontSize: 15,
@@ -373,7 +393,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
                             isOverdue
                                 ? 'Vaccination is overdue'
                                 : 'Vaccination due soon',
-                            style: TextStyle(
+                            style: const TextStyle(
                               color: textGrey,
                               fontSize: 12,
                             ),
@@ -389,8 +409,6 @@ class _NotificationScreenState extends State<NotificationScreen> {
                   ],
                 ),
                 const SizedBox(height: 16),
-                
-                // Main action card - Which flock to vaccinate
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.all(14),
@@ -412,14 +430,14 @@ class _NotificationScreenState extends State<NotificationScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
+                      const Row(
                         children: [
                           Icon(
                             Icons.info_outline_rounded,
                             size: 18,
                             color: brandDarkGreen,
                           ),
-                          const SizedBox(width: 8),
+                          SizedBox(width: 8),
                           Text(
                             'Next Vaccination For:',
                             style: TextStyle(
@@ -439,7 +457,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
                               color: Colors.white,
                               borderRadius: BorderRadius.circular(8),
                             ),
-                            child: Icon(
+                            child: const Icon(
                               Icons.vaccines_outlined,
                               color: brandDarkGreen,
                               size: 20,
@@ -450,7 +468,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(
+                                const Text(
                                   'Vaccine',
                                   style: TextStyle(
                                     color: textGrey,
@@ -481,7 +499,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
                               color: Colors.white,
                               borderRadius: BorderRadius.circular(8),
                             ),
-                            child: Icon(
+                            child: const Icon(
                               Icons.store_mall_directory_outlined,
                               color: brandDarkGreen,
                               size: 20,
@@ -492,7 +510,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(
+                                const Text(
                                   'Flock',
                                   style: TextStyle(
                                     color: textGrey,
@@ -517,10 +535,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
                     ],
                   ),
                 ),
-                
                 const SizedBox(height: 12),
-                
-                // Date and urgency info
                 Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
@@ -540,7 +555,9 @@ class _NotificationScreenState extends State<NotificationScreen> {
                           const SizedBox(width: 6),
                           Text(
                             notification['due_date'] != null
-                                ? _formatDate(notification['due_date'] as DateTime?)
+                                ? _formatDate(
+                                    notification['due_date'] as DateTime?,
+                                  )
                                 : '',
                             style: TextStyle(
                               color: notification['color'] as Color,

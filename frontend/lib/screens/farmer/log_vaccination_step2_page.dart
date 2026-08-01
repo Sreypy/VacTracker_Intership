@@ -2,41 +2,66 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
+
 import 'package:frontend/services/vaccine_service.dart';
 import 'package:frontend/models/vaccine.dart';
 
 class VaccineModel {
   final String id;
-  final String name;
-  final String diseaseTarget;
+
+  final String nameEn;
+  final String nameKm;
+
+  final String diseaseEn;
+  final String diseaseKm;
+
   final int intervalDays;
-  final String? notes;
+
+  final String? notesEn;
+  final String? notesKm;
 
   VaccineModel({
     required this.id,
-    required this.name,
-    required this.diseaseTarget,
+    required this.nameEn,
+    required this.nameKm,
+    required this.diseaseEn,
+    required this.diseaseKm,
     required this.intervalDays,
-    this.notes,
+    this.notesEn,
+    this.notesKm,
   });
 
   factory VaccineModel.fromVaccine(Vaccine vaccine) {
     return VaccineModel(
-      id: vaccine.vaccineId.toString(),
-      name: vaccine.name,
-      diseaseTarget: vaccine.diseaseTarget,
+      id: vaccine.id.toString(),
+
+      nameEn: vaccine.nameEn,
+      nameKm: vaccine.nameKm,
+
+      diseaseEn: vaccine.diseaseEn,
+      diseaseKm: vaccine.diseaseKm,
+
       intervalDays: vaccine.intervalDays,
-      notes: vaccine.notes,
+
+      notesEn: vaccine.notesEn,
+      notesKm: vaccine.notesKm,
     );
   }
 
   factory VaccineModel.fromJson(Map<String, dynamic> json) {
     return VaccineModel(
       id: json['vaccine_id']?.toString() ?? '',
-      name: json['name'] ?? '',
-      diseaseTarget: json['disease_target'] ?? '',
+
+      nameEn: json['name_en'] ?? '',
+      nameKm: json['name_km'] ?? '',
+
+      diseaseEn: json['disease_en'] ?? '',
+      diseaseKm: json['disease_km'] ?? '',
+
       intervalDays: (json['interval_days'] as num?)?.toInt() ?? 0,
-      notes: json['notes'] as String?,
+
+      notesEn: json['notes_en'],
+      notesKm: json['notes_km'],
     );
   }
 }
@@ -132,46 +157,26 @@ class _LogVaccinationStep2PageState extends State<LogVaccinationStep2Page> {
   Future<void> _fetchVaccines() async {
     try {
       final vaccines = await _vaccineService.fetchVaccines();
+
       final fetched = vaccines
           .map((item) => VaccineModel.fromVaccine(item))
           .toList();
 
       setState(() {
         _allVaccines = fetched;
+
         _filteredVaccines = fetched;
-        if (_allVaccines.isNotEmpty) {
-          _selectedVaccineId = _allVaccines.first.id;
+
+        if (fetched.isNotEmpty) {
+          _selectedVaccineId = fetched.first.id;
         }
+
         _isLoadingVaccines = false;
       });
     } catch (e) {
-      _useFallbackVaccines();
-    }
-  }
+      print("Load vaccine error: $e");
 
-  void _useFallbackVaccines() {
-    final mockVaccines = [
-      VaccineModel(
-        id: '1',
-        name: 'Newcastle Vaccine',
-        diseaseTarget: 'Newcastle Disease',
-        intervalDays: 21,
-        notes: 'Use for young birds',
-      ),
-      VaccineModel(
-        id: '2',
-        name: 'Gumboro IBD',
-        diseaseTarget: 'Gumboro Disease',
-        intervalDays: 14,
-        notes: 'Booster recommended',
-      ),
-    ];
-
-    if (mounted) {
       setState(() {
-        _allVaccines = mockVaccines;
-        _filteredVaccines = mockVaccines;
-        _selectedVaccineId = '1';
         _isLoadingVaccines = false;
       });
     }
@@ -206,9 +211,14 @@ class _LogVaccinationStep2PageState extends State<LogVaccinationStep2Page> {
         _filteredVaccines = _allVaccines;
       } else {
         _filteredVaccines = _allVaccines.where((v) {
-          return v.name.toLowerCase().contains(query.toLowerCase()) ||
-              v.diseaseTarget.toLowerCase().contains(query.toLowerCase()) ||
-              (v.notes ?? '').toLowerCase().contains(query.toLowerCase());
+          final search = query.toLowerCase();
+
+          return v.nameEn.toLowerCase().contains(search) ||
+              v.nameKm.contains(query) ||
+              v.diseaseEn.toLowerCase().contains(search) ||
+              v.diseaseKm.contains(query) ||
+              (v.notesEn ?? '').toLowerCase().contains(search) ||
+              (v.notesKm ?? '').contains(query);
         }).toList();
       }
     });
@@ -484,12 +494,9 @@ class _LogVaccinationStep2PageState extends State<LogVaccinationStep2Page> {
                             return;
                           }
 
-                          // Navigate to Step 3 (pass batchTitle encoded and flockId as query)
-                          final encodedBatch = Uri.encodeQueryComponent(
-                            widget.selectedFlockName,
-                          );
+                          // Navigate to Step 3 (pass batchTitle and flockId as query params)
                           final url =
-                              '/log-vaccination-step3/$_selectedVaccineId/$_currentLang?flockId=${widget.flockId}&batchTitle=$encodedBatch';
+                              '/log-vaccination-step3/$_selectedVaccineId/$_currentLang?flockId=${widget.flockId}&batchTitle=${widget.selectedFlockName}';
                           debugPrint('Navigating to: $url');
                           try {
                             context.push(url);
@@ -532,9 +539,17 @@ class _LogVaccinationStep2PageState extends State<LogVaccinationStep2Page> {
 
   // Individual Vaccine Item Card Widget
   Widget _buildVaccineCard(VaccineModel vaccine, bool isSelected) {
-    final title = vaccine.name;
-    final subtitle = vaccine.diseaseTarget;
-    final interval = '${vaccine.intervalDays} days';
+    final title = _currentLang == 'km' ? vaccine.nameKm : vaccine.nameEn;
+
+    final subtitle = _currentLang == 'km'
+        ? vaccine.diseaseKm
+        : vaccine.diseaseEn;
+
+    final note = _currentLang == 'km' ? vaccine.notesKm : vaccine.notesEn;
+
+    final interval = vaccine.intervalDays == 0
+        ? 'None'
+        : '${vaccine.intervalDays} days';
 
     return GestureDetector(
       onTap: () {
@@ -641,11 +656,10 @@ class _LogVaccinationStep2PageState extends State<LogVaccinationStep2Page> {
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                      if (vaccine.notes != null &&
-                          vaccine.notes!.isNotEmpty) ...[
+                      if (note != null && note.isNotEmpty) ...[
                         const SizedBox(height: 6),
                         Text(
-                          vaccine.notes!,
+                          note,
                           style: const TextStyle(color: textGrey, fontSize: 11),
                         ),
                       ],

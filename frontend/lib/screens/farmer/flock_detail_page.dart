@@ -5,15 +5,13 @@ import 'package:frontend/services/vaccination_service.dart';
 import 'package:go_router/go_router.dart';
 
 class FlockDetailPage extends StatefulWidget {
-  final String languageCode; // 'en' or 'km'
-  final String batchTitle;
-  final Flock? flock;
+  final String languageCode;
+  final int flockId;
 
   const FlockDetailPage({
     super.key,
     required this.languageCode,
-    this.batchTitle = 'Batch A-102',
-    this.flock,
+    required this.flockId,
   });
 
   @override
@@ -27,6 +25,7 @@ class _FlockDetailPageState extends State<FlockDetailPage> {
   bool _isLoading = true;
   String? _errorMessage;
   Flock? _flock;
+
   List<Map<String, dynamic>> _vaccinationHistory = [];
 
   static const Color backgroundLight = Color(0xFFF8FAFC);
@@ -58,7 +57,8 @@ class _FlockDetailPageState extends State<FlockDetailPage> {
       'section_recent_history': 'Recent History',
       'btn_see_all': 'See All',
       'banner_title': 'Protect Your Yield',
-      'banner_desc': 'Follow the recommended schedule for maximum flock health.',
+      'banner_desc':
+          'Follow the recommended schedule for maximum flock health.',
       'disease_ibv': 'IBV (Gumboro)',
       'disease_marek': 'Marek\'s Disease',
       'disease_salmonella': 'Salmonella Type A',
@@ -85,7 +85,8 @@ class _FlockDetailPageState extends State<FlockDetailPage> {
       'section_recent_history': 'ប្រវត្តិថ្មីៗ',
       'btn_see_all': 'មើលទាំងអស់',
       'banner_title': 'ការពារទិន្នផលរបស់អ្នក',
-      'banner_desc': 'អនុវត្តតាមកាលវិភាគដែលបានណែនាំ ដើម្បីសុខភាពហ្វូងបក្សីល្អបំផុត។',
+      'banner_desc':
+          'អនុវត្តតាមកាលវិភាគដែលបានណែនាំ ដើម្បីសុខភាពហ្វូងបក្សីល្អបំផុត។',
       'disease_ibv': 'ជំងឺអាសន្នរោគបក្សី (Gumboro)',
       'disease_marek': 'ជំងឺម៉ារ៉ែក (Marek\'s)',
       'disease_salmonella': 'ជំងឺសាល់ម៉ូណេឡា ប្រភេទ A',
@@ -103,9 +104,7 @@ class _FlockDetailPageState extends State<FlockDetailPage> {
 
   String _getText(String key) {
     final lang = widget.languageCode;
-    return _localizedValues[lang]?[key] ??
-        _localizedValues['en']?[key] ??
-        key;
+    return _localizedValues[lang]?[key] ?? _localizedValues['en']?[key] ?? key;
   }
 
   @override
@@ -121,84 +120,55 @@ class _FlockDetailPageState extends State<FlockDetailPage> {
         _errorMessage = null;
       });
 
-      // If flock object is passed directly, use it
-      if (widget.flock != null) {
-        _flock = widget.flock;
-      } else {
-        // Otherwise fetch by batch title (simplified - in real app would use ID)
-        // For now, we'll fetch all flocks and find the matching one
-        final flocks = await _flockService.fetchFlocks();
-        final matchingFlock = flocks.firstWhere(
-          (f) => f.batchName == widget.batchTitle,
-          orElse: () => flocks.isNotEmpty ? flocks.first : Flock(
-            flockId: 0,
-            batchName: widget.batchTitle,
-            birdCount: 0,
-            age: 0,
-            ageUnit: 'days',
-            breed: 'Unknown',
-            dateAcquired: DateTime.now().toIso8601String(),
-            createdAt: DateTime.now().toIso8601String(),
-          ),
-        );
-        _flock = matchingFlock;
+      // 1. Get flock detail
+      final flock = await _flockService.fetchFlockById(widget.flockId);
+
+      // 2. Get vaccination history
+      final vaccinations = await _vaccinationService.fetchVaccinationsByFlock(
+        widget.flockId,
+      );
+
+      List<Map<String, dynamic>> history = [];
+
+      for (final v in vaccinations) {
+        final vaccine = v['vaccine'] ?? {};
+
+        history.add({
+          "date": DateTime.parse(v['date_given']),
+
+          "vaccine_name": widget.languageCode == 'km'
+              ? vaccine['name_km']
+              : vaccine['name_en'],
+
+          "disease": widget.languageCode == 'km'
+              ? vaccine['disease_km']
+              : vaccine['disease_en'],
+
+          "status": v['status'] ?? "on_time",
+
+          "next_due": v['next_due_date'],
+        });
       }
 
-      // Fetch vaccination history for this flock
-      if (_flock != null && _flock!.flockId > 0) {
-        try {
-          final vaccinations = await _vaccinationService.fetchVaccinationsByFlock(_flock!.flockId);
-          final history = <Map<String, dynamic>>[];
-          
-          for (var v in vaccinations) {
-            // Skip if v is not a Map
-            if (v is! Map<String, dynamic>) continue;
-            
-            final dateGiven = v['date_given'] != null 
-                ? DateTime.tryParse(v['date_given'].toString()) 
-                : null;
-            if (dateGiven != null) {
-              final vaccine = v['vaccine'] as Map<String, dynamic>? ?? {};
-              history.add({
-                'date': dateGiven,
-                'vaccine_name': vaccine['name']?.toString() ?? 'Unknown Vaccine',
-                'status': v['status']?.toString() ?? 'on_time',
-                'next_due': v['next_due_date'] != null 
-                    ? DateTime.tryParse(v['next_due_date'].toString()) 
-                    : null,
-              });
-            }
-          }
-          
-          // Sort by date descending
-          if (history.isNotEmpty) {
-            history.sort((a, b) => (b['date'] as DateTime).compareTo(a['date'] as DateTime));
-          }
-          
-          if (!mounted) return;
-          setState(() {
-            _vaccinationHistory = history.take(5).toList();
-          });
-        } catch (e) {
-          // If vaccination fetch fails, continue with empty history
-          if (!mounted) return;
-          setState(() {
-            _vaccinationHistory = [];
-          });
-        }
-      }
+      history.sort(
+        (a, b) => (b['date'] as DateTime).compareTo(a['date'] as DateTime),
+      );
 
-      if (!mounted) return;
       setState(() {
+        _flock = flock;
+
+        _vaccinationHistory = history.take(5).toList();
+
+        if (history.isNotEmpty) {}
+
         _isLoading = false;
       });
     } catch (e) {
-      if (mounted) {
-        setState(() {
-          _errorMessage = e.toString();
-          _isLoading = false;
-        });
-      }
+      setState(() {
+        _errorMessage = e.toString();
+
+        _isLoading = false;
+      });
     }
   }
 
@@ -246,7 +216,7 @@ class _FlockDetailPageState extends State<FlockDetailPage> {
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
-          _flock != null ? _flock!.batchName : widget.batchTitle,
+          _flock?.batchName ?? "Flock Detail",
           style: const TextStyle(
             color: brandDarkGreen,
             fontSize: 20,
@@ -262,13 +232,6 @@ class _FlockDetailPageState extends State<FlockDetailPage> {
             ),
             onPressed: () {},
           ),
-          const SizedBox(width: 4),
-          const CircleAvatar(
-            radius: 16,
-            backgroundColor: textGreyLight,
-            child: Icon(Icons.person, color: brandDarkGreen, size: 20),
-          ),
-          const SizedBox(width: 16),
         ],
       ),
       body: SafeArea(
@@ -318,7 +281,11 @@ class _FlockDetailPageState extends State<FlockDetailPage> {
                         color: alertRedText,
                         borderColor: alertRedBorder.withValues(alpha: 0.5),
                         bgColor: Colors.white,
-                        onTap: () {},
+                        onTap: () {
+                          context.push(
+                            '/sick-report?lang=${widget.languageCode}',
+                          );
+                        },
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -329,7 +296,11 @@ class _FlockDetailPageState extends State<FlockDetailPage> {
                         color: brandDarkGreen,
                         borderColor: textGreyLight,
                         bgColor: Colors.white,
-                        onTap: () {},
+                        onTap: () {
+                          context.push(
+                            '/flock-detail/${widget.flockId}/vaccine-history?lang=${widget.languageCode}',
+                          );
+                        },
                       ),
                     ),
                   ],
@@ -368,14 +339,17 @@ class _FlockDetailPageState extends State<FlockDetailPage> {
                 else
                   ..._vaccinationHistory.map((vaccination) {
                     final date = vaccination['date'] as DateTime?;
-                    final status = vaccination['status'] as String? ?? 'on_time';
-                    final vaccineName = vaccination['vaccine_name'] as String? ?? 'Unknown Vaccine';
-                    
+                    final status =
+                        vaccination['status'] as String? ?? 'on_time';
+                    final vaccineName =
+                        vaccination['vaccine_name'] ?? 'Unknown Vaccine';
+
                     if (date == null) return null;
-                    
+
                     return _buildHistoryTile(
                       title: vaccineName,
-                      dateTime: '${_formatDate(date)} • ${_getStatusText(status)}',
+                      dateTime:
+                          '${_formatDate(date)} • ${_getStatusText(status)}',
                       statusColor: _getStatusColor(status),
                     );
                   }).whereType<Widget>(),
@@ -405,12 +379,10 @@ class _FlockDetailPageState extends State<FlockDetailPage> {
           borderRadius: BorderRadius.circular(16),
           border: Border.all(color: textGreyLight, width: 1),
         ),
-        child: const Center(
-          child: CircularProgressIndicator(),
-        ),
+        child: const Center(child: CircularProgressIndicator()),
       );
     }
-    
+
     final ageDays = _flock!.ageInDays;
     final isDueSoon = ageDays > 30 && ageDays <= 45;
     final isOverdue = ageDays > 45;
@@ -436,7 +408,11 @@ class _FlockDetailPageState extends State<FlockDetailPage> {
             Container(
               width: 5,
               decoration: BoxDecoration(
-                color: isOverdue ? alertRedText : isDueSoon ? statusYellow : statusGreen,
+                color: isOverdue
+                    ? alertRedText
+                    : isDueSoon
+                    ? statusYellow
+                    : statusGreen,
                 borderRadius: const BorderRadius.only(
                   topLeft: Radius.circular(16),
                   bottomLeft: Radius.circular(16),
@@ -468,21 +444,39 @@ class _FlockDetailPageState extends State<FlockDetailPage> {
                             vertical: 4,
                           ),
                           decoration: BoxDecoration(
-                            color: isOverdue ? alertRedBg : isDueSoon ? statusYellowBg : statusGreenBg,
+                            color: isOverdue
+                                ? alertRedBg
+                                : isDueSoon
+                                ? statusYellowBg
+                                : statusGreenBg,
                             borderRadius: BorderRadius.circular(20),
                           ),
                           child: Row(
                             children: [
                               Icon(
-                                isOverdue ? Icons.warning_amber_outlined : Icons.check_circle_outlined,
+                                isOverdue
+                                    ? Icons.warning_amber_outlined
+                                    : Icons.check_circle_outlined,
                                 size: 13,
-                                color: isOverdue ? alertRedText : isDueSoon ? statusYellow : statusGreen,
+                                color: isOverdue
+                                    ? alertRedText
+                                    : isDueSoon
+                                    ? statusYellow
+                                    : statusGreen,
                               ),
                               const SizedBox(width: 4),
                               Text(
-                                isOverdue ? 'Overdue' : isDueSoon ? 'Due Soon' : 'Healthy',
+                                isOverdue
+                                    ? 'Overdue'
+                                    : isDueSoon
+                                    ? 'Due Soon'
+                                    : 'Healthy',
                                 style: TextStyle(
-                                  color: isOverdue ? alertRedText : isDueSoon ? statusYellow : statusGreen,
+                                  color: isOverdue
+                                      ? alertRedText
+                                      : isDueSoon
+                                      ? statusYellow
+                                      : statusGreen,
                                   fontSize: 11,
                                   fontWeight: FontWeight.bold,
                                 ),
@@ -524,7 +518,8 @@ class _FlockDetailPageState extends State<FlockDetailPage> {
                         const SizedBox(width: 8),
                         _buildInfoTag(
                           icon: Icons.groups_outlined,
-                          label: '${_flock!.birdCount} ${_getText('tag_birds')}',
+                          label:
+                              '${_flock!.birdCount} ${_getText('tag_birds')}',
                         ),
                         const SizedBox(width: 8),
                         Container(
@@ -657,7 +652,11 @@ class _FlockDetailPageState extends State<FlockDetailPage> {
     );
   }
 
-  Widget _buildHistoryTile({required String title, required String dateTime, Color statusColor = statusGreen}) {
+  Widget _buildHistoryTile({
+    required String title,
+    required String dateTime,
+    Color statusColor = statusGreen,
+  }) {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -724,10 +723,7 @@ class _FlockDetailPageState extends State<FlockDetailPage> {
           const SizedBox(height: 12),
           Text(
             _getText('no_vaccinations'),
-            style: TextStyle(
-              color: textGrey,
-              fontSize: 14,
-            ),
+            style: TextStyle(color: textGrey, fontSize: 14),
           ),
         ],
       ),

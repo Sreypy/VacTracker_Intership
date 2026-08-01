@@ -12,9 +12,13 @@ import 'package:frontend/screens/farmer/log_vaccination_step1_page.dart';
 import 'package:frontend/screens/farmer/log_vaccination_step2_page.dart';
 import 'package:frontend/screens/farmer/log_vaccination_step3_page.dart';
 import 'package:frontend/screens/farmer/notification_screen.dart';
+import 'package:frontend/screens/farmer/sick_report.dart';
+import 'package:frontend/screens/farmer/vaccination_history.dart';
+import 'package:frontend/screens/farmer/vaccine_library_page.dart';
 import 'package:frontend/screens/language_page.dart';
 import 'package:frontend/screens/role.dart';
 import 'package:frontend/screens/vet/vet_dashboard_page.dart';
+import 'package:frontend/screens/vet/vet_profile_page.dart';
 import 'package:frontend/screens/vet/vet_register_page.dart';
 import 'package:frontend/screens/welcome_page.dart';
 import 'package:go_router/go_router.dart';
@@ -91,6 +95,13 @@ final GoRouter _router = GoRouter(
       },
     ),
     GoRoute(
+      path: '/vet-profile/:lang',
+      builder: (context, state) {
+        final language = state.pathParameters['lang'] ?? 'en';
+        return VetProfileScreen(currentLanguage: language);
+      },
+    ),
+    GoRoute(
       path: '/add-flock/:lang',
       builder: (context, state) {
         final language = state.pathParameters['lang'] ?? 'en';
@@ -116,7 +127,7 @@ final GoRouter _router = GoRouter(
         final flockId = state.uri.queryParameters['flockId'] ?? '';
 
         return LogVaccinationStep2Page(
-          selectedFlockName: Uri.decodeComponent(flockName),
+          selectedFlockName: flockName,
           flockId: flockId,
           languageCode: language,
         );
@@ -134,7 +145,7 @@ final GoRouter _router = GoRouter(
           flockId: flockId,
           vaccineId: vaccineId,
           languageCode: language,
-          flockName: Uri.decodeComponent(flockName),
+          flockName: flockName,
         );
       },
     ),
@@ -154,29 +165,38 @@ final GoRouter _router = GoRouter(
     ),
 
     // --- Flock Detail Route ---
+    // 1. Specific route MUST come first
     GoRoute(
-      path: '/flock-detail/:lang',
+      path: '/flock-detail/:flockId/vaccine-history',
       builder: (context, state) {
-        final language = state.pathParameters['lang'] ?? 'en';
-        final flock = state.extra is Flock ? state.extra as Flock : null;
-        return FlockDetailPage(
-          batchTitle: flock?.batchName ?? 'Batch A-102',
-          languageCode: language,
-        );
-      },
-    ),
-    GoRoute(
-      path: '/flock-detail/:batchTitle/:lang',
-      builder: (context, state) {
-        final batchTitle = state.pathParameters['batchTitle'] ?? 'Batch A-102';
-        final language = state.pathParameters['lang'] ?? 'en';
-        return FlockDetailPage(
-          batchTitle: Uri.decodeComponent(batchTitle),
-          languageCode: language,
+        final flockId = state.pathParameters['flockId'] ?? '';
+        final languageCode = state.uri.queryParameters['lang'] ?? 'km';
+
+        return VaccinationHistoryScreen(
+          flockId: flockId,
+          languageCode: languageCode,
         );
       },
     ),
 
+    GoRoute(
+      path: '/sick-report',
+      builder: (context, state) {
+        final languageCode = state.uri.queryParameters['lang'] ?? 'en';
+        return SickReportScreen(languageCode: languageCode);
+      },
+    ),
+    // 2. Generic wildcard route comes second
+    GoRoute(
+      path: '/flock-detail/:flockId/:lang',
+      builder: (context, state) {
+        final flockId =
+            int.tryParse(state.pathParameters['flockId'] ?? '') ?? 0;
+        final language = state.pathParameters['lang'] ?? 'en';
+
+        return FlockDetailPage(flockId: flockId, languageCode: language);
+      },
+    ),
     // Route for Farmer Registration
     GoRoute(
       path: '/register/farmer/:lang',
@@ -191,6 +211,14 @@ final GoRouter _router = GoRouter(
       builder: (context, state) {
         final language = state.pathParameters['lang'] ?? 'en';
         return VetRegisterPage(languageCode: language);
+      },
+    ),
+    // Inside GoRouter routes list:
+    GoRoute(
+      path: '/vaccine-library/:lang',
+      builder: (context, state) {
+        final language = state.pathParameters['lang'] ?? 'km';
+        return VaccineLibraryPage(languageCode: language);
       },
     ),
   ],
