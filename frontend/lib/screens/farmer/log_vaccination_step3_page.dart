@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:frontend/models/flock.dart';
 import 'package:frontend/models/vaccine.dart';
@@ -11,6 +12,7 @@ class LogVaccinationStep3Page extends StatefulWidget {
   final String vaccineId;
   final String languageCode; // 'km' or 'en'
   final String flockName;
+  final Map<String, dynamic>? summaryData;
 
   const LogVaccinationStep3Page({
     super.key,
@@ -18,6 +20,7 @@ class LogVaccinationStep3Page extends StatefulWidget {
     required this.vaccineId,
     this.languageCode = 'km',
     this.flockName = '',
+    this.summaryData,
   });
 
   @override
@@ -36,9 +39,11 @@ class _LogVaccinationStep3PageState extends State<LogVaccinationStep3Page> {
   String _vaccineName = '...';
   String _flockName = '...';
   String _dateGiven = '...';
+  String _nextVaccineName = '...';
   String _nextVaccinationDate = '...';
   String _statusBadge = 'ទាន់ពេលវេលា'; // On Time
-  String? _photoUrl;
+  bool _createReminder = false;
+  String? _photoPath;
 
   final VaccineService _vaccineService = VaccineService();
   final FlockService _flockService = FlockService();
@@ -67,6 +72,10 @@ class _LogVaccinationStep3PageState extends State<LogVaccinationStep3Page> {
       'lbl_flock': 'ក្រុមមាន់ (Flock)',
       'lbl_date_given': 'ថ្ងៃចាក់ (Date Given)',
       'lbl_next_vac': 'ចាក់លើកក្រោយ (Next Vaccination)',
+      'lbl_next_vaccine': 'វ៉ាក់សាំងបន្ទាប់',
+      'lbl_reminder': 'ការរំលឹក',
+      'reminder_on': 'បានបើក',
+      'reminder_off': 'មិនបានបើក',
       'lbl_status_on_time': 'ទាន់ពេលវេលា',
       'banner_text':
           'ប័ណ្ណបញ្ជាក់សុខភាព\nមាន់របស់អ្នកនឹងទទួលបានវិញ្ញាបនបត្រសុខភាពឌីជីថលភ្លាមៗ។',
@@ -86,6 +95,10 @@ class _LogVaccinationStep3PageState extends State<LogVaccinationStep3Page> {
       'lbl_flock': 'Flock',
       'lbl_date_given': 'Date Given',
       'lbl_next_vac': 'Next Vaccination',
+      'lbl_next_vaccine': 'Next Vaccine',
+      'lbl_reminder': 'Reminder',
+      'reminder_on': 'Enabled',
+      'reminder_off': 'Disabled',
       'lbl_status_on_time': 'On Time',
       'banner_text':
           'Health Certificate\nYour flock will receive a digital health certificate immediately.',
@@ -103,7 +116,11 @@ class _LogVaccinationStep3PageState extends State<LogVaccinationStep3Page> {
     if (widget.flockName.isNotEmpty) {
       _flockName = widget.flockName;
     }
-    _fetchSummaryDetails();
+    if (widget.summaryData != null) {
+      _populateFromSummary(widget.summaryData!);
+    } else {
+      _fetchSummaryDetails();
+    }
   }
 
   /// Fetch Summary Details from Backend API
@@ -145,20 +162,52 @@ class _LogVaccinationStep3PageState extends State<LogVaccinationStep3Page> {
         _flockName = flock.batchName;
 
         _dateGiven = formattedDate;
-
+        _nextVaccineName = widget.languageCode == 'km'
+            ? vaccine.nameKm
+            : vaccine.nameEn;
         _nextVaccinationDate = formattedNextDate;
 
         _statusBadge = _getText('lbl_status_on_time');
 
-        _photoUrl = null;
+        _photoPath = null;
 
         _isLoading = false;
       });
     } catch (e) {
-      print("Summary error: $e");
-
       _useFallbackData();
     }
+  }
+
+  void _populateFromSummary(Map<String, dynamic> data) {
+    final adminDate = data['administrationDate'] is DateTime
+        ? data['administrationDate'] as DateTime
+        : DateTime.tryParse(data['administrationDate']?.toString() ?? '') ??
+              DateTime.now();
+    final nextDate = data['nextDate'] is DateTime
+        ? data['nextDate'] as DateTime
+        : DateTime.tryParse(data['nextDate']?.toString() ?? '') ??
+              adminDate.add(const Duration(days: 7));
+
+    if (mounted) {
+      setState(() {
+        _vaccineName = data['todayVaccineName']?.toString() ?? '...';
+        _flockName = data['flockName']?.toString() ?? widget.flockName;
+        _dateGiven = _formatDate(adminDate);
+        _nextVaccineName = data['nextVaccineName']?.toString() ?? '...';
+        _nextVaccinationDate = _formatDate(nextDate);
+        _createReminder = data['createReminder'] == true;
+        _photoPath = data['photoPath']?.toString();
+        _statusBadge = _getText('lbl_status_on_time');
+        _isLoading = false;
+      });
+    }
+  }
+
+  String _formatDate(DateTime date) {
+    final localDate = date.toLocal();
+    return '${localDate.day.toString().padLeft(2, '0')}/'
+        '${localDate.month.toString().padLeft(2, '0')}/'
+        '${localDate.year}';
   }
 
   void _useFallbackData() {
@@ -166,8 +215,9 @@ class _LogVaccinationStep3PageState extends State<LogVaccinationStep3Page> {
       setState(() {
         _vaccineName = 'វ៉ាក់សាំងញូកាស';
         _flockName = 'Chicken Batch A (មាន់ ៥០០ ក្បាល)';
-        _dateGiven = '២២ កក្កដា ២០២៦';
-        _nextVaccinationDate = '១២ សីហា ២០២៦';
+        _dateGiven = '២២/០២/២០២៦';
+        _nextVaccineName = 'វ៉ាក់សាំងញូកាស';
+        _nextVaccinationDate = '១២/០៣/២០២៦';
         _statusBadge = _getText('lbl_status_on_time');
         _isLoading = false;
       });
@@ -179,10 +229,18 @@ class _LogVaccinationStep3PageState extends State<LogVaccinationStep3Page> {
     setState(() => _isSubmitting = true);
 
     try {
+      final summaryData = widget.summaryData;
+      final vaccineId =
+          summaryData?['vaccineId']?.toString() ?? widget.vaccineId;
+      final flockId = summaryData?['flockId']?.toString() ?? widget.flockId;
+      final administrationDate = summaryData?['administrationDate'] is DateTime
+          ? summaryData!['administrationDate'] as DateTime
+          : DateTime.now();
+
       await _vaccinationService.createVaccination({
-        'flock_id': int.parse(widget.flockId),
-        'vaccine_id': int.parse(widget.vaccineId),
-        'date_given': DateTime.now().toIso8601String(),
+        'flock_id': int.parse(flockId),
+        'vaccine_id': int.parse(vaccineId),
+        'date_given': administrationDate.toIso8601String(),
       });
 
       if (mounted) {
@@ -599,15 +657,55 @@ class _LogVaccinationStep3PageState extends State<LogVaccinationStep3Page> {
                                       size: 20,
                                     ),
                                     const SizedBox(width: 8),
-                                    Text(
-                                      _nextVaccinationDate,
-                                      style: const TextStyle(
-                                        color: brandDarkGreen,
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.bold,
+                                    Expanded(
+                                      child: Text(
+                                        _nextVaccinationDate,
+                                        style: const TextStyle(
+                                          color: brandDarkGreen,
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.bold,
+                                        ),
                                       ),
                                     ),
                                   ],
+                                ),
+                                const SizedBox(height: 10),
+                                Text(
+                                  _getText('lbl_next_vaccine'),
+                                  style: const TextStyle(
+                                    color: textGrey,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  _nextVaccineName,
+                                  style: const TextStyle(
+                                    color: textDarkBlue,
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                const SizedBox(height: 10),
+                                Text(
+                                  _getText('lbl_reminder'),
+                                  style: const TextStyle(
+                                    color: textGrey,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  _createReminder
+                                      ? _getText('reminder_on')
+                                      : _getText('reminder_off'),
+                                  style: const TextStyle(
+                                    color: textDarkBlue,
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
                               ],
                             ),
@@ -671,8 +769,8 @@ class _LogVaccinationStep3PageState extends State<LogVaccinationStep3Page> {
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(15),
-        child: _photoUrl != null
-            ? Image.network(_photoUrl!, fit: BoxFit.cover)
+        child: _photoPath != null && _photoPath!.isNotEmpty
+            ? Image.file(File(_photoPath!), fit: BoxFit.cover)
             : Image.network(
                 'https://images.unsplash.com/photo-1589923188900-85dae523342b?auto=format&fit=crop&q=80&w=800',
                 fit: BoxFit.cover,

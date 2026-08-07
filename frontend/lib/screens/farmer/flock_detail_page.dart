@@ -55,7 +55,6 @@ class _FlockDetailPageState extends State<FlockDetailPage> {
       'btn_flag_sick': 'Flag sick/dead',
       'btn_view_history': 'View full history',
       'section_recent_history': 'Recent History',
-      'btn_see_all': 'See All',
       'banner_title': 'Protect Your Yield',
       'banner_desc':
           'Follow the recommended schedule for maximum flock health.',
@@ -83,7 +82,6 @@ class _FlockDetailPageState extends State<FlockDetailPage> {
       'btn_flag_sick': 'រាយការណ៍ឈឺ/ងាប់',
       'btn_view_history': 'មើលប្រវត្តិទាំងស្រុង',
       'section_recent_history': 'ប្រវត្តិថ្មីៗ',
-      'btn_see_all': 'មើលទាំងអស់',
       'banner_title': 'ការពារទិន្នផលរបស់អ្នក',
       'banner_desc':
           'អនុវត្តតាមកាលវិភាគដែលបានណែនាំ ដើម្បីសុខភាពហ្វូងបក្សីល្អបំផុត។',
@@ -317,17 +315,6 @@ class _FlockDetailPageState extends State<FlockDetailPage> {
                         color: textDarkBlue,
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    GestureDetector(
-                      onTap: () {},
-                      child: Text(
-                        _getText('btn_see_all'),
-                        style: const TextStyle(
-                          color: brandDarkGreen,
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                        ),
                       ),
                     ),
                   ],

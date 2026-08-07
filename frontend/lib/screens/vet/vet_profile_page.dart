@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:frontend/services/storage_service.dart';
+import 'package:frontend/services/auth_service.dart';
 
 class VetProfileScreen extends StatefulWidget {
   final String currentLanguage; // 'en' or 'km'
@@ -37,12 +38,42 @@ class _VetProfileScreenState extends State<VetProfileScreen> {
   late String _selectedLanguage;
   bool _newSickReportsEnabled = true;
   bool _clientOverdueAlertsEnabled = true;
-  final String _vetShareLink = 'FG-VET-SOKHA-2024';
+  String? _vetShareLink;
+  
+  // Profile Data
+  Map<String, dynamic>? _profileData;
+  bool _isLoadingProfile = true;
+  String? _errorMessage;
 
   @override
   void initState() {
     super.initState();
     _selectedLanguage = widget.currentLanguage;
+    _loadProfileData();
+  }
+
+  Future<void> _loadProfileData() async {
+    setState(() {
+      _isLoadingProfile = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final authService = AuthService();
+      final profile = await authService.getProfile();
+      
+      setState(() {
+        _profileData = profile;
+        _vetShareLink = profile['share_code'] ?? 'FG-VET-SOKHA-2024';
+        _isLoadingProfile = false;
+      });
+    } catch (e) {
+      setState(() {
+        _errorMessage = e.toString();
+        _isLoadingProfile = false;
+        _vetShareLink = 'FG-VET-SOKHA-2024';
+      });
+    }
   }
 
   void _toggleLanguage(String lang) {
@@ -55,7 +86,8 @@ class _VetProfileScreenState extends State<VetProfileScreen> {
   }
 
   void _copyShareCode() {
-    Clipboard.setData(ClipboardData(text: _vetShareLink));
+    if (_vetShareLink == null) return;
+    Clipboard.setData(ClipboardData(text: _vetShareLink!));
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
@@ -203,6 +235,89 @@ class _VetProfileScreenState extends State<VetProfileScreen> {
   }
 
   Widget _buildDoctorProfileCard(bool isKhmer) {
+    if (_isLoadingProfile) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+        decoration: BoxDecoration(
+          color: cardBg,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: Colors.grey.withAlpha(30)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withAlpha(5),
+              blurRadius: 10,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: const Center(
+          child: CircularProgressIndicator(
+            color: primaryGreen,
+            strokeWidth: 2,
+          ),
+        ),
+      );
+    }
+
+    if (_errorMessage != null) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+        decoration: BoxDecoration(
+          color: cardBg,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: Colors.grey.withAlpha(30)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withAlpha(5),
+              blurRadius: 10,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Column(
+          children: [
+            const Icon(Icons.error_outline, color: Colors.red, size: 40),
+            const SizedBox(height: 12),
+            Text(
+              isKhmer ? 'មិនអាចផ្ទុកទិន្នន័យបាន' : 'Failed to load profile',
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+                color: textDark,
+              ),
+            ),
+            const SizedBox(height: 8),
+            ElevatedButton.icon(
+              onPressed: _loadProfileData,
+              icon: const Icon(Icons.refresh, size: 18),
+              label: Text(isKhmer ? 'ព្យាយាមម្តងទៀត' : 'Retry'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: primaryGreen,
+                foregroundColor: Colors.white,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final name = _profileData?['name'] ?? (isKhmer ? 'វេជ្ជបណ្ឌិត សុខា' : 'Dr. Sokha');
+    final role = _profileData?['role'] ?? 'veterinarian';
+    final profileImageUrl = _profileData?['profile_image_url'];
+    
+    // Get initials from name
+    String initials = 'DS';
+    if (name.isNotEmpty) {
+      final nameParts = name.split(' ');
+      if (nameParts.length >= 2) {
+        initials = '${nameParts[0][0]}${nameParts[1][0]}'.toUpperCase();
+      } else if (nameParts.length == 1 && nameParts[0].isNotEmpty) {
+        initials = nameParts[0][0].toUpperCase();
+      }
+    }
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
@@ -220,27 +335,41 @@ class _VetProfileScreenState extends State<VetProfileScreen> {
       ),
       child: Column(
         children: [
-          Container(
-            width: 80,
-            height: 80,
-            decoration: BoxDecoration(
-              color: primaryGreen,
-              borderRadius: BorderRadius.circular(40),
-            ),
-            child: Center(
-              child: Text(
-                'DS',
-                style: TextStyle(
-                  fontSize: 32,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
+          // Profile Image
+          if (profileImageUrl != null && profileImageUrl.isNotEmpty)
+            Container(
+              width: 80,
+              height: 80,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                image: DecorationImage(
+                  image: NetworkImage(profileImageUrl),
+                  fit: BoxFit.cover,
+                ),
+              ),
+            )
+          else
+            Container(
+              width: 80,
+              height: 80,
+              decoration: BoxDecoration(
+                color: primaryGreen,
+                borderRadius: BorderRadius.circular(40),
+              ),
+              child: Center(
+                child: Text(
+                  initials,
+                  style: TextStyle(
+                    fontSize: 32,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
                 ),
               ),
             ),
-          ),
           const SizedBox(height: 16),
           Text(
-            isKhmer ? 'វេជ្ជបណ្ឌិត សុខា' : 'Dr. Sokha',
+            name,
             style: const TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.bold,
@@ -250,8 +379,8 @@ class _VetProfileScreenState extends State<VetProfileScreen> {
           const SizedBox(height: 4),
           Text(
             isKhmer
-                ? 'Vet Clinic Cambodia • ពេទ្យសត្វឈានមុខ'
-                : 'Vet Clinic Cambodia • Lead Veterinarian',
+                ? 'វេជ្ជបណ្ឌិតសត្វ • Veterinarian'
+                : 'Veterinarian • វេជ្ជបណ្ឌិតសត្វ',
             style: const TextStyle(
               fontSize: 13,
               color: textMuted,
@@ -461,7 +590,7 @@ class _VetProfileScreenState extends State<VetProfileScreen> {
                       border: Border.all(color: const Color(0xFFE2E8F0)),
                     ),
                     child: Text(
-                      _vetShareLink,
+                      _vetShareLink ?? 'FG-VET-SOKHA-2024',
                       style: const TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,

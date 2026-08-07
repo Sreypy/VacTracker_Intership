@@ -1,5 +1,10 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:http/http.dart' as http;
+import 'package:frontend/services/reminder_service.dart';
+import 'package:frontend/services/storage_service.dart';
+import 'package:frontend/config/api_config.dart';
 
 class NotificationScreen extends StatefulWidget {
   final String languageCode; // 'en' or 'km'
@@ -56,84 +61,88 @@ class _NotificationScreenState extends State<NotificationScreen> {
     _loadNotifications();
   }
 
-  void _loadNotifications() {
-    // Static dummy data simulating backend responses
-    final List<Map<String, dynamic>> staticReminders = [
-      {
-        'title': 'Overdue Newcastle Vaccine',
-        'message': 'Newcastle Disease Vaccine - Batch A1',
-        'scheduled_date': DateTime.now()
-            .subtract(const Duration(days: 3))
-            .toIso8601String(),
-        'status': 'sent',
-        'vaccination': {
-          'flock': {'flock_id': 'flock_101', 'batch_name': 'Layer Batch A1'},
-          'vaccine': {'vaccine_id': 'vac_01', 'name': 'Newcastle Disease (ND)'},
-        },
-      },
-      {
-        'title': 'Gumboro Due Soon',
-        'message': 'Gumboro (IBD) Vaccine - Batch B2',
-        'scheduled_date': DateTime.now()
-            .add(const Duration(days: 2))
-            .toIso8601String(),
-        'status': 'pending',
-        'vaccination': {
-          'flock': {'flock_id': 'flock_102', 'batch_name': 'Broiler Batch B2'},
-          'vaccine': {'vaccine_id': 'vac_02', 'name': 'Gumboro (IBD)'},
-        },
-      },
-      {
-        'title': 'Fowl Pox Scheduled',
-        'message': 'Fowl Pox Vaccine - Batch C3',
-        'scheduled_date': DateTime.now()
-            .add(const Duration(days: 5))
-            .toIso8601String(),
-        'status': 'pending',
-        'vaccination': {
-          'flock': {'flock_id': 'flock_103', 'batch_name': 'Breeder Batch C3'},
-          'vaccine': {'vaccine_id': 'vac_03', 'name': 'Fowl Pox'},
-        },
-      },
-    ];
+  Future<void> _loadNotifications() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
 
+    try {
+      final reminderService = ReminderService();
+      final reminders = await reminderService.fetchMyReminders();
+      final notifications = _buildNotificationModels(reminders);
+
+      setState(() {
+        _notifications = notifications;
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _errorMessage = e.toString();
+        _isLoading = false;
+      });
+    }
+  }
+
+  List<Map<String, dynamic>> _buildNotificationModels(List<dynamic> reminders) {
     final notifications = <Map<String, dynamic>>[];
+    final now = DateTime.now();
 
-    for (var r in staticReminders) {
-      final scheduledDate = r['scheduled_date'] != null
-          ? DateTime.tryParse(r['scheduled_date'])
+    for (final reminder in reminders) {
+      final scheduledDate = reminder['scheduled_date'] != null
+          ? DateTime.tryParse(reminder['scheduled_date'].toString())
           : null;
 
-      if (scheduledDate != null) {
-        final now = DateTime.now();
-        final daysUntil = scheduledDate.difference(now).inDays;
-        final vaccination = r['vaccination'] ?? {};
-        final flock = vaccination['flock'] ?? {};
-        final vaccine = vaccination['vaccine'] ?? {};
+      if (scheduledDate == null) {
+        continue;
+      }
 
-        final flockName = flock['batch_name'] ?? 'Unknown Flock';
-        final vaccineName = vaccine['name'] ?? 'Unknown Vaccine';
-        final flockId = flock['flock_id'];
-        final status = r['status'] ?? 'pending';
+      final vaccination = reminder['vaccination'];
+      final vaccinationMap = vaccination is Map
+          ? vaccination
+          : <String, dynamic>{};
+      final flock = vaccinationMap['flock'];
+      final flockMap = flock is Map ? flock : <String, dynamic>{};
+      final vaccine = vaccinationMap['vaccine'];
+      final vaccineMap = vaccine is Map ? vaccine : <String, dynamic>{};
 
-        if (status == 'sent' || status == 'pending') {
-          notifications.add({
-            'type': daysUntil < 0 ? 'overdue' : 'upcoming',
-            'title': r['title'] ?? _getText('vaccination_due'),
-            'subtitle': r['message'] ?? '$vaccineName - $flockName',
-            'days': daysUntil < 0 ? daysUntil.abs() : daysUntil,
-            'due_date': scheduledDate,
-            'flock_id': flockId,
-            'vaccine_id': vaccine['vaccine_id'],
-            'vaccine_name': vaccineName,
-            'flock_name': flockName,
-            'icon': daysUntil < 0
-                ? Icons.warning_rounded
-                : Icons.schedule_rounded,
-            'color': daysUntil < 0 ? statusRed : statusYellow,
-            'bg_color': daysUntil < 0 ? statusRedBg : statusYellowBg,
-          });
-        }
+      final flockName =
+          flockMap['batch_name']?.toString() ??
+          reminder['flock_name']?.toString() ??
+          'Unknown Flock';
+      final vaccineName =
+          (widget.languageCode == 'km'
+              ? vaccineMap['name_km']?.toString()
+              : vaccineMap['name_en']?.toString()) ??
+          reminder['vaccine_name']?.toString() ??
+          'Unknown Vaccine';
+      final flockId = flockMap['flock_id'] ?? reminder['flock_id'];
+      final status = reminder['status']?.toString() ?? 'pending';
+      final daysUntil = scheduledDate.difference(now).inDays;
+
+      // Only show notifications for overdue vaccines or vaccines due within 7 days
+      if ((status == 'sent' || status == 'pending') && (daysUntil < 0 || daysUntil <= 7)) {
+        notifications.add({
+          'type': daysUntil < 0 ? 'overdue' : 'upcoming',
+          'title':
+              reminder['title']?.toString() ??
+              (daysUntil < 0
+                  ? _getText('vaccination_overdue')
+                  : _getText('vaccination_due')),
+          'subtitle':
+              reminder['message']?.toString() ?? '$vaccineName - $flockName',
+          'days': daysUntil < 0 ? daysUntil.abs() : daysUntil,
+          'due_date': scheduledDate,
+          'flock_id': flockId,
+          'vaccine_id': vaccineMap['vaccine_id'] ?? reminder['vaccine_id'],
+          'vaccine_name': vaccineName,
+          'flock_name': flockName,
+          'icon': daysUntil < 0
+              ? Icons.warning_rounded
+              : Icons.schedule_rounded,
+          'color': daysUntil < 0 ? statusRed : statusYellow,
+          'bg_color': daysUntil < 0 ? statusRedBg : statusYellowBg,
+        });
       }
     }
 
@@ -143,10 +152,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
       return (a['days'] as int).compareTo(b['days'] as int);
     });
 
-    setState(() {
-      _notifications = notifications;
-      _isLoading = false;
-    });
+    return notifications;
   }
 
   String _getText(String key) {
@@ -157,6 +163,74 @@ class _NotificationScreenState extends State<NotificationScreen> {
   String _formatDate(DateTime? date) {
     if (date == null) return '';
     return '${date.day}/${date.month}/${date.year}';
+  }
+
+  Future<void> _markVaccinationAsTaken(int? vaccinationId) async {
+    if (vaccinationId == null) return;
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final token = await StorageService.getToken();
+      if (token == null || token.isEmpty) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Please log in again.'),
+            backgroundColor: Color(0xFFA80000),
+          ),
+        );
+        return;
+      }
+
+      final url = Uri.parse('${ApiConfig.baseUrl}/vaccinations/$vaccinationId');
+      final response = await http.patch(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({
+          'status': 'completed',
+        }),
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Vaccination marked as taken!'),
+            backgroundColor: Color(0xFF034418),
+          ),
+        );
+        // Reload notifications to update the list
+        await _loadNotifications();
+      } else {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Failed to update vaccination status.'),
+            backgroundColor: Color(0xFFA80000),
+          ),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Error updating vaccination status.'),
+          backgroundColor: Color(0xFFA80000),
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
   }
 
   @override
@@ -323,6 +397,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
     final vaccineName =
         notification['vaccine_name'] as String? ?? 'Unknown Vaccine';
     final flockName = notification['flock_name'] as String? ?? 'Unknown Flock';
+    final vaccinationId = notification['vaccine_id'];
 
     return InkWell(
       onTap: () {
@@ -379,9 +454,10 @@ class _NotificationScreenState extends State<NotificationScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            isOverdue
-                                ? 'Take Action Now'
-                                : 'Upcoming Vaccination',
+                            notification['title']?.toString() ??
+                                (isOverdue
+                                    ? 'Take Action Now'
+                                    : 'Upcoming Vaccination'),
                             style: TextStyle(
                               color: notification['color'] as Color,
                               fontSize: 15,
@@ -390,9 +466,10 @@ class _NotificationScreenState extends State<NotificationScreen> {
                           ),
                           const SizedBox(height: 2),
                           Text(
-                            isOverdue
-                                ? 'Vaccination is overdue'
-                                : 'Vaccination due soon',
+                            notification['subtitle']?.toString() ??
+                                (isOverdue
+                                    ? 'Vaccination is overdue'
+                                    : 'Vaccination due soon'),
                             style: const TextStyle(
                               color: textGrey,
                               fontSize: 12,
@@ -592,6 +669,31 @@ class _NotificationScreenState extends State<NotificationScreen> {
                     ],
                   ),
                 ),
+                if (vaccinationId != null) ...[
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: () => _markVaccinationAsTaken(vaccinationId),
+                      icon: const Icon(Icons.check_circle_outline, size: 18),
+                      label: const Text(
+                        'Mark as Taken',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: brandDarkGreen,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ],
             ),
           ),

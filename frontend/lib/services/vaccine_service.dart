@@ -17,6 +17,24 @@ class VaccineService {
     }
   }
 
+  Future<Vaccine> createVaccine(Map<String, dynamic> payload) async {
+    final response = await http.post(
+      Uri.parse('${ApiConfig.baseUrl}/vaccines'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      body: jsonEncode(payload),
+    );
+
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      final data = jsonDecode(response.body);
+      return Vaccine.fromJson(data);
+    } else {
+      throw Exception('Failed to create vaccine');
+    }
+  }
+
   Future<Vaccine> fetchVaccineById(int id) async {
     final response = await http.get(
       Uri.parse('${ApiConfig.baseUrl}/vaccines/$id'),

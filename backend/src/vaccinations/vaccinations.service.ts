@@ -31,9 +31,7 @@ export class VaccinationsService {
     @InjectRepository(User)
     private userRepository: Repository<User>,
 
-    @InjectRepository(Reminder)
     private readonly remindersService: RemindersService,
-    
   ) {}
 
   // ===========================

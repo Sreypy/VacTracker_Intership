@@ -3,12 +3,14 @@ import {
   PrimaryGeneratedColumn,
   Column,
   ManyToOne,
+  OneToMany,
   JoinColumn,
   CreateDateColumn,
   UpdateDateColumn,
 } from 'typeorm';
 
 import { User } from '../../users/entities/user.entity';
+import { SickReport } from '../../sick-reports/entities/sick-report.entity';
 
 
 @Entity('flocks')
@@ -73,4 +75,7 @@ export class Flock {
 
   @UpdateDateColumn()
   updated_at!: Date;
+
+  @OneToMany(() => SickReport, (sickReport) => sickReport.flock)
+  sickReports!: SickReport[];
 }

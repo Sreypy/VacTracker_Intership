@@ -25,4 +25,8 @@ export class CreateUserDto {
   @IsOptional()
   @IsEnum(Language)
   language_pref?: Language;
+
+  @IsOptional()
+  @IsString()
+  profile_image_url?: string;
 }

@@ -7,6 +7,8 @@ import {
   OneToMany,
 } from 'typeorm';
 import { Flock } from '../../flocks/entities/flock.entity';
+import { SickReport } from '../../sick-reports/entities/sick-report.entity';
+import { VetFarmerConnection } from './vet-farmer-connection.entity';
 
 export enum UserRole {
   FARMER = 'farmer',
@@ -59,6 +61,17 @@ export class User {
   })
   language_pref!: Language;
 
+  @Column({
+    nullable: true,
+  })
+  profile_image_url!: string;
+
+  @Column({
+    nullable: true,
+    unique: true,
+  })
+  share_code!: string;
+
   @CreateDateColumn()
   created_at!: Date;
 
@@ -67,4 +80,13 @@ export class User {
 
   @OneToMany(() => Flock, (flock) => flock.farmer)
   flocks!: Flock[];
+
+  @OneToMany(() => SickReport, (sickReport) => sickReport.reporter)
+  sickReports!: SickReport[];
+
+  @OneToMany(() => VetFarmerConnection, (connection) => connection.vet)
+  vetConnections!: VetFarmerConnection[];
+
+  @OneToMany(() => VetFarmerConnection, (connection) => connection.farmer)
+  farmerConnections!: VetFarmerConnection[];
 }

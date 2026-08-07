@@ -9,7 +9,9 @@ import { FlocksModule } from './flocks/flocks.module';
 import { VaccinesModule } from './vaccines/vaccines.module';
 import { VaccinationsModule } from './vaccinations/vaccinations.module';
 import { RemindersModule } from './reminders/reminders.module';
+import { VetModule } from './vet/vet.module';
 import { ScheduleModule } from '@nestjs/schedule';
+import { SickReportsModule } from './sick-reports/sick-reports.module';
 
 @Module({
   imports: [
@@ -51,6 +53,10 @@ import { ScheduleModule } from '@nestjs/schedule';
     VaccinationsModule,
 
     RemindersModule,
+
+    VetModule,
+
+    SickReportsModule,
   ],
 })
 export class AppModule {}

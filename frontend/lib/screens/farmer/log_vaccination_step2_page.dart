@@ -35,13 +35,13 @@ class VaccineModel {
     return VaccineModel(
       id: vaccine.id.toString(),
 
-      nameEn: vaccine.nameEn,
-      nameKm: vaccine.nameKm,
+      nameEn: vaccine.nameEn ?? '',
+      nameKm: vaccine.nameKm ?? '',
 
-      diseaseEn: vaccine.diseaseEn,
-      diseaseKm: vaccine.diseaseKm,
+      diseaseEn: vaccine.diseaseEn ?? '',
+      diseaseKm: vaccine.diseaseKm ?? '',
 
-      intervalDays: vaccine.intervalDays,
+      intervalDays: vaccine.intervalDays ?? 0,
 
       notesEn: vaccine.notesEn,
       notesKm: vaccine.notesKm,
@@ -90,20 +90,19 @@ class _LogVaccinationStep2PageState extends State<LogVaccinationStep2Page> {
   // State Management
   List<VaccineModel> _allVaccines = [];
   List<VaccineModel> _filteredVaccines = [];
-  String? _selectedVaccineId;
-  bool _isLoadingVaccines = true;
+  String? _selectedTodayVaccineId;
+  String? _selectedNextVaccineId;
+  bool _createReminder = true;
+  bool _isSaving = false;
 
   // Date State
-  String _administrationDate = '22/07/2026';
-  bool _isLoadingDate = true;
-
+  DateTime _administrationDate = DateTime.now();
+  DateTime _nextDate = DateTime.now();
   final VaccineService _vaccineService = VaccineService();
 
   // Attachment Image
   File? _selectedImage;
   final ImagePicker _picker = ImagePicker();
-
-  final TextEditingController _searchController = TextEditingController();
 
   // Color Palette Matching Design System
   static const Color backgroundLight = Color(0xFFF8FAFC);
@@ -111,11 +110,10 @@ class _LogVaccinationStep2PageState extends State<LogVaccinationStep2Page> {
   static const Color textDarkBlue = Color(0xFF0A1C33);
   static const Color textGrey = Color(0xFF5A6B82);
   static const Color textGreyLight = Color(0xFFE2E8F0);
-  static const Color buttonGreyBg = Color(0xFF769B82);
 
   // Dictionary for Khmer & English Translations
   final Map<String, Map<String, String>> _localizedValues = const {
-    'km': {
+      'km': {
       'step_badge': 'ជំហានទី ២ នៃ ៣',
       'page_title': 'ជ្រើសរើសវ៉ាក់សាំង',
       'search_hint': 'ស្វែងរកវ៉ាក់សាំង...',
@@ -123,11 +121,33 @@ class _LogVaccinationStep2PageState extends State<LogVaccinationStep2Page> {
       'lbl_prevention': 'ការពារ៖',
       'lbl_repeat': 'ចាក់ឡើងវិញ៖',
       'lbl_admin_date': 'ថ្ងៃផ្តល់ឱ្យ',
-      'lbl_attach_photo': 'បញ្ចូលរូបភាពការចាក់វ៉ាក់សាំង',
-      'btn_add_photo': '+ បន្ថែមរូបថត',
+      'lbl_attach_photo': 'រូបភាព (ជាជម្រើស)',
+      'btn_add_photo': 'បញ្ចូលរូបភាព',
+      'btn_custom_vac': 'បន្ថែមវ៉ាក់សាំងផ្ទាល់ខ្លួន',
       'btn_back': 'ត្រឡប់ក្រោយ',
-      'btn_next': 'បន្ទាប់',
+      'btn_next': 'ជំហានបន្ទាប់',
+      'section_today': 'ការចាក់វ៉ាក់សាំងថ្ងៃនេះ',
+      'section_next': 'ការចាក់វ៉ាក់សាំងបន្ទាប់',
+      'field_flock': 'ហ្វូង',
+      'field_today_vaccine': 'វ៉ាក់សាំងដែលចាក់ថ្ងៃនេះ',
+      'field_next_vaccine': 'វ៉ាក់សាំងបន្ទាប់',
+      'field_next_date': 'កាលបរិច្ឆេទបន្ទាប់',
+      'field_reminder': 'បង្កើតការរំលឹក',
+      'upload_photo': 'បញ្ចូល',
       'err_select_vac': 'សូមជ្រើសរើសវ៉ាក់សាំងមួយជាមុនសិន',
+      'custom_title': 'បន្ថែមវ៉ាក់សាំងផ្ទាល់ខ្លួន',
+      'custom_name_en': 'ឈ្មោះវ៉ាក់សាំង (EN)',
+      'custom_name_km': 'ឈ្មោះវ៉ាក់សាំង (KM)',
+      'custom_disease_en': 'ជំងឺ (EN)',
+      'custom_disease_km': 'ជំងឺ (KM)',
+      'custom_interval': 'ចន្លោះពេលចាក់ (ថ្ងៃ)',
+      'custom_notes': 'ចំណាំ (ជាជម្រើស)',
+      'cancel': 'បោះបង់',
+      'save': 'រក្សាទុក',
+      'next': 'បន្ទាប់',
+      'custom_required': 'សូមបំពេញព័ត៌មានចាំបាច់',
+      'custom_success': 'វ៉ាក់សាំងផ្ទាល់ខ្លួនត្រូវបានបង្កើតដោយជោគជ័យ',
+      'custom_error': 'មិនអាចបង្កើតវ៉ាក់សាំងផ្ទាល់ខ្លួនបានទេ',
     },
     'en': {
       'step_badge': 'STEP 2 OF 3',
@@ -137,11 +157,33 @@ class _LogVaccinationStep2PageState extends State<LogVaccinationStep2Page> {
       'lbl_prevention': 'Prevents:',
       'lbl_repeat': 'Repeat Every:',
       'lbl_admin_date': 'Administered Date',
-      'lbl_attach_photo': 'Attach Vaccination Photo',
-      'btn_add_photo': '+ Add Photo',
+      'lbl_attach_photo': 'Photo (Optional)',
+      'btn_add_photo': 'Upload Photo',
+      'btn_custom_vac': 'Add custom vaccine',
       'btn_back': 'Back',
-      'btn_next': 'Next',
+      'btn_next': 'Next Step',
+      'section_today': 'Today\'s Vaccination',
+      'section_next': 'Next Vaccination',
+      'field_flock': 'Flock',
+      'field_today_vaccine': 'Vaccine Given Today',
+      'field_next_vaccine': 'Next Vaccine',
+      'field_next_date': 'Next Date',
+      'field_reminder': 'Create Reminder',
+      'upload_photo': 'Upload',
       'err_select_vac': 'Please select a vaccine first',
+      'custom_title': 'Add Custom Vaccine',
+      'custom_name_en': 'Vaccine name (EN)',
+      'custom_name_km': 'Vaccine name (KM)',
+      'custom_disease_en': 'Disease (EN)',
+      'custom_disease_km': 'Disease (KM)',
+      'custom_interval': 'Repeat interval (days)',
+      'custom_notes': 'Notes (optional)',
+      'cancel': 'Cancel',
+      'save': 'Save',
+      'next': 'Next',
+      'custom_required': 'Please fill in the required fields',
+      'custom_success': 'Custom vaccine created successfully',
+      'custom_error': 'Could not create custom vaccine',
     },
   };
 
@@ -168,30 +210,181 @@ class _LogVaccinationStep2PageState extends State<LogVaccinationStep2Page> {
         _filteredVaccines = fetched;
 
         if (fetched.isNotEmpty) {
-          _selectedVaccineId = fetched.first.id;
+          _selectedTodayVaccineId = fetched.first.id;
+          _selectedNextVaccineId = fetched.first.id;
+          _nextDate = DateTime.now().add(
+            Duration(
+              days: fetched.first.intervalDays > 0
+                  ? fetched.first.intervalDays
+                  : 7,
+            ),
+          );
         }
-
-        _isLoadingVaccines = false;
       });
     } catch (e) {
-      print("Load vaccine error: $e");
-
-      setState(() {
-        _isLoadingVaccines = false;
-      });
+      if (mounted) {
+        setState(() {});
+      }
     }
   }
 
   /// 2. Fetch Administration Date from Backend
   Future<void> _fetchServerDate() async {
-    final now = DateTime.now();
-    final formatted =
-        "${now.day.toString().padLeft(2, '0')}/${now.month.toString().padLeft(2, '0')}/${now.year}";
     if (mounted) {
       setState(() {
-        _administrationDate = formatted;
-        _isLoadingDate = false;
+        _administrationDate = DateTime.now();
+        _nextDate = _administrationDate.add(const Duration(days: 7));
       });
+    }
+  }
+
+  Future<void> _showCustomVaccineDialog() async {
+    final nameEnController = TextEditingController();
+    final nameKmController = TextEditingController();
+    final diseaseEnController = TextEditingController();
+    final diseaseKmController = TextEditingController();
+    final intervalController = TextEditingController(text: '0');
+    final notesEnController = TextEditingController();
+    final notesKmController = TextEditingController();
+
+    final result = await showDialog<Map<String, dynamic>>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: Text(_getText('custom_title')),
+          content: SingleChildScrollView(
+            child: SizedBox(
+              width: 320,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: nameEnController,
+                    decoration: InputDecoration(
+                      labelText: _getText('custom_name_en'),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  TextField(
+                    controller: nameKmController,
+                    decoration: InputDecoration(
+                      labelText: _getText('custom_name_km'),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  TextField(
+                    controller: diseaseEnController,
+                    decoration: InputDecoration(
+                      labelText: _getText('custom_disease_en'),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  TextField(
+                    controller: diseaseKmController,
+                    decoration: InputDecoration(
+                      labelText: _getText('custom_disease_km'),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  TextField(
+                    controller: intervalController,
+                    keyboardType: TextInputType.number,
+                    decoration: InputDecoration(
+                      labelText: _getText('custom_interval'),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  TextField(
+                    controller: notesEnController,
+                    decoration: InputDecoration(
+                      labelText: _getText('custom_notes'),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  TextField(
+                    controller: notesKmController,
+                    decoration: InputDecoration(
+                      labelText: _getText('custom_notes'),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: Text(_getText('cancel')),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                final nameEn = nameEnController.text.trim();
+                final nameKm = nameKmController.text.trim();
+                final diseaseEn = diseaseEnController.text.trim();
+                final diseaseKm = diseaseKmController.text.trim();
+                final intervalValue = int.tryParse(
+                  intervalController.text.trim(),
+                );
+
+                if (nameEn.isEmpty ||
+                    nameKm.isEmpty ||
+                    diseaseEn.isEmpty ||
+                    diseaseKm.isEmpty ||
+                    intervalValue == null) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text(_getText('custom_required'))),
+                  );
+                  return;
+                }
+
+                Navigator.pop(dialogContext, {
+                  'name_en': nameEn,
+                  'name_km': nameKm,
+                  'disease_en': diseaseEn,
+                  'disease_km': diseaseKm,
+                  'interval_days': intervalValue,
+                  'notes_en': notesEnController.text.trim().isEmpty
+                      ? null
+                      : notesEnController.text.trim(),
+                  'notes_km': notesKmController.text.trim().isEmpty
+                      ? null
+                      : notesKmController.text.trim(),
+                });
+              },
+              child: Text(_getText('save')),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (result == null) return;
+
+    try {
+      final createdVaccine = await _vaccineService.createVaccine(result);
+      final customModel = VaccineModel.fromVaccine(createdVaccine);
+
+      setState(() {
+        _allVaccines = [..._allVaccines, customModel];
+        _filteredVaccines = [..._filteredVaccines, customModel];
+        _selectedTodayVaccineId = customModel.id;
+        _selectedNextVaccineId = customModel.id;
+        _nextDate = DateTime.now().add(
+          Duration(
+            days: customModel.intervalDays > 0 ? customModel.intervalDays : 7,
+          ),
+        );
+      });
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(_getText('custom_success'))));
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(_getText('custom_error'))));
     }
   }
 
@@ -205,28 +398,104 @@ class _LogVaccinationStep2PageState extends State<LogVaccinationStep2Page> {
     }
   }
 
-  void _filterVaccines(String query) {
-    setState(() {
-      if (query.isEmpty) {
-        _filteredVaccines = _allVaccines;
-      } else {
-        _filteredVaccines = _allVaccines.where((v) {
-          final search = query.toLowerCase();
+  Future<void> _submitVaccinationRecord() async {
+    if (_selectedTodayVaccineId == null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(_getText('err_select_vac'))));
+      return;
+    }
 
-          return v.nameEn.toLowerCase().contains(search) ||
-              v.nameKm.contains(query) ||
-              v.diseaseEn.toLowerCase().contains(search) ||
-              v.diseaseKm.contains(query) ||
-              (v.notesEn ?? '').toLowerCase().contains(search) ||
-              (v.notesKm ?? '').contains(query);
-        }).toList();
+    setState(() => _isSaving = true);
+
+    try {
+      final todayVaccine = _allVaccines.firstWhere(
+        (vaccine) => vaccine.id == _selectedTodayVaccineId,
+      );
+      final nextVaccine = _allVaccines.firstWhere(
+        (vaccine) =>
+            vaccine.id == (_selectedNextVaccineId ?? _selectedTodayVaccineId),
+      );
+
+      final summaryData = {
+        'flockId': widget.flockId,
+        'flockName': widget.selectedFlockName,
+        'vaccineId': todayVaccine.id,
+        'todayVaccineName': _currentLang == 'km'
+            ? todayVaccine.nameKm
+            : todayVaccine.nameEn,
+        'nextVaccineName': _currentLang == 'km'
+            ? nextVaccine.nameKm
+            : nextVaccine.nameEn,
+        'administrationDate': _administrationDate,
+        'nextDate': _nextDate,
+        'createReminder': _createReminder,
+        'photoPath': _selectedImage?.path,
+        'languageCode': _currentLang,
+      };
+
+      if (!mounted) return;
+      context.push(
+        '/log-vaccination-step3/${todayVaccine.id}/$_currentLang',
+        extra: summaryData,
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(_getText('custom_error'))));
+    } finally {
+      if (mounted) {
+        setState(() => _isSaving = false);
       }
-    });
+    }
+  }
+
+  String _formatDate(DateTime date) {
+    final months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
+    final kmMonths = [
+      'មករា',
+      'កុម្ភៈ',
+      'មីនា',
+      'មេសា',
+      'ឧសភា',
+      'មិថុនា',
+      'កក្កដា',
+      'សីហា',
+      'កញ្ញា',
+      'តុលា',
+      'វិច្ឆិកា',
+      'ធ្នូ',
+    ];
+
+    if (_currentLang == 'km') {
+      return '${date.day} ${kmMonths[date.month - 1]} ${date.year}';
+    }
+
+    return '${date.day} ${months[date.month - 1]} ${date.year}';
   }
 
   String _getText(String key) {
-    return _localizedValues[_currentLang]?[key] ??
-        _localizedValues['km']![key]!;
+    final value = _localizedValues[_currentLang]?[key] ??
+        _localizedValues['km']?[key];
+    if (value != null) {
+      return value;
+    }
+    // Fallback to key name if translation not found
+    return key;
   }
 
   @override
@@ -276,258 +545,335 @@ class _LogVaccinationStep2PageState extends State<LogVaccinationStep2Page> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Search Input Box
-              TextField(
-                controller: _searchController,
-                onChanged: _filterVaccines,
-                style: const TextStyle(fontSize: 14),
-                decoration: InputDecoration(
-                  hintText: _getText('search_hint'),
-                  hintStyle: const TextStyle(color: textGrey, fontSize: 14),
-                  prefixIcon: const Icon(
-                    Icons.search,
-                    color: textGrey,
-                    size: 22,
-                  ),
-                  filled: true,
-                  fillColor: const Color(0xFFF1F5F9),
-                  contentPadding: const EdgeInsets.symmetric(vertical: 12),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide.none,
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 14),
-
-              // Description Text
-              Text.rich(
-                TextSpan(
-                  text: '${_getText('subtitle_prefix')}\n',
-                  style: const TextStyle(
-                    color: textGrey,
-                    fontSize: 13,
-                    height: 1.4,
-                  ),
-                  children: [
-                    TextSpan(
-                      text: widget.selectedFlockName,
-                      style: const TextStyle(
-                        color: brandDarkGreen,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 16),
-
-              // List of Vaccines
-              _isLoadingVaccines
-                  ? const Padding(
-                      padding: EdgeInsets.all(24),
-                      child: Center(
-                        child: CircularProgressIndicator(color: brandDarkGreen),
-                      ),
-                    )
-                  : ListView.separated(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      itemCount: _filteredVaccines.length,
-                      separatorBuilder: (context, index) =>
-                          const SizedBox(height: 12),
-                      itemBuilder: (context, index) {
-                        final vaccine = _filteredVaccines[index];
-                        final isSelected = _selectedVaccineId == vaccine.id;
-                        return _buildVaccineCard(vaccine, isSelected);
-                      },
-                    ),
-
-              const SizedBox(height: 20),
-
-              // Administration Date Field Box
               Text(
-                _getText('lbl_admin_date'),
+                _getText('section_today'),
                 style: const TextStyle(
-                  color: textDarkBlue,
-                  fontSize: 14,
+                  color: brandDarkGreen,
+                  fontSize: 18,
                   fontWeight: FontWeight.bold,
                 ),
               ),
-              const SizedBox(height: 8),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 14,
+              const SizedBox(height: 12),
+              Card(
+                elevation: 0,
+                color: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  side: BorderSide(color: textGreyLight.withValues(alpha: 0.7)),
                 ),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF1F5F9),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(
-                      Icons.calendar_today_outlined,
-                      color: textGrey,
-                      size: 20,
-                    ),
-                    const SizedBox(width: 12),
-                    _isLoadingDate
-                        ? const SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: brandDarkGreen,
-                            ),
-                          )
-                        : Text(
-                            _administrationDate,
-                            style: const TextStyle(
-                              color: textDarkBlue,
-                              fontSize: 15,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 20),
-
-              // Photo Attachment Section
-              Text(
-                _getText('lbl_attach_photo'),
-                style: const TextStyle(
-                  color: textDarkBlue,
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 8),
-              GestureDetector(
-                onTap: _pickImage,
-                child: Container(
-                  width: double.infinity,
-                  height: 110,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: textGreyLight, width: 1.5),
-                  ),
-                  child: _selectedImage != null
-                      ? ClipRRect(
-                          borderRadius: BorderRadius.circular(10),
-                          child: Image.file(_selectedImage!, fit: BoxFit.cover),
-                        )
-                      : Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Icon(
-                              Icons.camera_alt_outlined,
-                              color: textGrey,
-                              size: 28,
-                            ),
-                            const SizedBox(height: 6),
-                            Text(
-                              _getText('btn_add_photo'),
-                              style: const TextStyle(
-                                color: textGrey,
-                                fontSize: 13,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildInfoRow(
+                        _getText('field_flock'),
+                        widget.selectedFlockName,
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        _getText('field_today_vaccine'),
+                        style: const TextStyle(
+                          color: textGrey,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
                         ),
-                ),
-              ),
-
-              const SizedBox(height: 28),
-
-              // Bottom Action Buttons Row
-              Row(
-                children: [
-                  // Back Button
-                  Expanded(
-                    child: SizedBox(
-                      height: 50,
-                      child: OutlinedButton(
-                        onPressed: () => context.pop(),
-                        style: OutlinedButton.styleFrom(
-                          side: const BorderSide(
-                            color: brandDarkGreen,
-                            width: 1.5,
-                          ),
-                          shape: RoundedRectangleBorder(
+                      ),
+                      const SizedBox(height: 8),
+                      DropdownButtonFormField<String>(
+                        initialValue: _selectedTodayVaccineId,
+                        decoration: InputDecoration(
+                          filled: true,
+                          fillColor: const Color(0xFFF8FAFC),
+                          border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide.none,
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 10,
                           ),
                         ),
-                        child: Text(
-                          _getText('btn_back'),
-                          style: const TextStyle(
-                            color: brandDarkGreen,
-                            fontSize: 15,
-                            fontWeight: FontWeight.bold,
-                          ),
+                        items: [
+                          if (_allVaccines.isNotEmpty)
+                            ..._allVaccines.map((vaccine) {
+                              final title = _currentLang == 'km'
+                                  ? vaccine.nameKm
+                                  : vaccine.nameEn;
+                              return DropdownMenuItem(
+                                value: vaccine.id,
+                                child: Text(title),
+                              );
+                            }),
+                        ],
+                        onChanged: (value) {
+                          setState(() {
+                            _selectedTodayVaccineId = value;
+                            _selectedNextVaccineId =
+                                value ?? _selectedNextVaccineId;
+                          });
+                        },
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        _getText('lbl_admin_date'),
+                        style: const TextStyle(
+                          color: textGrey,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
-                    ),
-                  ),
-
-                  const SizedBox(width: 14),
-
-                  // Next Button
-                  Expanded(
-                    child: SizedBox(
-                      height: 50,
-                      child: ElevatedButton(
-                        onPressed: () {
-                          if (_selectedVaccineId == null) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(_getText('err_select_vac')),
-                              ),
-                            );
-                            return;
-                          }
-
-                          // Navigate to Step 3 (pass batchTitle and flockId as query params)
-                          final url =
-                              '/log-vaccination-step3/$_selectedVaccineId/$_currentLang?flockId=${widget.flockId}&batchTitle=${widget.selectedFlockName}';
-                          debugPrint('Navigating to: $url');
-                          try {
-                            context.push(url);
-                          } catch (e, st) {
-                            debugPrint('Navigation error: $e\n$st');
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('Navigation failed: $e')),
-                            );
+                      const SizedBox(height: 8),
+                      InkWell(
+                        onTap: () async {
+                          final picked = await showDatePicker(
+                            context: context,
+                            initialDate: _administrationDate,
+                            firstDate: DateTime(2020),
+                            lastDate: DateTime(2035),
+                          );
+                          if (picked != null) {
+                            setState(() => _administrationDate = picked);
                           }
                         },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: buttonGreyBg,
-                          foregroundColor: Colors.white,
-                          elevation: 0,
+                        child: Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 14,
+                          ),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF8FAFC),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(
+                                Icons.calendar_today_outlined,
+                                color: textGrey,
+                                size: 18,
+                              ),
+                              const SizedBox(width: 10),
+                              Text(
+                                _formatDate(_administrationDate),
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        _getText('lbl_attach_photo'),
+                        style: const TextStyle(
+                          color: textGrey,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      OutlinedButton.icon(
+                        onPressed: _pickImage,
+                        icon: const Icon(Icons.upload_file),
+                        label: Text(
+                          _selectedImage == null
+                              ? _getText('upload_photo')
+                              : 'Photo added',
+                        ),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: brandDarkGreen,
+                          side: const BorderSide(color: brandDarkGreen),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
                         ),
-                        child: Text(
-                          _getText('btn_next'),
-                          style: const TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.bold,
-                          ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                _getText('section_next'),
+                style: const TextStyle(
+                  color: brandDarkGreen,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Card(
+                elevation: 0,
+                color: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  side: BorderSide(color: textGreyLight.withValues(alpha: 0.7)),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        _getText('field_next_vaccine'),
+                        style: const TextStyle(
+                          color: textGrey,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
+                      const SizedBox(height: 8),
+                      DropdownButtonFormField<String>(
+                        initialValue: _selectedNextVaccineId,
+                        decoration: InputDecoration(
+                          filled: true,
+                          fillColor: const Color(0xFFF8FAFC),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide.none,
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 10,
+                          ),
+                        ),
+                        items: [
+                          if (_allVaccines.isNotEmpty)
+                            ..._allVaccines.map((vaccine) {
+                              final title = _currentLang == 'km'
+                                  ? vaccine.nameKm
+                                  : vaccine.nameEn;
+                              return DropdownMenuItem(
+                                value: vaccine.id,
+                                child: Text(title),
+                              );
+                            }),
+                        ],
+                        onChanged: (value) {
+                          setState(() {
+                            _selectedNextVaccineId = value;
+                            final selectedVaccine = _allVaccines.firstWhere(
+                              (item) => item.id == value,
+                              orElse: () => _allVaccines.isNotEmpty
+                                  ? _allVaccines.first
+                                  : VaccineModel(
+                                      id: '',
+                                      nameEn: '',
+                                      nameKm: '',
+                                      diseaseEn: '',
+                                      diseaseKm: '',
+                                      intervalDays: 7,
+                                    ),
+                            );
+                            _nextDate = _administrationDate.add(
+                              Duration(
+                                days: selectedVaccine.intervalDays > 0
+                                    ? selectedVaccine.intervalDays
+                                    : 7,
+                              ),
+                            );
+                          });
+                        },
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        _getText('field_next_date'),
+                        style: const TextStyle(
+                          color: textGrey,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 14,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF8FAFC),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          _formatDate(_nextDate),
+                          style: const TextStyle(fontWeight: FontWeight.w600),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Checkbox(
+                            value: _createReminder,
+                            activeColor: brandDarkGreen,
+                            onChanged: (value) => setState(
+                              () => _createReminder = value ?? false,
+                            ),
+                          ),
+                          Expanded(
+                            child: Text(
+                              _getText('field_reminder'),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      SizedBox(
+                        width: double.infinity,
+                        child: OutlinedButton.icon(
+                          onPressed: _showCustomVaccineDialog,
+                          style: OutlinedButton.styleFrom(
+                            side: const BorderSide(
+                              color: brandDarkGreen,
+                              width: 1.2,
+                            ),
+                            foregroundColor: brandDarkGreen,
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          icon: const Icon(Icons.add_circle_outline),
+                          label: Text(_getText('btn_custom_vac')),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                height: 52,
+                child: ElevatedButton(
+                  onPressed: _isSaving ? null : _submitVaccinationRecord,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: brandDarkGreen,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
                     ),
                   ),
-                ],
+                  child: _isSaving
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : Text(
+                          _getText('btn_next'),
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                ),
               ),
-
               const SizedBox(height: 16),
             ],
           ),
@@ -537,140 +883,32 @@ class _LogVaccinationStep2PageState extends State<LogVaccinationStep2Page> {
     );
   }
 
-  // Individual Vaccine Item Card Widget
-  Widget _buildVaccineCard(VaccineModel vaccine, bool isSelected) {
-    final title = _currentLang == 'km' ? vaccine.nameKm : vaccine.nameEn;
-
-    final subtitle = _currentLang == 'km'
-        ? vaccine.diseaseKm
-        : vaccine.diseaseEn;
-
-    final note = _currentLang == 'km' ? vaccine.notesKm : vaccine.notesEn;
-
-    final interval = vaccine.intervalDays == 0
-        ? 'None'
-        : '${vaccine.intervalDays} days';
-
-    return GestureDetector(
-      onTap: () {
-        setState(() {
-          _selectedVaccineId = vaccine.id;
-        });
-      },
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: isSelected ? brandDarkGreen : textGreyLight,
-            width: isSelected ? 2 : 1,
+  Widget _buildInfoRow(String label, String value) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          width: 90,
+          child: Text(
+            label,
+            style: const TextStyle(
+              color: textGrey,
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: brandDarkGreen,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: const Icon(
-                    Icons.vaccines,
-                    color: Colors.white,
-                    size: 22,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        title,
-                        style: const TextStyle(
-                          color: textDarkBlue,
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      if (subtitle.isNotEmpty) ...[
-                        const SizedBox(height: 2),
-                        Text(
-                          subtitle,
-                          style: const TextStyle(color: textGrey, fontSize: 12),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-              ],
+        Expanded(
+          child: Text(
+            value,
+            style: const TextStyle(
+              color: textDarkBlue,
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
             ),
-
-            const SizedBox(height: 12),
-            const Divider(height: 1, color: textGreyLight),
-            const SizedBox(height: 12),
-
-            Row(
-              children: [
-                // Prevention Info Column
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        _getText('lbl_prevention'),
-                        style: const TextStyle(color: textGrey, fontSize: 11),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        subtitle,
-                        style: const TextStyle(
-                          color: textDarkBlue,
-                          fontSize: 13,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
-                // Repeat Schedule Column
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        _getText('lbl_repeat'),
-                        style: const TextStyle(color: textGrey, fontSize: 11),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        interval,
-                        style: const TextStyle(
-                          color: textDarkBlue,
-                          fontSize: 13,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      if (note != null && note.isNotEmpty) ...[
-                        const SizedBox(height: 6),
-                        Text(
-                          note,
-                          style: const TextStyle(color: textGrey, fontSize: 11),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ],
+          ),
         ),
-      ),
+      ],
     );
   }
 

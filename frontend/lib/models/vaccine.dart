@@ -21,12 +21,12 @@ class Vaccine {
 
   factory Vaccine.fromJson(Map<String, dynamic> json) {
     return Vaccine(
-      id: json['vaccine_id'],
-      nameEn: json['name_en'],
-      nameKm: json['name_km'],
-      diseaseEn: json['disease_en'],
-      diseaseKm: json['disease_km'],
-      intervalDays: json['interval_days'],
+      id: json['vaccine_id'] ?? 0,
+      nameEn: json['name_en'] ?? '',
+      nameKm: json['name_km'] ?? '',
+      diseaseEn: json['disease_en'] ?? '',
+      diseaseKm: json['disease_km'] ?? '',
+      intervalDays: json['interval_days'] ?? 0,
       notesEn: json['notes_en'],
       notesKm: json['notes_km'],
     );

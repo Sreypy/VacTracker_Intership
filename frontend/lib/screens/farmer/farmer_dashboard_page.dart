@@ -29,6 +29,7 @@ class _FarmerDashboardPageState extends State<FarmerDashboardPage> {
   String? _errorMessage;
   List<Flock> _flocks = [];
   String _userName = '';
+  String _profileImageUrl = '';
   // Dashboard metrics
   int _totalFlocks = 0;
   int _totalBirds = 0;
@@ -159,9 +160,11 @@ class _FarmerDashboardPageState extends State<FarmerDashboardPage> {
 
   Future<void> _loadUserName() async {
     final userName = await StorageService.getName();
+    final profileImageUrl = await StorageService.getProfileImageUrl();
     if (!mounted) return;
     setState(() {
       _userName = userName?.trim() ?? '';
+      _profileImageUrl = profileImageUrl?.trim() ?? '';
     });
   }
 
@@ -368,7 +371,7 @@ class _FarmerDashboardPageState extends State<FarmerDashboardPage> {
         title: Row(
           children: [
             _buildUserAvatar(
-              widget.profileImageUrl,
+              _profileImageUrl.isNotEmpty ? _profileImageUrl : widget.profileImageUrl,
               _userName.isNotEmpty ? _userName : "U",
             ),
             const SizedBox(width: 10),

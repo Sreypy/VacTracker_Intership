@@ -1,4 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:frontend/models/flock.dart';
+import 'package:frontend/services/flock_service.dart';
+import 'package:frontend/services/vaccination_pdf_service.dart';
+import 'package:frontend/services/vaccination_service.dart';
 
 class VaccinationHistoryScreen extends StatefulWidget {
   final String flockId;
@@ -7,8 +11,8 @@ class VaccinationHistoryScreen extends StatefulWidget {
 
   const VaccinationHistoryScreen({
     super.key,
-    this.flockId = 'KH-882-B',
-    this.flockDetails = '2,500 Broiler Chickens in Barn 4',
+    this.flockId = '0',
+    this.flockDetails = '',
     this.languageCode = 'km', // Default to Khmer
   });
 
@@ -18,6 +22,10 @@ class VaccinationHistoryScreen extends StatefulWidget {
 }
 
 class _VaccinationHistoryScreenState extends State<VaccinationHistoryScreen> {
+  final FlockService _flockService = FlockService();
+  final VaccinationService _vaccinationService = VaccinationService();
+  final VaccinationPdfService _pdfService = VaccinationPdfService();
+
   // Theme Colors
   static const Color primaryGreen = Color(0xFF034418);
   static const Color backgroundLight = Color(0xFFF8FAFC);
@@ -35,6 +43,13 @@ class _VaccinationHistoryScreenState extends State<VaccinationHistoryScreen> {
   static const Color calloutBg = Color(0xFFFFF5F5);
   static const Color calloutText = Color(0xFFC62828);
 
+  bool _isLoading = true;
+  String? _errorMessage;
+  Flock? _flock;
+  List<Map<String, dynamic>> _records = [];
+  int _completedCount = 0;
+  String _nextDueLabel = '';
+
   // Localization Dictionary
   static const Map<String, Map<String, String>> _localizedValues = {
     'en': {
@@ -49,6 +64,10 @@ class _VaccinationHistoryScreenState extends State<VaccinationHistoryScreen> {
       'download_pdf': 'Download PDF History',
       'done': 'Done',
       'missed': 'Missed',
+      'loading': 'Loading vaccination history...',
+      'retry': 'Retry',
+      'no_records': 'No vaccination records found yet.',
+      'no_data': 'No upcoming date',
     },
     'km': {
       'app_title': 'VacTracker',
@@ -62,69 +81,164 @@ class _VaccinationHistoryScreenState extends State<VaccinationHistoryScreen> {
       'download_pdf': 'ទាញយកប្រវត្តិជា PDF',
       'done': 'រួចរាល់',
       'missed': 'ខកខាន',
+      'loading': 'កំពុងទាញយកប្រវត្តិការចាក់វ៉ាក់សាំង...',
+      'retry': 'ព្យាយាមម្តងទៀត',
+      'no_records': 'មិនទាន់មានកំណត់ត្រាការចាក់វ៉ាក់សាំងទេ។',
+      'no_data': 'គ្មានកាលបរិច្ឆេទជិតដល់',
     },
   };
+
+  @override
+  void initState() {
+    super.initState();
+    _loadHistory();
+  }
 
   String _getText(String key) {
     return _localizedValues[widget.languageCode]?[key] ??
         _localizedValues['en']![key]!;
   }
 
-  // Mocked History Data with Multilingual Support
-  List<Map<String, dynamic>> _getRecords() {
-    final isKhmer = widget.languageCode == 'km';
+  Future<void> _loadHistory() async {
+    final flockId = int.tryParse(widget.flockId);
+    if (flockId == null || flockId <= 0) {
+      setState(() {
+        _isLoading = false;
+        _errorMessage = 'Invalid flock id';
+      });
+      return;
+    }
 
-    return [
-      {
-        'title': isKhmer ? 'ជំងឺញូវកាសិន (ND)' : 'Newcastle Disease (ND)',
-        'subtitle': isKhmer
-            ? 'ដូសជំរុញ • បន្តក់ភ្នែក'
-            : 'Booster Dose • Eye Drop',
-        'status': _getText('done'),
-        'date': isKhmer ? '១២ តុលា ២០២៣' : 'Oct 12, 2023',
-        'administrator': isKhmer ? 'វេជ្ជបណ្ឌិត សុខា' : 'Dr. Sokha',
-        'adminType': 'person',
-        'isMissed': false,
-      },
-      {
-        'title': isKhmer
-            ? 'ជំងឺហ្គំបូរ៉ូ (IBD)'
-            : 'Infectious Bursal Disease (IBD)',
-        'subtitle': isKhmer ? 'ដូសដំបូង • តាមមាត់' : 'Primary Dose • Oral',
-        'status': _getText('done'),
-        'date': isKhmer ? '២៨ កញ្ញា ២០២៣' : 'Sep 28, 2023',
-        'administrator': isKhmer ? 'វេជ្ជបណ្ឌិត សុខា' : 'Dr. Sokha',
-        'adminType': 'person',
-        'isMissed': false,
-      },
-      {
-        'title': isKhmer ? 'វ៉ាក់សាំងអុតស្បែក' : 'Fowl Pox Vaccine',
-        'subtitle': isKhmer ? 'ចាក់តាមស្លាប' : 'Wing Web Prick',
-        'status': _getText('missed'),
-        'date': isKhmer ? '១៤ កញ្ញា ២០២៣' : 'Sep 14, 2023',
-        'administrator': null,
-        'isMissed': true,
-        'note': isKhmer
-            ? 'បានពន្យារពេលដោយសារការសង្កេតឃើញហ្វូងមានភាពតានតឹង។'
-            : 'Rescheduled due to flock stress observations.',
-      },
-      {
-        'title': isKhmer ? 'ជំងឺម៉ារ៉ិក' : 'Marek\'s Disease',
-        'subtitle': isKhmer
-            ? 'អាយុ ១ ថ្ងៃ • ចាក់ក្រោមស្បែកនៅកសិដ្ឋាន'
-            : 'Day Old • Hatchery Sub-Q',
-        'status': _getText('done'),
-        'date': isKhmer ? '៣០ សីហា ២០២៣' : 'Aug 30, 2023',
-        'administrator': isKhmer ? 'កសិដ្ឋាន CP' : 'CP Hatchery',
-        'adminType': 'facility',
-        'isMissed': false,
-      },
+    try {
+      setState(() {
+        _isLoading = true;
+        _errorMessage = null;
+      });
+
+      final flock = await _flockService.fetchFlockById(flockId);
+      final vaccinations = await _vaccinationService.fetchVaccinationsByFlock(
+        flockId,
+      );
+
+      final records = <Map<String, dynamic>>[];
+
+      for (final vaccination in vaccinations) {
+        final vaccine = vaccination['vaccine'] ?? {};
+        final dateGiven = vaccination['date_given'];
+        final parsedDate = DateTime.tryParse(dateGiven?.toString() ?? '');
+        final admin = vaccination['administered_by'] ?? {};
+        final status = (vaccination['status'] ?? 'on_time').toString();
+
+        records.add({
+          'title': widget.languageCode == 'km'
+              ? (vaccine['name_km'] ?? vaccine['name_en'] ?? 'វ៉ាក់សាំង')
+              : (vaccine['name_en'] ?? vaccine['name_km'] ?? 'Vaccine'),
+          'subtitle': widget.languageCode == 'km'
+              ? (vaccine['disease_km'] ?? vaccine['disease_en'] ?? '')
+              : (vaccine['disease_en'] ?? vaccine['disease_km'] ?? ''),
+          'status': _getStatusText(status),
+          'date': parsedDate == null ? '' : _formatDisplayDate(parsedDate),
+          'administrator': admin['name']?.toString(),
+          'adminType': admin['name'] != null ? 'person' : null,
+          'isMissed': status == 'overdue',
+          'note': status == 'overdue' ? _getText('missed') : null,
+          'next_due': vaccination['next_due_date'],
+          'raw_status': status,
+          'date_value': parsedDate,
+        });
+      }
+
+      records.sort((a, b) {
+        final firstDate = a['date_value'] as DateTime?;
+        final secondDate = b['date_value'] as DateTime?;
+        if (firstDate == null && secondDate == null) return 0;
+        if (firstDate == null) return 1;
+        if (secondDate == null) return -1;
+        return secondDate.compareTo(firstDate);
+      });
+
+      DateTime? nextDueDate;
+      for (final record in records) {
+        final rawDate = record['next_due']?.toString();
+        final candidateDate = DateTime.tryParse(rawDate ?? '');
+        if (candidateDate != null) {
+          if (nextDueDate == null || candidateDate.isBefore(nextDueDate)) {
+            nextDueDate = candidateDate;
+          }
+        }
+      }
+
+      if (!mounted) return;
+      setState(() {
+        _flock = flock;
+        _records = records;
+        _completedCount = records.length;
+        _nextDueLabel = nextDueDate == null
+            ? _getText('no_data')
+            : _formatDisplayDate(nextDueDate);
+        _isLoading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _errorMessage = e.toString();
+        _isLoading = false;
+      });
+    }
+  }
+
+  String _formatDisplayDate(DateTime date) {
+    if (widget.languageCode == 'km') {
+      final months = [
+        'មករា',
+        'កុម្ភៈ',
+        'មីនា',
+        'មេសា',
+        'ឧសភា',
+        'មិថុនា',
+        'កក្កដា',
+        'សីហា',
+        'កញ្ញា',
+        'តុលា',
+        'វិច្ឆិកា',
+        'ធ្នូ',
+      ];
+      return '${date.day} ${months[date.month - 1]} ${date.year}';
+    }
+
+    final months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
     ];
+    return '${months[date.month - 1]} ${date.day}, ${date.year}';
+  }
+
+  String _getStatusText(String status) {
+    switch (status.toLowerCase()) {
+      case 'overdue':
+        return _getText('missed');
+      case 'due_soon':
+        return widget.languageCode == 'km' ? 'ជិតដល់' : 'Due Soon';
+      case 'completed':
+        return _getText('completed');
+      default:
+        return _getText('done');
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final records = _getRecords();
+    final records = _records;
 
     return Scaffold(
       backgroundColor: backgroundLight,
@@ -178,7 +292,7 @@ class _VaccinationHistoryScreenState extends State<VaccinationHistoryScreen> {
               ),
               const SizedBox(height: 6),
               Text(
-                '${_getText('history_subtitle')} ${widget.flockDetails}.',
+                '${_getText('history_subtitle')} ${_flock?.batchName ?? (widget.flockDetails.isNotEmpty ? widget.flockDetails : widget.flockId)}.',
                 style: const TextStyle(
                   color: textMuted,
                   fontSize: 14,
@@ -196,7 +310,7 @@ class _VaccinationHistoryScreenState extends State<VaccinationHistoryScreen> {
                       iconBg: const Color(0xFFE8F5E9),
                       iconColor: primaryGreen,
                       label: _getText('completed'),
-                      value: '12',
+                      value: _completedCount.toString(),
                     ),
                   ),
                   const SizedBox(width: 14),
@@ -206,7 +320,9 @@ class _VaccinationHistoryScreenState extends State<VaccinationHistoryScreen> {
                       iconBg: const Color(0xFFE8F5E9),
                       iconColor: primaryGreen,
                       label: _getText('next_due'),
-                      value: widget.languageCode == 'km' ? '២៤ តុលា' : 'Oct 24',
+                      value: _nextDueLabel.isEmpty
+                          ? _getText('no_data')
+                          : _nextDueLabel,
                     ),
                   ),
                 ],
@@ -257,22 +373,103 @@ class _VaccinationHistoryScreenState extends State<VaccinationHistoryScreen> {
               ),
               const SizedBox(height: 16),
 
-              // History Timeline List
-              ListView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: records.length,
-                itemBuilder: (context, index) {
-                  final record = records[index];
-                  final isLast = index == records.length - 1;
-                  return _buildTimelineItem(record, isLast);
-                },
-              ),
+              if (_isLoading)
+                const Center(
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(vertical: 24.0),
+                    child: CircularProgressIndicator(color: primaryGreen),
+                  ),
+                )
+              else if (_errorMessage != null)
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Column(
+                    children: [
+                      const Icon(
+                        Icons.error_outline,
+                        color: calloutText,
+                        size: 28,
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        _errorMessage!,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(color: textDark),
+                      ),
+                      const SizedBox(height: 12),
+                      OutlinedButton(
+                        onPressed: _loadHistory,
+                        style: OutlinedButton.styleFrom(
+                          side: const BorderSide(color: primaryGreen),
+                        ),
+                        child: Text(_getText('retry')),
+                      ),
+                    ],
+                  ),
+                )
+              else if (records.isEmpty)
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Text(
+                    _getText('no_records'),
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(color: textMuted),
+                  ),
+                )
+              else
+                ListView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: records.length,
+                  itemBuilder: (context, index) {
+                    final record = records[index];
+                    final isLast = index == records.length - 1;
+                    return _buildTimelineItem(record, isLast);
+                  },
+                ),
               const SizedBox(height: 24),
 
               // Download PDF Button
               OutlinedButton.icon(
-                onPressed: () {},
+                onPressed:
+                    _isLoading || _errorMessage != null || _records.isEmpty
+                    ? null
+                    : () async {
+                        final scaffoldMessenger = ScaffoldMessenger.of(context);
+                        final result = await _pdfService.exportHistoryPdf(
+                          flockId: widget.flockId,
+                          flockName: _flock?.batchName ?? widget.flockDetails,
+                          languageCode: widget.languageCode,
+                          records: _records.map((record) {
+                            return {
+                              'title': record['title'],
+                              'subtitle': record['subtitle'],
+                              'date': record['date'],
+                              'status': record['status'],
+                            };
+                          }).toList(),
+                          context: context,
+                        );
+
+                        if (!mounted) return;
+                        if (result == null) {
+                          scaffoldMessenger.showSnackBar(
+                            const SnackBar(
+                              content: Text('Unable to export PDF right now.'),
+                            ),
+                          );
+                        }
+                      },
                 icon: const Icon(
                   Icons.file_download_outlined,
                   color: primaryGreen,

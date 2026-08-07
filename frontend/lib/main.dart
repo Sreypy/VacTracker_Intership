@@ -140,12 +140,16 @@ final GoRouter _router = GoRouter(
         final language = state.pathParameters['lang'] ?? 'km';
         final flockId = state.uri.queryParameters['flockId'] ?? '';
         final flockName = state.uri.queryParameters['batchTitle'] ?? '';
+        final summaryData = state.extra is Map<String, dynamic>
+            ? state.extra as Map<String, dynamic>
+            : null;
 
         return LogVaccinationStep3Page(
           flockId: flockId,
           vaccineId: vaccineId,
           languageCode: language,
           flockName: flockName,
+          summaryData: summaryData,
         );
       },
     ),

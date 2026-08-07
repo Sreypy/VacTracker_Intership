@@ -19,14 +19,34 @@ class StorageService {
     return prefs.getString("name");
   }
 
+  static Future<String?> getProfileImageUrl() async {
+    final prefs = await SharedPreferences.getInstance();
+
+    return prefs.getString("profile_image_url");
+  }
+
   static Future<void> saveUser(Map<String, dynamic> user) async {
     final prefs = await SharedPreferences.getInstance();
 
     await prefs.setString("user_id", user["user_id"].toString());
 
-    await prefs.setString("role", user["role"]);
+    await prefs.setString("role", user["role"] ?? "farmer");
 
     await prefs.setString("name", user["name"] ?? "");
+
+    final profileImageUrl =
+        [
+          user["profile_image_url"],
+          user["avatar_url"],
+          user["profile_image"],
+          user["image_url"],
+          user["photo_url"],
+        ].firstWhere(
+          (value) => value != null && value.toString().isNotEmpty,
+          orElse: () => "",
+        );
+
+    await prefs.setString("profile_image_url", profileImageUrl.toString());
   }
 
   static Future<void> clearAll() async {

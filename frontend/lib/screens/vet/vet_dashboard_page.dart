@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../../services/vet_dashboard_service.dart';
 
 class VetDashboardPage extends StatefulWidget {
   final String languageCode; // 'en' or 'km'
@@ -25,12 +26,17 @@ class _VetDashboardPageState extends State<VetDashboardPage> {
   static const Color textGrey = Color(0xFF5A6B82);
 
   static const Color statusGreen = Color(0xFF0D6E28);
-  // static const Color statusGreenBg = Color(0xFFE2F6EA);
   static const Color statusRed = Color(0xFFA80000);
   static const Color statusRedBg = Color(0xFFFDE8E8);
   static const Color textGreyLight = Color(0xFFE2E8F0);
   static const Color compliantBg = Color(0xFFE2E8F0);
   static const Color compliantText = Color(0xFF5A6B82);
+
+  // Data State
+  VetDashboardStats? _dashboardStats;
+  bool _isLoading = true;
+  String? _errorMessage;
+  final VetDashboardService _vetDashboardService = VetDashboardService();
 
   final Map<String, Map<String, String>> _localizedValues = const {
     'en': {
@@ -73,7 +79,6 @@ class _VetDashboardPageState extends State<VetDashboardPage> {
       radius: 18,
       backgroundColor: hasAvatar
           ? Colors.transparent
-          // ignore: deprecated_member_use, deprecated_member_uses
           : brandHeaderGreen.withOpacity(0.15),
       backgroundImage: hasAvatar ? NetworkImage(avatarUrl) : null,
       child: hasAvatar
@@ -90,6 +95,36 @@ class _VetDashboardPageState extends State<VetDashboardPage> {
   }
 
   @override
+  void initState() {
+    super.initState();
+    _fetchDashboardStats();
+  }
+
+  Future<void> _fetchDashboardStats() async {
+    debugPrint('Fetching vet dashboard stats...');
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      debugPrint('Calling vet dashboard service...');
+      final stats = await _vetDashboardService.getDashboardStats();
+      debugPrint('Stats received: ${stats.totalClients} clients');
+      setState(() {
+        _dashboardStats = stats;
+        _isLoading = false;
+      });
+    } catch (e) {
+      debugPrint('Error fetching stats: $e');
+      setState(() {
+        _errorMessage = e.toString();
+        _isLoading = false;
+      });
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: backgroundLight,
@@ -98,16 +133,13 @@ class _VetDashboardPageState extends State<VetDashboardPage> {
         elevation: 0,
         scrolledUnderElevation: 0,
         titleSpacing: 16,
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(1),
-          child: Container(color: textGreyLight, height: 1),
+        bottom: const PreferredSize(
+          preferredSize: Size.fromHeight(1),
+          child: Divider(height: 1, color: textGreyLight),
         ),
         title: Row(
           children: [
-            _buildUserAvatar(
-              widget.profileImageUrl,
-              "Sokha",
-            ), // Profile Image Dynamic Avatar
+            _buildUserAvatar(widget.profileImageUrl, "Sokha"),
             const SizedBox(width: 10),
             const Text(
               "VacTracker",
@@ -153,234 +185,247 @@ class _VetDashboardPageState extends State<VetDashboardPage> {
               ),
               const SizedBox(height: 20),
 
-              // Total Managed Clients Card
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: brandDarkGreen,
-                  borderRadius: BorderRadius.circular(16),
+              // Loading or Error State
+              if (_isLoading)
+                const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(32.0),
+                    child: CircularProgressIndicator(color: brandDarkGreen),
+                  ),
+                )
+              else if (_errorMessage != null)
+                Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(32.0),
+                    child: Column(
+                      children: [
+                        const Icon(
+                          Icons.error_outline_rounded,
+                          color: statusRed,
+                          size: 48,
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'Unable to load dashboard',
+                          style: TextStyle(
+                            color: textDarkBlue,
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          _errorMessage!,
+                          style: const TextStyle(color: textGrey),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 20),
+                        ElevatedButton.icon(
+                          onPressed: _fetchDashboardStats,
+                          icon: const Icon(Icons.refresh_rounded),
+                          label: const Text('Retry'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: brandDarkGreen,
+                            foregroundColor: Colors.white,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                )
+              else ...[
+                // Total Managed Clients Card
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: brandDarkGreen,
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        _getText('total_clients'),
+                        style: const TextStyle(
+                          color: Colors.white70,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        "${_dashboardStats?.totalClients ?? 0}",
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 36,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                const SizedBox(height: 16),
+
+                // Split Priority Metric Row
+                Row(
                   children: [
-                    Text(
-                      _getText('total_clients'),
-                      style: const TextStyle(
-                        color: Colors.white70,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
+                    Expanded(
+                      child: Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: statusRedBg,
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              _getText('overdue_label'),
+                              style: const TextStyle(
+                                color: statusRed,
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              "${_dashboardStats?.overdueCount ?? 0}",
+                              style: const TextStyle(
+                                color: statusRed,
+                                fontSize: 24,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              _getText('needs_action'),
+                              style: const TextStyle(
+                                color: statusRed,
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
-                    const SizedBox(height: 6),
-                    const Text(
-                      "124",
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 36,
-                        fontWeight: FontWeight.bold,
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: textGreyLight.withOpacity(0.5),
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              _getText('due_today_label'),
+                              style: const TextStyle(
+                                color: textGrey,
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              "${_dashboardStats?.dueTodayCount ?? 0}",
+                              style: const TextStyle(
+                                color: textDarkBlue,
+                                fontSize: 24,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Row(
+                              children: [
+                                const Icon(
+                                  Icons.calendar_today_outlined,
+                                  size: 14,
+                                  color: brandHeaderGreen,
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  _getText('scheduled'),
+                                  style: const TextStyle(
+                                    color: brandHeaderGreen,
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ],
                 ),
-              ),
-              const SizedBox(height: 16),
+                const SizedBox(height: 20),
 
-              // Split Priority Metric Row
-              Row(
-                children: [
-                  Expanded(
-                    child: Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: statusRedBg,
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            _getText('overdue_label'),
-                            style: const TextStyle(
-                              color: statusRed,
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
-                              letterSpacing: 0.5,
-                            ),
-                          ),
-                          const SizedBox(height: 6),
-                          const Text(
-                            "12",
-                            style: TextStyle(
-                              color: statusRed,
-                              fontSize: 24,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(height: 6),
-                          Text(
-                            _getText('needs_action'),
-                            style: const TextStyle(
-                              color: statusRed,
-                              fontSize: 13,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ],
+                // Send Reminders Button
+                SizedBox(
+                  width: double.infinity,
+                  height: 52,
+                  child: ElevatedButton.icon(
+                    onPressed: () {},
+                    icon: const Icon(Icons.exit_to_app_rounded, size: 20),
+                    label: Text(
+                      _getText('btn_reminders'),
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        // ignore: deprecated_member_use
-                        color: textGreyLight.withOpacity(0.5),
-                        borderRadius: BorderRadius.circular(14),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: brandDarkGreen,
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
                       ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            _getText('due_today_label'),
-                            style: const TextStyle(
-                              color: textGrey,
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
-                              letterSpacing: 0.5,
-                            ),
-                          ),
-                          const SizedBox(height: 6),
-                          const Text(
-                            "08",
-                            style: TextStyle(
-                              color: textDarkBlue,
-                              fontSize: 24,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(height: 6),
-                          Row(
-                            children: [
-                              const Icon(
-                                Icons.calendar_today_outlined,
-                                size: 14,
-                                color: brandHeaderGreen,
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
-                                _getText('scheduled'),
-                                style: const TextStyle(
-                                  color: brandHeaderGreen,
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 20),
-
-              // Send Reminders Button
-              SizedBox(
-                width: double.infinity,
-                height: 52,
-                child: ElevatedButton.icon(
-                  onPressed: () {},
-                  icon: const Icon(Icons.exit_to_app_rounded, size: 20),
-                  label: Text(
-                    _getText('btn_reminders'),
-                    style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: brandDarkGreen,
-                    foregroundColor: Colors.white,
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
                     ),
                   ),
                 ),
-              ),
-              const SizedBox(height: 28),
+                const SizedBox(height: 28),
 
-              // Directory Titles
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    _getText('directory_title'),
-                    style: const TextStyle(
-                      color: textDarkBlue,
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                    ),
+                // Connected Farmers Section
+                if (_dashboardStats != null)
+                  _buildConnectedFarmersSection(
+                    _dashboardStats!.connectedFarmers,
                   ),
-                  Text(
-                    _getText('sorting'),
-                    style: const TextStyle(color: textGrey, fontSize: 12),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 14),
 
-              // Client Directory Cards
-              _buildClientCard(
-                title: "Battambang Poultry Co.",
-                subtitle: "Ek Phnom, BTB",
-                statusText: _getText('overdue_label'),
-                iconData: Icons.agriculture_rounded,
-                accentColor: statusRed,
-                statusColor: Colors.white,
-                statusBgColor: statusRed,
-                iconBgColor: const Color(0xFFFDE8E8),
-                iconColor: const Color(0xFFE11D48),
-              ),
-              const SizedBox(height: 12),
-              _buildClientCard(
-                title: "Sokha Phon",
-                subtitle: "Kampong Speu",
-                statusText: _getText('overdue_label'),
-                iconData: Icons.person_rounded,
-                accentColor: statusRed,
-                statusColor: Colors.white,
-                statusBgColor: statusRed,
-                iconBgColor: const Color(0xFFFDE8E8),
-                iconColor: const Color(0xFFE11D48),
-              ),
-              const SizedBox(height: 12),
-              _buildClientCard(
-                title: "Kandal Egg Farm",
-                subtitle: "Sa'ang, Kandal",
-                statusText: _getText('due_today_label'),
-                iconData: Icons.egg_outlined,
-                accentColor: statusGreen,
-                statusColor: Colors.white,
-                statusBgColor: statusGreen,
-                iconBgColor: const Color(0xFFDCFCE7),
-                iconColor: statusGreen,
-              ),
-              const SizedBox(height: 12),
-              _buildClientCard(
-                title: "Prey Veng Cooperative",
-                subtitle: "Prey Veng City",
-                statusText: _getText('compliant_label'),
-                iconData: Icons.home_work_outlined,
-                accentColor: textGrey,
-                statusColor: compliantText,
-                statusBgColor: compliantBg,
-                iconBgColor: const Color(0xFFF1F5F9),
-                iconColor: textGrey,
-              ),
+                // Directory Titles
+                if (_dashboardStats != null)
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        _getText('directory_title'),
+                        style: const TextStyle(
+                          color: textDarkBlue,
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      Text(
+                        _getText('sorting'),
+                        style: const TextStyle(color: textGrey, fontSize: 12),
+                      ),
+                    ],
+                  ),
+                if (_dashboardStats != null) const SizedBox(height: 14),
+
+                // Client Directory Cards
+                if (_dashboardStats != null)
+                  ..._dashboardStats!.clients.map((client) {
+                    return _buildClientCard(client);
+                  }).toList(),
+              ],
             ],
           ),
         ),
@@ -389,17 +434,142 @@ class _VetDashboardPageState extends State<VetDashboardPage> {
     );
   }
 
-  Widget _buildClientCard({
-    required String title,
-    required String subtitle,
-    required String statusText,
-    required IconData iconData,
-    required Color accentColor,
-    required Color statusColor,
-    required Color statusBgColor,
-    required Color iconBgColor,
-    required Color iconColor,
-  }) {
+  Widget _buildConnectedFarmersSection(List<ConnectedFarmer> farmers) {
+    if (farmers.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 20),
+        Text(
+          'Connected Farmers',
+          style: const TextStyle(
+            color: textDarkBlue,
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 12),
+        ...farmers.map((farmer) {
+          final statusLabel = farmer.status == 'accepted'
+              ? 'Connected'
+              : 'Pending';
+          final statusColor = farmer.status == 'accepted'
+              ? statusGreen
+              : statusRed;
+          return Container(
+            margin: const EdgeInsets.only(bottom: 12),
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: textGreyLight, width: 1),
+            ),
+            child: Row(
+              children: [
+                CircleAvatar(
+                  radius: 20,
+                  backgroundColor: statusColor.withOpacity(0.15),
+                  child: Text(
+                    farmer.name.isNotEmpty ? farmer.name[0].toUpperCase() : 'F',
+                    style: TextStyle(
+                      color: statusColor,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        farmer.name,
+                        style: const TextStyle(
+                          color: textDarkBlue,
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '${farmer.village}, ${farmer.province}',
+                        style: const TextStyle(color: textGrey, fontSize: 13),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        farmer.phone,
+                        style: const TextStyle(color: textGrey, fontSize: 13),
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: statusColor.withOpacity(0.16),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    statusLabel,
+                    style: TextStyle(
+                      color: statusColor,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        }).toList(),
+        const SizedBox(height: 20),
+      ],
+    );
+  }
+
+  Widget _buildClientCard(ClientData client) {
+    // Determine colors based on status
+    Color accentColor;
+    Color statusColor;
+    Color statusBgColor;
+    Color iconBgColor;
+    Color iconColor;
+    IconData iconData;
+
+    switch (client.status) {
+      case 'overdue':
+        accentColor = statusRed;
+        statusColor = Colors.white;
+        statusBgColor = statusRed;
+        iconBgColor = const Color(0xFFFDE8E8);
+        iconColor = const Color(0xFFE11D48);
+        iconData = Icons.warning_amber_rounded;
+        break;
+      case 'due_today':
+        accentColor = statusGreen;
+        statusColor = Colors.white;
+        statusBgColor = statusGreen;
+        iconBgColor = const Color(0xFFDCFCE7);
+        iconColor = statusGreen;
+        iconData = Icons.calendar_today_rounded;
+        break;
+      case 'compliant':
+      default:
+        accentColor = textGrey;
+        statusColor = compliantText;
+        statusBgColor = compliantBg;
+        iconBgColor = const Color(0xFFF1F5F9);
+        iconColor = textGrey;
+        iconData = Icons.check_circle_outline_rounded;
+        break;
+    }
+
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -429,7 +599,7 @@ class _VetDashboardPageState extends State<VetDashboardPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      title,
+                      client.name,
                       style: const TextStyle(
                         color: textDarkBlue,
                         fontSize: 16,
@@ -446,11 +616,31 @@ class _VetDashboardPageState extends State<VetDashboardPage> {
                         ),
                         const SizedBox(width: 2),
                         Text(
-                          subtitle,
+                          client.location,
                           style: const TextStyle(color: textGrey, fontSize: 12),
                         ),
                       ],
                     ),
+                    if (client.lastVaccination != null) ...[
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          const Icon(
+                            Icons.vaccines_outlined,
+                            size: 13,
+                            color: textGrey,
+                          ),
+                          const SizedBox(width: 2),
+                          Text(
+                            'Last: ${client.lastVaccination!.vaccine}',
+                            style: const TextStyle(
+                              color: textGrey,
+                              fontSize: 11,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -467,7 +657,7 @@ class _VetDashboardPageState extends State<VetDashboardPage> {
                       borderRadius: BorderRadius.circular(100),
                     ),
                     child: Text(
-                      statusText,
+                      client.statusText,
                       style: TextStyle(
                         color: statusColor,
                         fontSize: 10,

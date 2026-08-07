@@ -15,6 +15,7 @@ export enum VaccinationStatus {
   ON_TIME = 'on_time',
   DUE_SOON = 'due_soon',
   OVERDUE = 'overdue',
+  COMPLETED = 'completed',
 }
 
 @Entity('vaccinations')
