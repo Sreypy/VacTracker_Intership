@@ -115,11 +115,11 @@ export class UsersService {
       throw new ConflictException('Connection already exists with this veterinarian');
     }
 
-    // Create new connection
+    // Create new connection with ACCEPTED status (no vet approval needed)
     const connection = this.connectionRepository.create({
       vetId: vet.user_id,
       farmerId: farmerId,
-      status: ConnectionStatus.PENDING,
+      status: ConnectionStatus.ACCEPTED,
     });
 
     return await this.connectionRepository.save(connection);
@@ -127,11 +127,17 @@ export class UsersService {
 
   async getMyVets(farmerId: number) {
     const connections = await this.connectionRepository.find({
-      where: { farmerId, status: ConnectionStatus.ACCEPTED },
+      where: { farmerId },
       relations: { vet: true },
     });
 
-    return connections.map((conn) => conn.vet);
+    return connections.map((conn) => ({
+      user_id: conn.vet.user_id,
+      name: conn.vet.name,
+      phone: conn.vet.phone,
+      share_code: conn.vet.share_code,
+      status: conn.status,
+    }));
   }
 
 }

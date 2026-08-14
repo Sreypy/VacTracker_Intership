@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:frontend/services/storage_service.dart';
 import 'package:go_router/go_router.dart';
 import '../../services/auth_service.dart';
+import 'login_otp_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   final String role;
@@ -72,6 +74,9 @@ class _LoginScreenState extends State<LoginScreen> {
       return;
     }
 
+    final scaffoldMessenger = ScaffoldMessenger.maybeOf(context);
+    final appRouter = GoRouter.of(context);
+
     try {
       setState(() {
         loading = true;
@@ -80,7 +85,7 @@ class _LoginScreenState extends State<LoginScreen> {
       final exists = await authService.checkPhone(phone);
       if (!mounted) return;
       if (!exists) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        scaffoldMessenger?.showSnackBar(
           SnackBar(
             content: Text(
               widget.role == 'farmer'
@@ -98,12 +103,46 @@ class _LoginScreenState extends State<LoginScreen> {
 
       if (!mounted) return;
 
-      context.go(
-        "/login-otp",
-        extra: {'phone': phone, 'lang': widget.languageCode},
+      final otpCode = result is Map && result['otp'] != null
+          ? result['otp'].toString()
+          : '';
+
+      await LoginOtpScreen.showOtpDialog(
+        context: context,
+        phone: phone,
+        languageCode: widget.languageCode,
+        otpCode: otpCode,
+        onVerify: (otp) async {
+          final verificationResult = await authService.verifyOtp(phone, otp);
+          debugPrint('OTP verify result: $verificationResult');
+
+          await StorageService.saveToken(verificationResult["access_token"]);
+          await StorageService.saveUser(verificationResult["user"]);
+
+          final user = verificationResult["user"];
+          if (user == null) {
+            throw Exception("User data not found");
+          }
+
+          final role = user["role"];
+
+          if (role == "farmer") {
+            if (!mounted) return;
+            appRouter.go("/farmer-dashboard?lang=${widget.languageCode}");
+          } else if (role == "veterinarian") {
+            if (!mounted) return;
+            appRouter.go("/vet-dashboard?lang=${widget.languageCode}");
+          } else {
+            throw Exception("Unknown user role");
+          }
+        },
+        onResend: () async {
+          final resendResult = await authService.sendOtp(phone);
+          debugPrint('OTP resend result: $resendResult');
+        },
       );
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      scaffoldMessenger?.showSnackBar(
         SnackBar(
           content: Text("${_getText('err_failed')}$e"),
           behavior: SnackBarBehavior.floating,

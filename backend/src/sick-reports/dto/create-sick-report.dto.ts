@@ -1,4 +1,4 @@
-import { IsEnum, IsInt, IsString, IsOptional, IsDate } from 'class-validator';
+import { IsEnum, IsInt, IsString, IsOptional, IsDate, IsDateString } from 'class-validator';
 import { ReportType } from '../entities/sick-report.entity';
 
 export class CreateSickReportDto {
@@ -18,6 +18,6 @@ export class CreateSickReportDto {
   @IsString()
   photoUrl?: string;
 
-  @IsDate()
+  @IsDateString()
   reportDate!: Date;
 }

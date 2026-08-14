@@ -5,94 +5,68 @@ import '../config/api_config.dart';
 import 'storage_service.dart';
 
 class VetDashboardStats {
-  final int totalClients;
-  final int overdueCount;
-  final int dueTodayCount;
-  final List<ClientData> clients;
-  final List<ConnectedFarmer> connectedFarmers;
+  final int connectedFarmers;
+  final int totalFlocks;
+  final int newSickReports;
+  final int overdueVaccinations;
+  final List<FarmerData> farmers;
 
   VetDashboardStats({
-    required this.totalClients,
-    required this.overdueCount,
-    required this.dueTodayCount,
-    required this.clients,
     required this.connectedFarmers,
+    required this.totalFlocks,
+    required this.newSickReports,
+    required this.overdueVaccinations,
+    required this.farmers,
   });
 
   factory VetDashboardStats.fromJson(Map<String, dynamic> json) {
-    final clientsList = (json['clients'] as List)
-        .map((client) => ClientData.fromJson(client))
-        .toList();
-    final farmersList = (json['connectedFarmers'] as List? ?? [])
-        .map((farmer) => ConnectedFarmer.fromJson(farmer))
+    final farmersList = (json['farmers'] as List)
+        .map((farmer) => FarmerData.fromJson(farmer))
         .toList();
 
     return VetDashboardStats(
-      totalClients: json['totalClients'] ?? 0,
-      overdueCount: json['overdueCount'] ?? 0,
-      dueTodayCount: json['dueTodayCount'] ?? 0,
-      clients: clientsList,
-      connectedFarmers: farmersList,
+      connectedFarmers: json['connectedFarmers'] ?? 0,
+      totalFlocks: json['totalFlocks'] ?? 0,
+      newSickReports: json['newSickReports'] ?? 0,
+      overdueVaccinations: json['overdueVaccinations'] ?? 0,
+      farmers: farmersList,
     );
   }
 }
 
-class ConnectedFarmer {
+class FarmerData {
   final int farmerId;
   final String name;
-  final String phone;
-  final String village;
-  final String province;
-  final String status;
-
-  ConnectedFarmer({
-    required this.farmerId,
-    required this.name,
-    required this.phone,
-    required this.village,
-    required this.province,
-    required this.status,
-  });
-
-  factory ConnectedFarmer.fromJson(Map<String, dynamic> json) {
-    return ConnectedFarmer(
-      farmerId: json['farmerId'] ?? 0,
-      name: json['name'] ?? '',
-      phone: json['phone'] ?? '',
-      village: json['village'] ?? '',
-      province: json['province'] ?? '',
-      status: json['status'] ?? 'pending',
-    );
-  }
-}
-
-class ClientData {
-  final int flockId;
-  final String name;
+  final String farmName;
   final String location;
   final String status;
   final String statusText;
-  final int birdCount;
+  final int flockCount;
+  final int totalBirds;
   final LastVaccination? lastVaccination;
 
-  ClientData({
-    required this.flockId,
+  FarmerData({
+    required this.farmerId,
     required this.name,
+    required this.farmName,
     required this.location,
     required this.status,
     required this.statusText,
-    required this.birdCount,
+    required this.flockCount,
+    required this.totalBirds,
     this.lastVaccination,
   });
 
-  factory ClientData.fromJson(Map<String, dynamic> json) {
-    return ClientData(
-      flockId: json['flockId'] ?? 0,
+  factory FarmerData.fromJson(Map<String, dynamic> json) {
+    return FarmerData(
+      farmerId: json['farmerId'] ?? 0,
       name: json['name'] ?? '',
+      farmName: json['farmName'] ?? '',
       location: json['location'] ?? '',
-      status: json['status'] ?? 'compliant',
-      statusText: json['statusText'] ?? 'COMPLIANT',
-      birdCount: json['birdCount'] ?? 0,
+      status: json['status'] ?? 'healthy',
+      statusText: json['statusText'] ?? 'HEALTHY',
+      flockCount: json['flockCount'] ?? 0,
+      totalBirds: json['totalBirds'] ?? 0,
       lastVaccination: json['lastVaccination'] != null
           ? LastVaccination.fromJson(json['lastVaccination'])
           : null,

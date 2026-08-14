@@ -300,7 +300,10 @@ class _VaccineLibraryPageState extends State<VaccineLibraryPage> {
                   ),
                   const SizedBox(width: 10),
                   TextButton.icon(
-                    onPressed: () {},
+                    onPressed: () => setState(() {
+                      _selectedCategory = 'all';
+                      _applyFilter();
+                    }),
                     icon: const Icon(
                       Icons.filter_list,
                       size: 18,

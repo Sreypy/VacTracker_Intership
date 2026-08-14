@@ -298,7 +298,7 @@ class _FarmerProfilePageState extends State<FarmerProfilePage> {
 
   Future<void> _connectToVet() async {
     final vetCode = _vetCodeController.text.trim();
-    
+
     if (vetCode.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -336,9 +336,7 @@ class _FarmerProfilePageState extends State<FarmerProfilePage> {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
         },
-        body: jsonEncode({
-          'vetShareCode': vetCode,
-        }),
+        body: jsonEncode({'vetShareCode': vetCode}),
       );
 
       if (response.statusCode == 200 || response.statusCode == 201) {
@@ -347,8 +345,8 @@ class _FarmerProfilePageState extends State<FarmerProfilePage> {
           SnackBar(
             content: Text(
               _currentLang == 'km'
-                  ? 'បានផ្ញើសំណើភ្ជាប់ជាមួយវេជ្ជបណ្ឌិតសត្វ'
-                  : 'Connection request sent to veterinarian',
+                  ? 'បានភ្ជាប់ជាមួយវេជ្ជបណ្ឌិតសត្វដោយជោគជ័យ'
+                  : 'Successfully connected with veterinarian',
             ),
             backgroundColor: brandDarkGreen,
           ),
@@ -571,7 +569,7 @@ class _FarmerProfilePageState extends State<FarmerProfilePage> {
               color: brandDarkGreen,
               size: 24,
             ),
-            onPressed: () {},
+            onPressed: () => context.push('/language'),
           ),
           const SizedBox(width: 8),
         ],
@@ -766,88 +764,138 @@ class _FarmerProfilePageState extends State<FarmerProfilePage> {
 
               // Vet Connection Section Card
               _buildSectionWrapper(
-                title: _currentLang == 'km' ? 'វេជ្ជបណ្ឌិតសត្វ' : 'VETERINARIAN',
+                title: _currentLang == 'km'
+                    ? 'វេជ្ជបណ្ឌិតសត្វ'
+                    : 'VETERINARIAN',
                 child: Padding(
                   padding: const EdgeInsets.all(16.0),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Connect to Vet Input
-                      Row(
-                        children: [
-                          Expanded(
-                            child: TextField(
-                              controller: _vetCodeController,
-                              decoration: InputDecoration(
-                                hintText: _currentLang == 'km'
-                                    ? 'បញ្ចូលកូដវេជ្ជបណ្ឌិតសត្វ'
-                                    : 'Enter vet share code',
-                                hintStyle: TextStyle(
-                                  color: textGrey.withValues(alpha: 0.6),
-                                  fontSize: 14,
-                                ),
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(10),
-                                  borderSide: BorderSide(color: textGreyLight),
-                                ),
-                                enabledBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(10),
-                                  borderSide: BorderSide(color: textGreyLight),
-                                ),
-                                focusedBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(10),
-                                  borderSide: BorderSide(color: brandDarkGreen, width: 1.5),
-                                ),
-                                contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 10,
-                                ),
-                              ),
+                      // Show connection status (all connections are auto-accepted)
+                      if (_connectedVets.isNotEmpty)
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: badgeGreenBg,
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(
+                              color: brandDarkGreen.withValues(alpha: 0.3),
                             ),
                           ),
-                          const SizedBox(width: 8),
-                          ElevatedButton(
-                            onPressed: _isConnectingToVet ? null : _connectToVet,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: brandDarkGreen,
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 12,
+                          child: Row(
+                            children: [
+                              const Icon(
+                                Icons.check_circle_rounded,
+                                color: brandDarkGreen,
+                                size: 20,
                               ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              elevation: 0,
-                            ),
-                            child: _isConnectingToVet
-                                ? const SizedBox(
-                                    width: 18,
-                                    height: 18,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      color: Colors.white,
-                                    ),
-                                  )
-                                : Icon(
-                                    Icons.add_rounded,
-                                    size: 20,
-                                    color: Colors.white,
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Text(
+                                  _currentLang == 'km'
+                                      ? 'បានភ្ជាប់ជាមួយវេជ្ជបណ្ឌិតសត្វរួចហើយ'
+                                      : 'Connected with veterinarian',
+                                  style: TextStyle(
+                                    color: brandDarkGreen,
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
                                   ),
+                                ),
+                              ),
+                            ],
                           ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      Text(
-                        _currentLang == 'km'
-                            ? 'សួរថ្ងៃទីចែករំលែកកូដពីវេជ្ជបណ្ឌិតសត្វរបស់អ្នក'
-                            : 'Ask your vet for their share code to connect',
-                        style: TextStyle(
-                          color: textGrey,
-                          fontSize: 12,
-                          fontStyle: FontStyle.italic,
+                        )
+                      else
+                        Column(
+                          children: [
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: TextField(
+                                    controller: _vetCodeController,
+                                    decoration: InputDecoration(
+                                      hintText: _currentLang == 'km'
+                                          ? 'បញ្ចូលកូដវេជ្ជបណ្ឌិតសត្វ'
+                                          : 'Enter vet share code',
+                                      hintStyle: TextStyle(
+                                        color: textGrey.withValues(alpha: 0.6),
+                                        fontSize: 14,
+                                      ),
+                                      border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(10),
+                                        borderSide: BorderSide(
+                                          color: textGreyLight,
+                                        ),
+                                      ),
+                                      enabledBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(10),
+                                        borderSide: BorderSide(
+                                          color: textGreyLight,
+                                        ),
+                                      ),
+                                      focusedBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(10),
+                                        borderSide: BorderSide(
+                                          color: brandDarkGreen,
+                                          width: 1.5,
+                                        ),
+                                      ),
+                                      contentPadding:
+                                          const EdgeInsets.symmetric(
+                                            horizontal: 12,
+                                            vertical: 10,
+                                          ),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                ElevatedButton(
+                                  onPressed: _isConnectingToVet
+                                      ? null
+                                      : _connectToVet,
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: brandDarkGreen,
+                                    foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 16,
+                                      vertical: 12,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    elevation: 0,
+                                  ),
+                                  child: _isConnectingToVet
+                                      ? const SizedBox(
+                                          width: 18,
+                                          height: 18,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                            color: Colors.white,
+                                          ),
+                                        )
+                                      : Icon(
+                                          Icons.add_rounded,
+                                          size: 20,
+                                          color: Colors.white,
+                                        ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 12),
+                            Text(
+                              _currentLang == 'km'
+                                  ? 'សួរថ្ងៃទីចែករំលែកកូដពីវេជ្ជបណ្ឌិតសត្វរបស់អ្នក'
+                                  : 'Ask your vet for their share code to connect',
+                              style: TextStyle(
+                                color: textGrey,
+                                fontSize: 12,
+                                fontStyle: FontStyle.italic,
+                              ),
+                            ),
+                          ],
                         ),
-                      ),
                       const SizedBox(height: 16),
 
                       // Connected Vets List
@@ -862,55 +910,60 @@ class _FarmerProfilePageState extends State<FarmerProfilePage> {
                           ),
                         )
                       else if (_connectedVets.isNotEmpty)
-                        ...(_connectedVets.map((vet) => Padding(
-                              padding: const EdgeInsets.only(bottom: 8.0),
-                              child: Container(
-                                padding: const EdgeInsets.all(12),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFF1F5F9),
-                                  borderRadius: BorderRadius.circular(10),
-                                  border: Border.all(color: textGreyLight),
-                                ),
-                                child: Row(
-                                  children: [
-                                    Icon(
-                                      Icons.medical_services_rounded,
-                                      color: brandDarkGreen,
-                                      size: 20,
-                                    ),
-                                    const SizedBox(width: 10),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            vet['name'] ?? 'Unknown Vet',
-                                            style: const TextStyle(
-                                              color: textDarkBlue,
-                                              fontSize: 14,
-                                              fontWeight: FontWeight.w600,
-                                            ),
-                                          ),
-                                          if (vet['phone'] != null)
+                        ...(_connectedVets
+                            .map(
+                              (vet) => Padding(
+                                padding: const EdgeInsets.only(bottom: 8.0),
+                                child: Container(
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFF1F5F9),
+                                    borderRadius: BorderRadius.circular(10),
+                                    border: Border.all(color: textGreyLight),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Icon(
+                                        Icons.medical_services_rounded,
+                                        color: brandDarkGreen,
+                                        size: 20,
+                                      ),
+                                      const SizedBox(width: 10),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
                                             Text(
-                                              vet['phone'],
-                                              style: TextStyle(
-                                                color: textGrey,
-                                                fontSize: 12,
+                                              vet['name'] ?? 'Unknown Vet',
+                                              style: const TextStyle(
+                                                color: textDarkBlue,
+                                                fontSize: 14,
+                                                fontWeight: FontWeight.w600,
                                               ),
                                             ),
-                                        ],
+                                            if (vet['phone'] != null)
+                                              Text(
+                                                vet['phone'],
+                                                style: TextStyle(
+                                                  color: textGrey,
+                                                  fontSize: 12,
+                                                ),
+                                              ),
+                                          ],
+                                        ),
                                       ),
-                                    ),
-                                    Icon(
-                                      Icons.check_circle_rounded,
-                                      color: brandDarkGreen,
-                                      size: 18,
-                                    ),
-                                  ],
+                                      const Icon(
+                                        Icons.check_circle_rounded,
+                                        color: brandDarkGreen,
+                                        size: 18,
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ),
-                            )).toList())
+                            )
+                            .toList())
                       else
                         Center(
                           child: Padding(
@@ -940,7 +993,11 @@ class _FarmerProfilePageState extends State<FarmerProfilePage> {
                 child: Column(
                   children: [
                     InkWell(
-                      onTap: () {},
+                      onTap: () => showAboutDialog(
+                        context: context,
+                        applicationName: 'VacTracker',
+                        applicationVersion: '1.0.0',
+                      ),
                       child: Padding(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 16,
@@ -1358,7 +1415,7 @@ class _FarmerProfilePageState extends State<FarmerProfilePage> {
 
       // Convert image to base64 with compression
       final bytes = await image.readAsBytes();
-      
+
       // Check file size - if still too large (over 50KB), compress further
       if (bytes.length > 50000) {
         // Try to compress even more by creating a smaller version
@@ -1368,11 +1425,11 @@ class _FarmerProfilePageState extends State<FarmerProfilePage> {
           maxHeight: 100,
           imageQuality: 30,
         );
-        
+
         if (smallerImage == null) return;
-        
+
         final smallerBytes = await smallerImage.readAsBytes();
-        
+
         // If still too large, show error
         if (smallerBytes.length > 50000) {
           if (!mounted) return;
@@ -1388,7 +1445,7 @@ class _FarmerProfilePageState extends State<FarmerProfilePage> {
           );
           return;
         }
-        
+
         final base64Image = base64Encode(smallerBytes);
         final String imageUrl = 'data:image/jpeg;base64,$base64Image';
         await _uploadProfileImage(imageUrl);

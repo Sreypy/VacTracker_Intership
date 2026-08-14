@@ -5,6 +5,7 @@ import { Vaccination, VaccinationStatus } from '../vaccinations/entities/vaccina
 import { Flock } from '../flocks/entities/flock.entity';
 import { User, UserRole } from '../users/entities/user.entity';
 import { VetFarmerConnection, ConnectionStatus } from '../users/entities/vet-farmer-connection.entity';
+import { SickReport } from '../sick-reports/entities/sick-report.entity';
 
 @Injectable()
 export class VetDashboardService {
@@ -20,6 +21,9 @@ export class VetDashboardService {
 
     @InjectRepository(VetFarmerConnection)
     private connectionRepository: Repository<VetFarmerConnection>,
+
+    @InjectRepository(SickReport)
+    private sickReportRepository: Repository<SickReport>,
   ) {}
 
   /**
@@ -36,10 +40,33 @@ export class VetDashboardService {
       throw new Error('Veterinarian not found');
     }
 
-    // Get all vaccinations administered by this vet
-    const vaccinations = await this.vaccinationRepository.find({
+    // Get all accepted connections for this vet
+    const connections = await this.connectionRepository.find({
       where: {
-        administered_by: { user_id: vet.user_id },
+        vetId: vet.user_id,
+        status: ConnectionStatus.ACCEPTED,
+      },
+      relations: {
+        farmer: true,
+      },
+    });
+
+    // Get all flocks from connected farmers
+    const farmerIds = connections.map(conn => conn.farmerId);
+    const flocks = farmerIds.length > 0 ? await this.flockRepository
+      .createQueryBuilder('flock')
+      .where('flock.farmer_id IN (:...farmerIds)', { farmerIds })
+      .leftJoinAndSelect('flock.farmer', 'farmer')
+      .getMany() : [];
+
+    // Get all vaccinations for these flocks administered by this vet
+    const flockIds = flocks.map(f => f.flock_id);
+    const vaccinations = flockIds.length > 0 ? await this.vaccinationRepository.find({
+      where: {
+        flock: In(flockIds),
+        administered_by: {
+          user_id: vet.user_id,
+        },
       },
       relations: {
         flock: true,
@@ -48,28 +75,35 @@ export class VetDashboardService {
       order: {
         date_given: 'DESC',
       },
-    });
+    }) : [];
 
-    // Get unique flocks managed by this vet
-    const flockIds = [...new Set(vaccinations.map(v => v.flock.flock_id))];
-    
-    const flocks = await this.flockRepository.find({
+    // Get sick reports for these flocks
+    const sickReports = flockIds.length > 0 ? await this.sickReportRepository.find({
       where: {
-        flock_id: In(flockIds),
+        flockId: In(flockIds),
       },
       relations: {
-        farmer: true,
+        flock: true,
       },
-    });
+      order: {
+        created_at: 'DESC',
+      },
+    }) : [];
 
     // Calculate statistics
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    const totalClients = flocks.length;
+    // Summary cards
+    const connectedFarmers = connections.length;
+    const totalFlocks = flocks.length;
+    const newSickReports = sickReports.filter(sr => {
+      const reportDate = new Date(sr.created_at);
+      reportDate.setHours(0, 0, 0, 0);
+      return reportDate.getTime() === today.getTime();
+    }).length;
 
-    // Count overdue vaccinations (next_due_date < today and status not completed)
-    const overdueCount = vaccinations.filter(v => {
+    const overdueVaccinations = vaccinations.filter(v => {
       if (v.status === VaccinationStatus.COMPLETED) return false;
       if (!v.next_due_date) return false;
       const nextDue = new Date(v.next_due_date);
@@ -77,46 +111,30 @@ export class VetDashboardService {
       return nextDue < today;
     }).length;
 
-    // Count due today (next_due_date === today)
-    const dueTodayCount = vaccinations.filter(v => {
-      if (!v.next_due_date) return false;
-      const nextDue = new Date(v.next_due_date);
-      nextDue.setHours(0, 0, 0, 0);
-      return nextDue.getTime() === today.getTime();
-    }).length;
-
-    // Get accepted or pending farmer connections for the vet
-    const connections = await this.connectionRepository.find({
-      where: {
-        vetId: vet.user_id,
-        status: In([ConnectionStatus.PENDING, ConnectionStatus.ACCEPTED]),
-      },
-      relations: {
-        farmer: true,
-      },
-      order: {
-        created_at: 'DESC',
-      },
-    });
-
-    const connectedFarmers = connections.map((connection) => ({
-      farmerId: connection.farmer.user_id,
-      name: connection.farmer.name,
-      phone: connection.farmer.phone,
-      village: connection.farmer.village,
-      province: connection.farmer.province,
-      status: connection.status,
-    }));
-
-    // Get client directory with vaccination status
-    const clientDirectory = flocks.map(flock => {
-      const flockVaccinations = vaccinations.filter(v => v.flock.flock_id === flock.flock_id);
-      const latestVaccination = flockVaccinations[0];
+    // Build connected farmers list with their flocks
+    const farmersList = connections.map(connection => {
+      const farmer = connection.farmer;
+      const farmerFlocks = flocks.filter(f => f.farmer?.user_id === farmer.user_id);
       
-      let status = 'compliant';
-      let statusText = 'COMPLIANT';
+      // Get all vaccinations for this farmer's flocks
+      const farmerFlockIds = farmerFlocks.map(f => f.flock_id);
+      const farmerVaccinations = vaccinations.filter(v => farmerFlockIds.includes(v.flock.flock_id));
+      const latestVaccination = farmerVaccinations[0];
       
-      if (latestVaccination) {
+      // Get sick reports for this farmer's flocks
+      const farmerSickReports = sickReports.filter(sr => farmerFlockIds.includes(sr.flockId));
+      const activeSickReports = farmerSickReports.filter(sr => 
+        sr.status !== 'resolved' && sr.status !== 'reviewed'
+      ).length;
+
+      // Determine status
+      let status = 'healthy';
+      let statusText = 'HEALTHY';
+      
+      if (activeSickReports > 0) {
+        status = 'sick';
+        statusText = `${activeSickReports} SICK REPORT${activeSickReports > 1 ? 'S' : ''}`;
+      } else if (latestVaccination) {
         if (latestVaccination.status === VaccinationStatus.OVERDUE) {
           status = 'overdue';
           statusText = 'OVERDUE';
@@ -129,20 +147,27 @@ export class VetDashboardService {
           if (diffDays <= 0) {
             status = 'overdue';
             statusText = 'OVERDUE';
-          } else if (diffDays <= 1) {
-            status = 'due_today';
-            statusText = 'DUE TODAY';
+          } else if (diffDays <= 7) {
+            status = 'due_soon';
+            statusText = `${diffDays} VACCINATION${diffDays > 1 ? 'S' : ''} DUE`;
           }
         }
       }
 
+      const totalBirds = farmerFlocks.reduce((sum, flock) => sum + flock.bird_count, 0);
+      
+      // Get farm names (flock batch names)
+      const farmNames = farmerFlocks.map(f => f.batch_name).join(', ');
+
       return {
-        flockId: flock.flock_id,
-        name: flock.batch_name,
-        location: flock.farmer ? `${flock.farmer.village || ''}, ${flock.farmer.province || ''}` : 'Unknown',
+        farmerId: farmer.user_id,
+        name: farmer.name,
+        farmName: farmNames,
+        location: `${farmer.village || ''}, ${farmer.province || ''}`,
         status,
         statusText,
-        birdCount: flock.bird_count,
+        flockCount: farmerFlocks.length,
+        totalBirds,
         lastVaccination: latestVaccination ? {
           date: latestVaccination.date_given,
           vaccine: latestVaccination.vaccine.name_en,
@@ -150,16 +175,16 @@ export class VetDashboardService {
       };
     });
 
-    // Sort by priority (overdue first, then due today, then compliant)
-    const priorityOrder = { 'overdue': 0, 'due_today': 1, 'compliant': 2 };
-    clientDirectory.sort((a, b) => priorityOrder[a.status] - priorityOrder[b.status]);
+    // Sort by priority (sick first, then overdue, then due soon, then healthy)
+    const priorityOrder = { 'sick': 0, 'overdue': 1, 'due_soon': 2, 'healthy': 3 };
+    farmersList.sort((a, b) => priorityOrder[a.status] - priorityOrder[b.status]);
 
     return {
-      totalClients,
-      overdueCount,
-      dueTodayCount,
-      clients: clientDirectory,
       connectedFarmers,
+      totalFlocks,
+      newSickReports,
+      overdueVaccinations,
+      farmers: farmersList,
     };
   }
 }

@@ -14,10 +14,14 @@ export class SickReportsService {
   ) {}
 
   async create(createSickReportDto: CreateSickReportDto, userId: number) {
+    const reportDate = createSickReportDto.reportDate instanceof Date 
+      ? createSickReportDto.reportDate 
+      : new Date(createSickReportDto.reportDate);
+    
     const sickReport = this.sickReportRepository.create({
       ...createSickReportDto,
       reportedBy: userId,
-      reportDate: createSickReportDto.reportDate.toISOString().split('T')[0],
+      reportDate: reportDate.toISOString().split('T')[0],
     });
     return await this.sickReportRepository.save(sickReport);
   }

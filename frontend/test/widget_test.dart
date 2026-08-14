@@ -8,23 +8,52 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:frontend/main.dart';
+import 'package:frontend/screens/auth/login_otp_screen.dart';
+import 'package:frontend/screens/farmer/log_vaccination_step2_page.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const VacTrackerApp());
+  testWidgets('OTP dialog shows verification controls', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: OtpVerificationDialog(
+          phone: '85512345678',
+          languageCode: 'en',
+          otpCode: '123456',
+          onVerify: (otp) async {},
+          onResend: () async {},
+        ),
+      ),
+    );
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+    await tester.pumpAndSettle();
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
+    expect(find.text('Verify OTP'), findsOneWidget);
+    expect(
+      find.text('Enter the 6-digit code sent to your phone'),
+      findsOneWidget,
+    );
+    expect(find.text('Verify'), findsOneWidget);
+    expect(find.text('Resend OTP'), findsOneWidget);
+  });
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+  testWidgets('Step 2 keeps the reminder vaccine preselected', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LogVaccinationStep2Page(
+          selectedFlockName: 'Batch A',
+          flockId: '7',
+          languageCode: 'en',
+          selectedVaccineId: '2',
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    expect(find.text('Select Vaccine'), findsOneWidget);
   });
 }

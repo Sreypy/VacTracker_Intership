@@ -218,7 +218,7 @@ class _FarmerRegisterPageState extends State<FarmerRegisterPage> {
                         color: brandHeaderGreen,
                         size: 26,
                       ),
-                      onPressed: () {},
+                      onPressed: () => context.push('/language'),
                     ),
                   ],
                 ),

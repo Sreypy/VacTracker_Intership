@@ -3,8 +3,8 @@ import 'package:go_router/go_router.dart';
 import '../../services/vet_dashboard_service.dart';
 
 class VetDashboardPage extends StatefulWidget {
-  final String languageCode; // 'en' or 'km'
-  final String? profileImageUrl; // Pass null or network URL string
+  final String languageCode;
+  final String? profileImageUrl;
 
   const VetDashboardPage({
     super.key,
@@ -24,75 +24,16 @@ class _VetDashboardPageState extends State<VetDashboardPage> {
   static const Color brandHeaderGreen = Color(0xFF0D6E28);
   static const Color textDarkBlue = Color(0xFF0A1C33);
   static const Color textGrey = Color(0xFF5A6B82);
-
+  static const Color textGreyLight = Color(0xFFE2E8F0);
   static const Color statusGreen = Color(0xFF0D6E28);
   static const Color statusRed = Color(0xFFA80000);
   static const Color statusRedBg = Color(0xFFFDE8E8);
-  static const Color textGreyLight = Color(0xFFE2E8F0);
-  static const Color compliantBg = Color(0xFFE2E8F0);
-  static const Color compliantText = Color(0xFF5A6B82);
+  static const Color statusYellow = Color(0xFFB78209);
 
-  // Data State
   VetDashboardStats? _dashboardStats;
   bool _isLoading = true;
   String? _errorMessage;
   final VetDashboardService _vetDashboardService = VetDashboardService();
-
-  final Map<String, Map<String, String>> _localizedValues = const {
-    'en': {
-      'welcome': 'Welcome back,',
-      'dr_title': 'Dr. Sokha',
-      'total_clients': 'Total Managed Clients',
-      'overdue_label': 'OVERDUE',
-      'due_today_label': 'DUE TODAY',
-      'needs_action': '! Needs Action',
-      'scheduled': 'Scheduled',
-      'btn_reminders': 'Send Bulk Reminders',
-      'directory_title': 'Client Directory',
-      'sorting': 'Sorted by Priority',
-      'compliant_label': 'COMPLIANT',
-    },
-    'km': {
-      'welcome': 'ស្វាគមន៍ការត្រឡប់មកវិញ',
-      'dr_title': 'វេជ្ជបណ្ឌិត សុខា',
-      'total_clients': 'អតិថិជនគ្រប់គ្រងសរុប',
-      'overdue_label': 'ហួសកំណត់',
-      'due_today_label': 'ដល់កំណត់ថ្ងៃនេះ',
-      'needs_action': '! ត្រូវការការពិនិត្យ',
-      'scheduled': 'បានគ្រោងទុក',
-      'btn_reminders': 'ផ្ញើការរំលឹកជាក្រុម',
-      'directory_title': 'បញ្ជីឈ្មោះអតិថិជន',
-      'sorting': 'តម្រៀបតាមអាទិភាព',
-      'compliant_label': 'ត្រឹមត្រូវតាមស្តង់ដារ',
-    },
-  };
-
-  String _getText(String key) {
-    return _localizedValues[widget.languageCode]?[key] ??
-        _localizedValues['en']![key]!;
-  }
-
-  // Dynamic Avatar Loader Helper
-  Widget _buildUserAvatar(String? avatarUrl, String displayName) {
-    final hasAvatar = avatarUrl != null && avatarUrl.isNotEmpty;
-    return CircleAvatar(
-      radius: 18,
-      backgroundColor: hasAvatar
-          ? Colors.transparent
-          : brandHeaderGreen.withOpacity(0.15),
-      backgroundImage: hasAvatar ? NetworkImage(avatarUrl) : null,
-      child: hasAvatar
-          ? null
-          : Text(
-              displayName.isNotEmpty ? displayName[0].toUpperCase() : "U",
-              style: const TextStyle(
-                color: brandDarkGreen,
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-    );
-  }
 
   @override
   void initState() {
@@ -101,22 +42,18 @@ class _VetDashboardPageState extends State<VetDashboardPage> {
   }
 
   Future<void> _fetchDashboardStats() async {
-    debugPrint('Fetching vet dashboard stats...');
     setState(() {
       _isLoading = true;
       _errorMessage = null;
     });
 
     try {
-      debugPrint('Calling vet dashboard service...');
       final stats = await _vetDashboardService.getDashboardStats();
-      debugPrint('Stats received: ${stats.totalClients} clients');
       setState(() {
         _dashboardStats = stats;
         _isLoading = false;
       });
     } catch (e) {
-      debugPrint('Error fetching stats: $e');
       setState(() {
         _errorMessage = e.toString();
         _isLoading = false;
@@ -139,7 +76,18 @@ class _VetDashboardPageState extends State<VetDashboardPage> {
         ),
         title: Row(
           children: [
-            _buildUserAvatar(widget.profileImageUrl, "Sokha"),
+            CircleAvatar(
+              radius: 18,
+              backgroundColor: brandHeaderGreen.withValues(alpha: 0.15),
+              child: Text(
+                "S",
+                style: TextStyle(
+                  color: brandDarkGreen,
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
             const SizedBox(width: 10),
             const Text(
               "VacTracker",
@@ -154,7 +102,7 @@ class _VetDashboardPageState extends State<VetDashboardPage> {
         actions: [
           IconButton(
             icon: const Icon(
-              Icons.language_outlined,
+              Icons.notifications_outlined,
               color: brandDarkGreen,
               size: 24,
             ),
@@ -170,20 +118,26 @@ class _VetDashboardPageState extends State<VetDashboardPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Header
               Text(
-                _getText('welcome'),
-                style: const TextStyle(color: textGrey, fontSize: 15),
+                'Good Morning,',
+                style: TextStyle(color: textGrey, fontSize: 15),
               ),
               const SizedBox(height: 2),
               Text(
-                _getText('dr_title'),
-                style: const TextStyle(
+                'Dr. Sokha 👋',
+                style: TextStyle(
                   color: textDarkBlue,
                   fontSize: 26,
                   fontWeight: FontWeight.bold,
                 ),
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 4),
+              Text(
+                'Monitor your farmers and poultry health',
+                style: TextStyle(color: textGrey, fontSize: 14),
+              ),
+              const SizedBox(height: 24),
 
               // Loading or Error State
               if (_isLoading)
@@ -234,196 +188,78 @@ class _VetDashboardPageState extends State<VetDashboardPage> {
                   ),
                 )
               else ...[
-                // Total Managed Clients Card
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: brandDarkGreen,
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        _getText('total_clients'),
-                        style: const TextStyle(
-                          color: Colors.white70,
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        "${_dashboardStats?.totalClients ?? 0}",
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 36,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 16),
-
-                // Split Priority Metric Row
+                // Summary Cards
                 Row(
                   children: [
                     Expanded(
-                      child: Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: statusRedBg,
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              _getText('overdue_label'),
-                              style: const TextStyle(
-                                color: statusRed,
-                                fontSize: 11,
-                                fontWeight: FontWeight.bold,
-                                letterSpacing: 0.5,
-                              ),
-                            ),
-                            const SizedBox(height: 6),
-                            Text(
-                              "${_dashboardStats?.overdueCount ?? 0}",
-                              style: const TextStyle(
-                                color: statusRed,
-                                fontSize: 24,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            const SizedBox(height: 6),
-                            Text(
-                              _getText('needs_action'),
-                              style: const TextStyle(
-                                color: statusRed,
-                                fontSize: 13,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
-                        ),
+                      child: _buildSummaryCard(
+                        '👨‍🌾',
+                        'Connected Farmers',
+                        '${_dashboardStats?.connectedFarmers ?? 0}',
+                        'Farmers',
+                        brandDarkGreen,
                       ),
                     ),
-                    const SizedBox(width: 14),
+                    const SizedBox(width: 12),
                     Expanded(
-                      child: Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: textGreyLight.withOpacity(0.5),
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              _getText('due_today_label'),
-                              style: const TextStyle(
-                                color: textGrey,
-                                fontSize: 11,
-                                fontWeight: FontWeight.bold,
-                                letterSpacing: 0.5,
-                              ),
-                            ),
-                            const SizedBox(height: 6),
-                            Text(
-                              "${_dashboardStats?.dueTodayCount ?? 0}",
-                              style: const TextStyle(
-                                color: textDarkBlue,
-                                fontSize: 24,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            const SizedBox(height: 6),
-                            Row(
-                              children: [
-                                const Icon(
-                                  Icons.calendar_today_outlined,
-                                  size: 14,
-                                  color: brandHeaderGreen,
-                                ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  _getText('scheduled'),
-                                  style: const TextStyle(
-                                    color: brandHeaderGreen,
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
+                      child: _buildSummaryCard(
+                        '🐔',
+                        'Total Flocks',
+                        '${_dashboardStats?.totalFlocks ?? 0}',
+                        'Flocks',
+                        brandDarkGreen,
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 20),
-
-                // Send Reminders Button
-                SizedBox(
-                  width: double.infinity,
-                  height: 52,
-                  child: ElevatedButton.icon(
-                    onPressed: () {},
-                    icon: const Icon(Icons.exit_to_app_rounded, size: 20),
-                    label: Text(
-                      _getText('btn_reminders'),
-                      style: const TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.bold,
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildAlertCard(
+                        '🩺',
+                        'New Sick Reports',
+                        '${_dashboardStats?.newSickReports ?? 0}',
+                        'Reports',
+                        statusRed,
+                        statusRedBg,
                       ),
                     ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: brandDarkGreen,
-                      foregroundColor: Colors.white,
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _buildAlertCard(
+                        '💉',
+                        'Overdue Vaccinations',
+                        '${_dashboardStats?.overdueVaccinations ?? 0}',
+                        'Flocks',
+                        statusRed,
+                        statusRedBg,
                       ),
                     ),
-                  ),
+                  ],
                 ),
                 const SizedBox(height: 28),
 
-                // Connected Farmers Section
-                if (_dashboardStats != null)
-                  _buildConnectedFarmersSection(
-                    _dashboardStats!.connectedFarmers,
-                  ),
-
-                // Directory Titles
-                if (_dashboardStats != null)
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        _getText('directory_title'),
-                        style: const TextStyle(
-                          color: textDarkBlue,
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                        ),
+                // My Farmers Section
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'My Farmers',
+                      style: TextStyle(
+                        color: textDarkBlue,
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
                       ),
-                      Text(
-                        _getText('sorting'),
-                        style: const TextStyle(color: textGrey, fontSize: 12),
-                      ),
-                    ],
-                  ),
-                if (_dashboardStats != null) const SizedBox(height: 14),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 14),
 
-                // Client Directory Cards
+                // Farmers List
                 if (_dashboardStats != null)
-                  ..._dashboardStats!.clients.map((client) {
-                    return _buildClientCard(client);
+                  ..._dashboardStats!.farmers.map((farmer) {
+                    return _buildFarmerCard(farmer);
                   }).toList(),
               ],
             ],
@@ -434,246 +270,175 @@ class _VetDashboardPageState extends State<VetDashboardPage> {
     );
   }
 
-  Widget _buildConnectedFarmersSection(List<ConnectedFarmer> farmers) {
-    if (farmers.isEmpty) {
-      return const SizedBox.shrink();
-    }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const SizedBox(height: 20),
-        Text(
-          'Connected Farmers',
-          style: const TextStyle(
-            color: textDarkBlue,
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
+  Widget _buildSummaryCard(
+    String emoji,
+    String label,
+    String value,
+    String unit,
+    Color color,
+  ) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: textGreyLight, width: 1),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(emoji, style: const TextStyle(fontSize: 24)),
+          const SizedBox(height: 8),
+          Text(
+            label,
+            style: TextStyle(
+              color: textGrey,
+              fontSize: 11,
+              fontWeight: FontWeight.w500,
+            ),
           ),
-        ),
-        const SizedBox(height: 12),
-        ...farmers.map((farmer) {
-          final statusLabel = farmer.status == 'accepted'
-              ? 'Connected'
-              : 'Pending';
-          final statusColor = farmer.status == 'accepted'
-              ? statusGreen
-              : statusRed;
-          return Container(
-            margin: const EdgeInsets.only(bottom: 12),
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: textGreyLight, width: 1),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            style: TextStyle(
+              color: color,
+              fontSize: 28,
+              fontWeight: FontWeight.bold,
             ),
-            child: Row(
-              children: [
-                CircleAvatar(
-                  radius: 20,
-                  backgroundColor: statusColor.withOpacity(0.15),
-                  child: Text(
-                    farmer.name.isNotEmpty ? farmer.name[0].toUpperCase() : 'F',
-                    style: TextStyle(
-                      color: statusColor,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        farmer.name,
-                        style: const TextStyle(
-                          color: textDarkBlue,
-                          fontSize: 15,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        '${farmer.village}, ${farmer.province}',
-                        style: const TextStyle(color: textGrey, fontSize: 13),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        farmer.phone,
-                        style: const TextStyle(color: textGrey, fontSize: 13),
-                      ),
-                    ],
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: statusColor.withOpacity(0.16),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    statusLabel,
-                    style: TextStyle(
-                      color: statusColor,
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          );
-        }).toList(),
-        const SizedBox(height: 20),
-      ],
+          ),
+        ],
+      ),
     );
   }
 
-  Widget _buildClientCard(ClientData client) {
-    // Determine colors based on status
-    Color accentColor;
-    Color statusColor;
-    Color statusBgColor;
-    Color iconBgColor;
-    Color iconColor;
-    IconData iconData;
+  Widget _buildAlertCard(
+    String emoji,
+    String label,
+    String value,
+    String unit,
+    Color color,
+    Color bgColor,
+  ) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: color.withValues(alpha: 0.2), width: 1),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(emoji, style: const TextStyle(fontSize: 24)),
+          const SizedBox(height: 8),
+          Text(
+            label,
+            style: TextStyle(
+              color: color,
+              fontSize: 11,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            style: TextStyle(
+              color: color,
+              fontSize: 28,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
-    switch (client.status) {
+  Widget _buildFarmerCard(FarmerData farmer) {
+    // Determine status color and icon
+    Color statusColor;
+    String statusEmoji;
+
+    switch (farmer.status) {
+      case 'sick':
+        statusColor = statusRed;
+        statusEmoji = '🔴';
+        break;
       case 'overdue':
-        accentColor = statusRed;
-        statusColor = Colors.white;
-        statusBgColor = statusRed;
-        iconBgColor = const Color(0xFFFDE8E8);
-        iconColor = const Color(0xFFE11D48);
-        iconData = Icons.warning_amber_rounded;
+        statusColor = statusRed;
+        statusEmoji = '🔴';
         break;
-      case 'due_today':
-        accentColor = statusGreen;
-        statusColor = Colors.white;
-        statusBgColor = statusGreen;
-        iconBgColor = const Color(0xFFDCFCE7);
-        iconColor = statusGreen;
-        iconData = Icons.calendar_today_rounded;
+      case 'due_soon':
+        statusColor = statusYellow;
+        statusEmoji = '🟡';
         break;
-      case 'compliant':
+      case 'healthy':
       default:
-        accentColor = textGrey;
-        statusColor = compliantText;
-        statusBgColor = compliantBg;
-        iconBgColor = const Color(0xFFF1F5F9);
-        iconColor = textGrey;
-        iconData = Icons.check_circle_outline_rounded;
-        break;
+        statusColor = statusGreen;
+        statusEmoji = '🟢';
     }
 
     return Container(
+      margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: textGreyLight, width: 1),
       ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(12),
-        child: Container(
-          decoration: BoxDecoration(
-            border: Border(left: BorderSide(color: accentColor, width: 4)),
-          ),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      child: InkWell(
+        onTap: () {
+          // Navigate to farmer detail screen
+          // context.push('/farmer-detail/${farmer.farmerId}?lang=${widget.languageCode}');
+        },
+        child: Padding(
+          padding: const EdgeInsets.all(14),
           child: Row(
             children: [
               Container(
-                padding: const EdgeInsets.all(10),
+                width: 48,
+                height: 48,
                 decoration: BoxDecoration(
-                  color: iconBgColor,
-                  borderRadius: BorderRadius.circular(8),
+                  color: statusColor.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                child: Icon(iconData, color: iconColor, size: 24),
+                child: Icon(Icons.person_rounded, color: statusColor, size: 24),
               ),
-              const SizedBox(width: 14),
+              const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      client.name,
-                      style: const TextStyle(
+                      farmer.name,
+                      style: TextStyle(
                         color: textDarkBlue,
-                        fontSize: 16,
+                        fontSize: 15,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
                     const SizedBox(height: 4),
+                    Text(
+                      '${farmer.flockCount} Flocks · ${farmer.totalBirds} Chickens',
+                      style: TextStyle(color: textGrey, fontSize: 12),
+                    ),
+                    const SizedBox(height: 4),
                     Row(
                       children: [
-                        const Icon(
-                          Icons.location_on_outlined,
-                          size: 13,
-                          color: textGrey,
-                        ),
-                        const SizedBox(width: 2),
+                        Text(statusEmoji, style: const TextStyle(fontSize: 12)),
+                        const SizedBox(width: 4),
                         Text(
-                          client.location,
-                          style: const TextStyle(color: textGrey, fontSize: 12),
+                          farmer.statusText,
+                          style: TextStyle(
+                            color: statusColor,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       ],
                     ),
-                    if (client.lastVaccination != null) ...[
-                      const SizedBox(height: 4),
-                      Row(
-                        children: [
-                          const Icon(
-                            Icons.vaccines_outlined,
-                            size: 13,
-                            color: textGrey,
-                          ),
-                          const SizedBox(width: 2),
-                          Text(
-                            'Last: ${client.lastVaccination!.vaccine}',
-                            style: const TextStyle(
-                              color: textGrey,
-                              fontSize: 11,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
                   ],
                 ),
               ),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: statusBgColor,
-                      borderRadius: BorderRadius.circular(100),
-                    ),
-                    child: Text(
-                      client.statusText,
-                      style: TextStyle(
-                        color: statusColor,
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 0.3,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  const Icon(
-                    Icons.arrow_forward_ios_rounded,
-                    color: textGrey,
-                    size: 14,
-                  ),
-                ],
-              ),
+              Icon(Icons.arrow_forward_ios_rounded, color: textGrey, size: 14),
             ],
           ),
         ),
@@ -689,12 +454,18 @@ class _VetDashboardPageState extends State<VetDashboardPage> {
       child: BottomNavigationBar(
         currentIndex: _currentIndex,
         onTap: (index) {
-          if (index == 3) {
-            // Navigate to vet profile page
+          setState(() {
+            _currentIndex = index;
+          });
+          if (index == 0) {
+            context.push('/vet-dashboard?lang=${widget.languageCode}');
+          } else if (index == 1) {
+            context.push('/vet-reports?lang=${widget.languageCode}');
+          } else if (index == 2) {
+            context.push('/my-farmers/${widget.languageCode}');
+          } else if (index == 3) {
             context.push('/vet-profile/${widget.languageCode}');
-            return;
           }
-          setState(() => _currentIndex = index);
         },
         type: BottomNavigationBarType.fixed,
         backgroundColor: Colors.white,
@@ -703,37 +474,25 @@ class _VetDashboardPageState extends State<VetDashboardPage> {
         showSelectedLabels: false,
         showUnselectedLabels: false,
         items: [
+          const BottomNavigationBarItem(
+            icon: Icon(Icons.home_outlined, size: 24),
+            label: 'Home',
+          ),
+          const BottomNavigationBarItem(
+            icon: Icon(Icons.assignment_outlined, size: 24),
+            label: 'Reports',
+          ),
           BottomNavigationBarItem(
-            icon: _currentIndex == 0
-                ? Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 6,
-                    ),
-                    decoration: BoxDecoration(
-                      color: brandDarkGreen,
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: const Icon(
-                      Icons.grid_view_rounded,
-                      color: Colors.white,
-                      size: 24,
-                    ),
-                  )
-                : const Icon(Icons.grid_view_rounded, size: 24),
-            label: '',
-          ),
-          const BottomNavigationBarItem(
-            icon: Icon(Icons.warning_amber_rounded, size: 24),
-            label: '',
-          ),
-          const BottomNavigationBarItem(
-            icon: Icon(Icons.notifications_none_rounded, size: 24),
-            label: '',
+            icon: Icon(
+              Icons.people_outline_rounded,
+              size: 24,
+              color: _currentIndex == 2 ? brandDarkGreen : null,
+            ),
+            label: 'Farmers',
           ),
           const BottomNavigationBarItem(
             icon: Icon(Icons.person_outline_rounded, size: 24),
-            label: '',
+            label: 'Profile',
           ),
         ],
       ),

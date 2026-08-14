@@ -20,6 +20,10 @@ import 'package:frontend/screens/role.dart';
 import 'package:frontend/screens/vet/vet_dashboard_page.dart';
 import 'package:frontend/screens/vet/vet_profile_page.dart';
 import 'package:frontend/screens/vet/vet_register_page.dart';
+import 'package:frontend/screens/vet/my_farmers_page.dart';
+import 'package:frontend/screens/vet/farmer_detail_page.dart';
+import 'package:frontend/screens/vet/sick_reports_screen.dart';
+import 'package:frontend/screens/vet/sick_report_detail_screen.dart';
 import 'package:frontend/screens/welcome_page.dart';
 import 'package:go_router/go_router.dart';
 
@@ -95,6 +99,39 @@ final GoRouter _router = GoRouter(
       },
     ),
     GoRoute(
+      path: '/vet-reports',
+      builder: (context, state) {
+        final language = state.uri.queryParameters['lang'] ?? 'en';
+        return VetSickReportsScreen(languageCode: language);
+      },
+    ),
+    GoRoute(
+      path: '/vet-reports/:reportId',
+      builder: (context, state) {
+        final reportId = state.pathParameters['reportId'] ?? '';
+        final language = state.uri.queryParameters['lang'] ?? 'en';
+        return VetSickReportDetailScreen(
+          reportId: reportId,
+          languageCode: language,
+        );
+      },
+    ),
+    GoRoute(
+      path: '/my-farmers/:lang',
+      builder: (context, state) {
+        final language = state.pathParameters['lang'] ?? 'en';
+        return MyFarmersPage(languageCode: language);
+      },
+    ),
+    GoRoute(
+      path: '/farmer-detail/:farmerId/:lang',
+      builder: (context, state) {
+        final farmerId = int.parse(state.pathParameters['farmerId'] ?? '0');
+        final language = state.pathParameters['lang'] ?? 'en';
+        return FarmerDetailPage(farmerId: farmerId, languageCode: language);
+      },
+    ),
+    GoRoute(
       path: '/vet-profile/:lang',
       builder: (context, state) {
         final language = state.pathParameters['lang'] ?? 'en';
@@ -125,11 +162,13 @@ final GoRouter _router = GoRouter(
         final flockName =
             state.uri.queryParameters['batchTitle'] ?? 'Flock B-42';
         final flockId = state.uri.queryParameters['flockId'] ?? '';
+        final vaccineId = state.uri.queryParameters['vaccineId'] ?? '';
 
         return LogVaccinationStep2Page(
           selectedFlockName: flockName,
           flockId: flockId,
           languageCode: language,
+          selectedVaccineId: vaccineId,
         );
       },
     ),

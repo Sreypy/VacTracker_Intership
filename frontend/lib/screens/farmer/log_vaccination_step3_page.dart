@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:frontend/models/flock.dart';
 import 'package:frontend/models/vaccine.dart';
@@ -44,6 +45,7 @@ class _LogVaccinationStep3PageState extends State<LogVaccinationStep3Page> {
   String _statusBadge = 'ទាន់ពេលវេលា'; // On Time
   bool _createReminder = false;
   String? _photoPath;
+  Uint8List? _photoBytes;
 
   final VaccineService _vaccineService = VaccineService();
   final FlockService _flockService = FlockService();
@@ -197,6 +199,7 @@ class _LogVaccinationStep3PageState extends State<LogVaccinationStep3Page> {
         _nextVaccinationDate = _formatDate(nextDate);
         _createReminder = data['createReminder'] == true;
         _photoPath = data['photoPath']?.toString();
+        _photoBytes = data['photoBytes'] as Uint8List?;
         _statusBadge = _getText('lbl_status_on_time');
         _isLoading = false;
       });
@@ -769,22 +772,80 @@ class _LogVaccinationStep3PageState extends State<LogVaccinationStep3Page> {
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(15),
-        child: _photoPath != null && _photoPath!.isNotEmpty
-            ? Image.file(File(_photoPath!), fit: BoxFit.cover)
-            : Image.network(
-                'https://images.unsplash.com/photo-1589923188900-85dae523342b?auto=format&fit=crop&q=80&w=800',
+        child: _photoBytes != null
+            ? Image.memory(
+                _photoBytes!,
                 fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) => Container(
-                  color: const Color(0xFFE2E8F0),
-                  child: const Center(
-                    child: Icon(
-                      Icons.tablet_mac_rounded,
-                      size: 48,
-                      color: textGrey,
+                errorBuilder: (context, error, stackTrace) {
+                  return Container(
+                    color: const Color(0xFFE2E8F0),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(
+                          Icons.broken_image_outlined,
+                          size: 48,
+                          color: textGrey,
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          _currentLang == 'km'
+                              ? 'មិនអាចបង្ហាញរូបភាព'
+                              : 'Cannot display image',
+                          style: const TextStyle(
+                            color: textGrey,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              )
+            : _photoPath != null && _photoPath!.isNotEmpty
+                ? Image.file(
+                    File(_photoPath!),
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) {
+                      return Container(
+                        color: const Color(0xFFE2E8F0),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(
+                              Icons.broken_image_outlined,
+                              size: 48,
+                              color: textGrey,
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              _currentLang == 'km'
+                                  ? 'មិនអាចបង្ហាញរូបភាព'
+                                  : 'Cannot display image',
+                              style: const TextStyle(
+                                color: textGrey,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  )
+                : Image.network(
+                    'https://images.unsplash.com/photo-1589923188900-85dae523342b?auto=format&fit=crop&q=80&w=800',
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) => Container(
+                      color: const Color(0xFFE2E8F0),
+                      child: const Center(
+                        child: Icon(
+                          Icons.tablet_mac_rounded,
+                          size: 48,
+                          color: textGrey,
+                        ),
+                      ),
                     ),
                   ),
-                ),
-              ),
       ),
     );
   }

@@ -228,7 +228,7 @@ class _FlockDetailPageState extends State<FlockDetailPage> {
               color: brandDarkGreen,
               size: 24,
             ),
-            onPressed: () {},
+            onPressed: () => context.push('/language'),
           ),
         ],
       ),

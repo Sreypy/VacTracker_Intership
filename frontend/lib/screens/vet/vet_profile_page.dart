@@ -39,7 +39,7 @@ class _VetProfileScreenState extends State<VetProfileScreen> {
   bool _newSickReportsEnabled = true;
   bool _clientOverdueAlertsEnabled = true;
   String? _vetShareLink;
-  
+
   // Profile Data
   Map<String, dynamic>? _profileData;
   bool _isLoadingProfile = true;
@@ -61,7 +61,7 @@ class _VetProfileScreenState extends State<VetProfileScreen> {
     try {
       final authService = AuthService();
       final profile = await authService.getProfile();
-      
+
       setState(() {
         _profileData = profile;
         _vetShareLink = profile['share_code'] ?? 'FG-VET-SOKHA-2024';
@@ -110,7 +110,9 @@ class _VetProfileScreenState extends State<VetProfileScreen> {
         return AlertDialog(
           title: Text(isKhmer ? 'ចាកចេញ' : 'Log Out'),
           content: Text(
-            isKhmer ? 'តើអ្នកពិតជាចង់ចាកចេញមែនទេ?' : 'Are you sure you want to log out?',
+            isKhmer
+                ? 'តើអ្នកពិតជាចង់ចាកចេញមែនទេ?'
+                : 'Are you sure you want to log out?',
           ),
           actions: [
             TextButton(
@@ -119,9 +121,7 @@ class _VetProfileScreenState extends State<VetProfileScreen> {
             ),
             ElevatedButton(
               onPressed: () => Navigator.of(context).pop(true),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: logoutText,
-              ),
+              style: ElevatedButton.styleFrom(backgroundColor: logoutText),
               child: Text(
                 isKhmer ? 'ចាកចេញ' : 'Log Out',
                 style: const TextStyle(color: Colors.white),
@@ -252,10 +252,7 @@ class _VetProfileScreenState extends State<VetProfileScreen> {
           ],
         ),
         child: const Center(
-          child: CircularProgressIndicator(
-            color: primaryGreen,
-            strokeWidth: 2,
-          ),
+          child: CircularProgressIndicator(color: primaryGreen, strokeWidth: 2),
         ),
       );
     }
@@ -303,10 +300,11 @@ class _VetProfileScreenState extends State<VetProfileScreen> {
       );
     }
 
-    final name = _profileData?['name'] ?? (isKhmer ? 'វេជ្ជបណ្ឌិត សុខា' : 'Dr. Sokha');
+    final name =
+        _profileData?['name'] ?? (isKhmer ? 'វេជ្ជបណ្ឌិត សុខា' : 'Dr. Sokha');
     final role = _profileData?['role'] ?? 'veterinarian';
     final profileImageUrl = _profileData?['profile_image_url'];
-    
+
     // Get initials from name
     String initials = 'DS';
     if (name.isNotEmpty) {
@@ -741,25 +739,33 @@ class _VetProfileScreenState extends State<VetProfileScreen> {
           // Navigate to vet dashboard
           context.push('/vet-dashboard?lang=${widget.currentLanguage}');
           return;
+        } else if (index == 1) {
+          // Navigate to reports
+          context.push('/vet-reports?lang=${widget.currentLanguage}');
+          return;
+        } else if (index == 2) {
+          // Navigate to farmers
+          context.push('/my-farmers/${widget.currentLanguage}');
+          return;
         }
       },
       showSelectedLabels: false,
       showUnselectedLabels: false,
       items: const [
         BottomNavigationBarItem(
-          icon: Icon(Icons.grid_view_rounded),
-          label: 'Dashboard',
+          icon: Icon(Icons.home_outlined, size: 24),
+          label: 'Home',
         ),
         BottomNavigationBarItem(
-          icon: Icon(Icons.warning_amber_rounded),
-          label: 'Alerts',
+          icon: Icon(Icons.assignment_outlined, size: 24),
+          label: 'Reports',
         ),
         BottomNavigationBarItem(
-          icon: Icon(Icons.notifications_none),
-          label: 'Notifications',
+          icon: Icon(Icons.people_outline_rounded, size: 24),
+          label: 'Farmers',
         ),
         BottomNavigationBarItem(
-          icon: Icon(Icons.person_outline),
+          icon: Icon(Icons.person_outline_rounded, size: 24),
           label: 'Profile',
         ),
       ],

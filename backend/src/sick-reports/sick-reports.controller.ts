@@ -11,8 +11,15 @@ export class SickReportsController {
   constructor(private readonly sickReportsService: SickReportsService) {}
 
   @Post()
-  create(@Request() req, @Body() createSickReportDto: CreateSickReportDto) {
-    return this.sickReportsService.create(createSickReportDto, req.user.user_id);
+  async create(@Request() req, @Body() createSickReportDto: CreateSickReportDto) {
+    try {
+      return await this.sickReportsService.create(createSickReportDto, req.user.user_id);
+    } catch (error) {
+      console.error('Error creating sick report:', error);
+      console.error('DTO:', createSickReportDto);
+      console.error('User ID:', req.user.user_id);
+      throw error;
+    }
   }
 
   @Get()

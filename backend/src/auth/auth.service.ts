@@ -57,9 +57,11 @@ export class AuthService {
 
     await this.otpRepository.save(otpCode);
 
+    console.log(`OTP for ${phone}: ${otp}`);
+
     return {
       message: 'OTP sent successfully',
-
+      // TODO: REMOVE OTP FROM API RESPONSE BEFORE PRODUCTION
       // Development only
       otp,
     };

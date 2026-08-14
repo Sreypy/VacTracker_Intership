@@ -396,7 +396,7 @@ class _AddFlockPageState extends State<AddFlockPage> {
               color: brandDarkGreen,
               size: 24,
             ),
-            onPressed: () {},
+            onPressed: () => context.push('/language'),
           ),
           const SizedBox(width: 8),
         ],

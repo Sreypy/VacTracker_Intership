@@ -3,6 +3,7 @@ import 'package:frontend/models/flock.dart';
 import 'package:frontend/services/flock_service.dart';
 import 'package:frontend/services/vaccination_pdf_service.dart';
 import 'package:frontend/services/vaccination_service.dart';
+import 'package:go_router/go_router.dart';
 
 class VaccinationHistoryScreen extends StatefulWidget {
   final String flockId;
@@ -261,7 +262,7 @@ class _VaccinationHistoryScreenState extends State<VaccinationHistoryScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.language, color: primaryGreen),
-            onPressed: () {},
+            onPressed: () => context.push('/language'),
           ),
         ],
       ),
@@ -342,7 +343,20 @@ class _VaccinationHistoryScreenState extends State<VaccinationHistoryScreen> {
                     ),
                   ),
                   InkWell(
-                    onTap: () {},
+                    onTap: () => showModalBottomSheet<void>(
+                      context: context,
+                      builder: (context) => SafeArea(
+                        child: Wrap(
+                          children: [
+                            ListTile(
+                              leading: const Icon(Icons.filter_list),
+                              title: Text(_getText('filter')),
+                              onTap: () => Navigator.pop(context),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
                     borderRadius: BorderRadius.circular(8),
                     child: Padding(
                       padding: const EdgeInsets.symmetric(

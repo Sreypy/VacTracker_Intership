@@ -1,4 +1,6 @@
 import 'dart:io';
+import 'dart:typed_data';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
@@ -35,13 +37,13 @@ class VaccineModel {
     return VaccineModel(
       id: vaccine.id.toString(),
 
-      nameEn: vaccine.nameEn ?? '',
-      nameKm: vaccine.nameKm ?? '',
+      nameEn: vaccine.nameEn,
+      nameKm: vaccine.nameKm,
 
-      diseaseEn: vaccine.diseaseEn ?? '',
-      diseaseKm: vaccine.diseaseKm ?? '',
+      diseaseEn: vaccine.diseaseEn,
+      diseaseKm: vaccine.diseaseKm,
 
-      intervalDays: vaccine.intervalDays ?? 0,
+      intervalDays: vaccine.intervalDays,
 
       notesEn: vaccine.notesEn,
       notesKm: vaccine.notesKm,
@@ -70,12 +72,14 @@ class LogVaccinationStep2Page extends StatefulWidget {
   final String selectedFlockName;
   final String flockId;
   final String languageCode; // 'km' or 'en'
+  final String? selectedVaccineId;
 
   const LogVaccinationStep2Page({
     super.key,
     required this.selectedFlockName,
     required this.flockId,
     this.languageCode = 'km',
+    this.selectedVaccineId,
   });
 
   @override
@@ -102,6 +106,7 @@ class _LogVaccinationStep2PageState extends State<LogVaccinationStep2Page> {
 
   // Attachment Image
   File? _selectedImage;
+  Uint8List? _selectedImageBytes;
   final ImagePicker _picker = ImagePicker();
 
   // Color Palette Matching Design System
@@ -113,7 +118,7 @@ class _LogVaccinationStep2PageState extends State<LogVaccinationStep2Page> {
 
   // Dictionary for Khmer & English Translations
   final Map<String, Map<String, String>> _localizedValues = const {
-      'km': {
+    'km': {
       'step_badge': 'ជំហានទី ២ នៃ ៣',
       'page_title': 'ជ្រើសរើសវ៉ាក់សាំង',
       'search_hint': 'ស្វែងរកវ៉ាក់សាំង...',
@@ -210,12 +215,21 @@ class _LogVaccinationStep2PageState extends State<LogVaccinationStep2Page> {
         _filteredVaccines = fetched;
 
         if (fetched.isNotEmpty) {
-          _selectedTodayVaccineId = fetched.first.id;
-          _selectedNextVaccineId = fetched.first.id;
+          final preferredVaccineId = widget.selectedVaccineId;
+          final preferredVaccine =
+              preferredVaccineId != null && preferredVaccineId.isNotEmpty
+              ? fetched.firstWhere(
+                  (vaccine) => vaccine.id == preferredVaccineId,
+                  orElse: () => fetched.first,
+                )
+              : fetched.first;
+
+          _selectedTodayVaccineId = preferredVaccine.id;
+          _selectedNextVaccineId = preferredVaccine.id;
           _nextDate = DateTime.now().add(
             Duration(
-              days: fetched.first.intervalDays > 0
-                  ? fetched.first.intervalDays
+              days: preferredVaccine.intervalDays > 0
+                  ? preferredVaccine.intervalDays
                   : 7,
             ),
           );
@@ -392,8 +406,11 @@ class _LogVaccinationStep2PageState extends State<LogVaccinationStep2Page> {
   Future<void> _pickImage() async {
     final XFile? image = await _picker.pickImage(source: ImageSource.camera);
     if (image != null) {
+      // Read image bytes for web compatibility
+      final bytes = await image.readAsBytes();
       setState(() {
         _selectedImage = File(image.path);
+        _selectedImageBytes = bytes;
       });
     }
   }
@@ -431,6 +448,7 @@ class _LogVaccinationStep2PageState extends State<LogVaccinationStep2Page> {
         'nextDate': _nextDate,
         'createReminder': _createReminder,
         'photoPath': _selectedImage?.path,
+        'photoBytes': _selectedImageBytes,
         'languageCode': _currentLang,
       };
 
@@ -489,8 +507,8 @@ class _LogVaccinationStep2PageState extends State<LogVaccinationStep2Page> {
   }
 
   String _getText(String key) {
-    final value = _localizedValues[_currentLang]?[key] ??
-        _localizedValues['km']?[key];
+    final value =
+        _localizedValues[_currentLang]?[key] ?? _localizedValues['km']?[key];
     if (value != null) {
       return value;
     }
