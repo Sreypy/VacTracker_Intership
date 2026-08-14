@@ -302,7 +302,6 @@ class _VetProfileScreenState extends State<VetProfileScreen> {
 
     final name =
         _profileData?['name'] ?? (isKhmer ? 'វេជ្ជបណ្ឌិត សុខា' : 'Dr. Sokha');
-    final role = _profileData?['role'] ?? 'veterinarian';
     final profileImageUrl = _profileData?['profile_image_url'];
 
     // Get initials from name

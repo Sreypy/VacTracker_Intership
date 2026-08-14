@@ -260,7 +260,7 @@ class _VetDashboardPageState extends State<VetDashboardPage> {
                 if (_dashboardStats != null)
                   ..._dashboardStats!.farmers.map((farmer) {
                     return _buildFarmerCard(farmer);
-                  }).toList(),
+                  }),
               ],
             ],
           ),

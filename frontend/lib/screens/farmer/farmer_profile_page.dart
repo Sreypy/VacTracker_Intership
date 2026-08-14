@@ -505,6 +505,7 @@ class _FarmerProfilePageState extends State<FarmerProfilePage> {
               width: radius * 2,
               height: radius * 2,
               fit: BoxFit.cover,
+              // ignore: unnecessary_underscores
               errorBuilder: (_, __, ___) {
                 return Center(
                   child: Text(
