@@ -41,8 +41,12 @@ export class UsersService {
     return await this.userRepository.save(user);
   }
   
-    async findAll() {
-      return await this.userRepository.find();
+    async findAll(userId: number, role: string) {
+      // Only return the current user's own record to prevent data leakage
+      // (e.g., password_hash exposure)
+      return await this.userRepository.find({
+        where: { user_id: userId },
+      });
     }
     async update(
       id: number,

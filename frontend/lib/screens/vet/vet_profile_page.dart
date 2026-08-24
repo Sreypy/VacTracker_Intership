@@ -736,15 +736,15 @@ class _VetProfileScreenState extends State<VetProfileScreen> {
       onTap: (index) {
         if (index == 0) {
           // Navigate to vet dashboard
-          context.push('/vet-dashboard?lang=${widget.currentLanguage}');
+          context.go('/vet-dashboard?lang=$_selectedLanguage');
           return;
         } else if (index == 1) {
           // Navigate to reports
-          context.push('/vet-reports?lang=${widget.currentLanguage}');
+          context.go('/vet-reports?lang=$_selectedLanguage');
           return;
         } else if (index == 2) {
           // Navigate to farmers
-          context.push('/my-farmers/${widget.currentLanguage}');
+          context.go('/my-farmers/$_selectedLanguage');
           return;
         }
       },

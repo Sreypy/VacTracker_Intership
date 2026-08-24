@@ -6,11 +6,13 @@ import {
   Param,
   Patch,
   Post,
+  UseGuards,
 } from '@nestjs/common';
 
 import { VaccinesService } from './vaccines.service';
 import { CreateVaccineDto } from './dto/create-vaccine.dto';
 import { UpdateVaccineDto } from './dto/update-vaccine.dto';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 @Controller('vaccines')
 export class VaccinesController {
@@ -18,7 +20,8 @@ export class VaccinesController {
     private readonly vaccinesService: VaccinesService,
   ) {}
 
-  // Create Vaccine
+  // Create Vaccine (protected - write operation)
+  @UseGuards(JwtAuthGuard)
   @Post()
   create(
     @Body() createVaccineDto: CreateVaccineDto,
@@ -26,13 +29,13 @@ export class VaccinesController {
     return this.vaccinesService.create(createVaccineDto);
   }
 
-  // Get All Vaccines
+  // Get All Vaccines (public - reference data)
   @Get()
   findAll() {
     return this.vaccinesService.findAll();
   }
 
-  // Get Vaccine By ID
+  // Get Vaccine By ID (public - reference data)
   @Get(':id')
   findOne(
     @Param('id') id: string,
@@ -40,7 +43,8 @@ export class VaccinesController {
     return this.vaccinesService.findOne(+id);
   }
 
-  // Update Vaccine
+  // Update Vaccine (protected - write operation)
+  @UseGuards(JwtAuthGuard)
   @Patch(':id')
   update(
     @Param('id') id: string,
@@ -52,7 +56,8 @@ export class VaccinesController {
     );
   }
 
-  // Delete Vaccine
+  // Delete Vaccine (protected - write operation)
+  @UseGuards(JwtAuthGuard)
   @Delete(':id')
   remove(
     @Param('id') id: string,

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../../services/auth_service.dart';
 import '../../services/vet_dashboard_service.dart';
 
 class VetDashboardPage extends StatefulWidget {
@@ -33,12 +34,38 @@ class _VetDashboardPageState extends State<VetDashboardPage> {
   VetDashboardStats? _dashboardStats;
   bool _isLoading = true;
   String? _errorMessage;
+  String _vetName = 'Dr. Sokha';
+  String _vetInitials = 'S';
   final VetDashboardService _vetDashboardService = VetDashboardService();
+  final AuthService _authService = AuthService();
 
   @override
   void initState() {
     super.initState();
+    _fetchVetProfile();
     _fetchDashboardStats();
+  }
+
+  Future<void> _fetchVetProfile() async {
+    try {
+      final profile = await _authService.getProfile();
+      if (!mounted) return;
+      final name = profile['name']?.toString() ?? 'Dr. Sokha';
+      setState(() {
+        _vetName = name;
+        // Get initials from name
+        if (name.isNotEmpty) {
+          final nameParts = name.split(' ');
+          if (nameParts.length >= 2) {
+            _vetInitials = '${nameParts[0][0]}${nameParts[1][0]}'.toUpperCase();
+          } else if (nameParts.length == 1 && nameParts[0].isNotEmpty) {
+            _vetInitials = nameParts[0][0].toUpperCase();
+          }
+        }
+      });
+    } catch (e) {
+      // Keep default values if profile fetch fails
+    }
   }
 
   Future<void> _fetchDashboardStats() async {
@@ -80,7 +107,7 @@ class _VetDashboardPageState extends State<VetDashboardPage> {
               radius: 18,
               backgroundColor: brandHeaderGreen.withValues(alpha: 0.15),
               child: Text(
-                "S",
+                _vetInitials,
                 style: TextStyle(
                   color: brandDarkGreen,
                   fontSize: 14,
@@ -106,7 +133,9 @@ class _VetDashboardPageState extends State<VetDashboardPage> {
               color: brandDarkGreen,
               size: 24,
             ),
-            onPressed: () {},
+            onPressed: () {
+              context.push('/notifications/${widget.languageCode}');
+            },
           ),
           const SizedBox(width: 8),
         ],
@@ -125,7 +154,7 @@ class _VetDashboardPageState extends State<VetDashboardPage> {
               ),
               const SizedBox(height: 2),
               Text(
-                'Dr. Sokha 👋',
+                '$_vetName 👋',
                 style: TextStyle(
                   color: textDarkBlue,
                   fontSize: 26,
@@ -277,36 +306,46 @@ class _VetDashboardPageState extends State<VetDashboardPage> {
     String unit,
     Color color,
   ) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: textGreyLight, width: 1),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(emoji, style: const TextStyle(fontSize: 24)),
-          const SizedBox(height: 8),
-          Text(
-            label,
-            style: TextStyle(
-              color: textGrey,
-              fontSize: 11,
-              fontWeight: FontWeight.w500,
+    return InkWell(
+      onTap: () {
+        if (label == 'Connected Farmers') {
+          context.push('/my-farmers/${widget.languageCode}');
+        } else if (label == 'Total Flocks') {
+          context.push('/my-farmers/${widget.languageCode}');
+        }
+      },
+      borderRadius: BorderRadius.circular(14),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: textGreyLight, width: 1),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(emoji, style: const TextStyle(fontSize: 24)),
+            const SizedBox(height: 8),
+            Text(
+              label,
+              style: TextStyle(
+                color: textGrey,
+                fontSize: 11,
+                fontWeight: FontWeight.w500,
+              ),
             ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            value,
-            style: TextStyle(
-              color: color,
-              fontSize: 28,
-              fontWeight: FontWeight.bold,
+            const SizedBox(height: 4),
+            Text(
+              value,
+              style: TextStyle(
+                color: color,
+                fontSize: 28,
+                fontWeight: FontWeight.bold,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -319,36 +358,46 @@ class _VetDashboardPageState extends State<VetDashboardPage> {
     Color color,
     Color bgColor,
   ) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: bgColor,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: color.withValues(alpha: 0.2), width: 1),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(emoji, style: const TextStyle(fontSize: 24)),
-          const SizedBox(height: 8),
-          Text(
-            label,
-            style: TextStyle(
-              color: color,
-              fontSize: 11,
-              fontWeight: FontWeight.w500,
+    return InkWell(
+      onTap: () {
+        if (label == 'New Sick Reports') {
+          context.push('/vet-reports?lang=${widget.languageCode}');
+        } else if (label == 'Overdue Vaccinations') {
+          context.push('/my-farmers/${widget.languageCode}');
+        }
+      },
+      borderRadius: BorderRadius.circular(14),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: bgColor,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: color.withValues(alpha: 0.2), width: 1),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(emoji, style: const TextStyle(fontSize: 24)),
+            const SizedBox(height: 8),
+            Text(
+              label,
+              style: TextStyle(
+                color: color,
+                fontSize: 11,
+                fontWeight: FontWeight.w500,
+              ),
             ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            value,
-            style: TextStyle(
-              color: color,
-              fontSize: 28,
-              fontWeight: FontWeight.bold,
+            const SizedBox(height: 4),
+            Text(
+              value,
+              style: TextStyle(
+                color: color,
+                fontSize: 28,
+                fontWeight: FontWeight.bold,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -387,7 +436,7 @@ class _VetDashboardPageState extends State<VetDashboardPage> {
       child: InkWell(
         onTap: () {
           // Navigate to farmer detail screen
-          // context.push('/farmer-detail/${farmer.farmerId}?lang=${widget.languageCode}');
+          context.push('/farmer-detail/${farmer.farmerId}/${widget.languageCode}');
         },
         child: Padding(
           padding: const EdgeInsets.all(14),
@@ -458,13 +507,13 @@ class _VetDashboardPageState extends State<VetDashboardPage> {
             _currentIndex = index;
           });
           if (index == 0) {
-            context.push('/vet-dashboard?lang=${widget.languageCode}');
+            context.go('/vet-dashboard?lang=${widget.languageCode}');
           } else if (index == 1) {
-            context.push('/vet-reports?lang=${widget.languageCode}');
+            context.go('/vet-reports?lang=${widget.languageCode}');
           } else if (index == 2) {
-            context.push('/my-farmers/${widget.languageCode}');
+            context.go('/my-farmers/${widget.languageCode}');
           } else if (index == 3) {
-            context.push('/vet-profile/${widget.languageCode}');
+            context.go('/vet-profile/${widget.languageCode}');
           }
         },
         type: BottomNavigationBarType.fixed,

@@ -13,8 +13,11 @@ import 'package:frontend/screens/farmer/log_vaccination_step2_page.dart';
 import 'package:frontend/screens/farmer/log_vaccination_step3_page.dart';
 import 'package:frontend/screens/farmer/notification_screen.dart';
 import 'package:frontend/screens/farmer/sick_report.dart';
+import 'package:frontend/screens/farmer/my_sick_reports_screen.dart';
+import 'package:frontend/screens/farmer/sick_report_detail_screen.dart';
 import 'package:frontend/screens/farmer/vaccination_history.dart';
 import 'package:frontend/screens/farmer/vaccine_library_page.dart';
+import 'package:frontend/screens/farmer/vaccine_library_detail_page.dart';
 import 'package:frontend/screens/language_page.dart';
 import 'package:frontend/screens/role.dart';
 import 'package:frontend/screens/vet/vet_dashboard_page.dart';
@@ -24,6 +27,7 @@ import 'package:frontend/screens/vet/my_farmers_page.dart';
 import 'package:frontend/screens/vet/farmer_detail_page.dart';
 import 'package:frontend/screens/vet/sick_reports_screen.dart';
 import 'package:frontend/screens/vet/sick_report_detail_screen.dart';
+import 'package:frontend/screens/vet/vet_response_sent_screen.dart';
 import 'package:frontend/screens/welcome_page.dart';
 import 'package:go_router/go_router.dart';
 
@@ -111,6 +115,17 @@ final GoRouter _router = GoRouter(
         final reportId = state.pathParameters['reportId'] ?? '';
         final language = state.uri.queryParameters['lang'] ?? 'en';
         return VetSickReportDetailScreen(
+          reportId: reportId,
+          languageCode: language,
+        );
+      },
+    ),
+    GoRoute(
+      path: '/vet-response-sent/:reportId',
+      builder: (context, state) {
+        final reportId = state.pathParameters['reportId'] ?? '';
+        final language = state.uri.queryParameters['lang'] ?? 'en';
+        return VetResponseSentScreen(
           reportId: reportId,
           languageCode: language,
         );
@@ -229,6 +244,19 @@ final GoRouter _router = GoRouter(
         return SickReportScreen(languageCode: languageCode);
       },
     ),
+    GoRoute(
+      path: '/my-sick-reports',
+      builder: (context, state) => MySickReportsScreen(
+        languageCode: state.uri.queryParameters['lang'] ?? 'en',
+      ),
+    ),
+    GoRoute(
+      path: '/my-sick-reports/:reportId',
+      builder: (context, state) => FarmerSickReportDetailScreen(
+        reportId: int.tryParse(state.pathParameters['reportId'] ?? '') ?? 0,
+        languageCode: state.uri.queryParameters['lang'] ?? 'en',
+      ),
+    ),
     // 2. Generic wildcard route comes second
     GoRoute(
       path: '/flock-detail/:flockId/:lang',
@@ -262,6 +290,17 @@ final GoRouter _router = GoRouter(
       builder: (context, state) {
         final language = state.pathParameters['lang'] ?? 'km';
         return VaccineLibraryPage(languageCode: language);
+      },
+    ),
+    GoRoute(
+      path: '/vaccine-library-detail/:articleId/:lang',
+      builder: (context, state) {
+        final articleId = state.pathParameters['articleId'] ?? '';
+        final language = state.pathParameters['lang'] ?? 'km';
+        return VaccineLibraryDetailPage(
+          articleId: articleId,
+          languageCode: language,
+        );
       },
     ),
   ],

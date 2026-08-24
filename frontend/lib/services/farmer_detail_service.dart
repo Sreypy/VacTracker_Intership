@@ -170,15 +170,15 @@ class SickReportData {
 
   factory SickReportData.fromJson(Map<String, dynamic> json) {
     return SickReportData(
-      reportId: json['reportId'] ?? 0,
-      flockId: json['flockId'] ?? 0,
-      flockName: json['flockName'] ?? 'Unknown',
+      reportId: json['report_id'] ?? json['reportId'] ?? 0,
+      flockId: json['flock_id'] ?? json['flockId'] ?? 0,
+      flockName: json['flockName'] ?? json['batch_name'] ?? 'Unknown',
       reportType: json['reportType'] ?? '',
       affectedCount: json['affectedCount'] ?? 0,
       symptoms: json['symptoms'] ?? '',
-      reportDate: json['reportDate'] ?? '',
+      reportDate: json['reportDate'] ?? json['report_date'] ?? '',
       status: json['status'] ?? '',
-      createdAt: DateTime.parse(json['createdAt'] ?? DateTime.now().toIso8601String()),
+      createdAt: DateTime.parse(json['createdAt'] ?? json['created_at'] ?? DateTime.now().toIso8601String()),
     );
   }
 }

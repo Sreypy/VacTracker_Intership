@@ -183,6 +183,19 @@ class _VetSickReportDetailScreenState extends State<VetSickReportDetailScreen> {
       final token = await StorageService.getToken();
       if (token == null) throw Exception('Authentication token is missing.');
 
+      // Map selected action to backend enum value
+      String? actionValue;
+      if (_selectedAction != null) {
+        final actionMap = {
+          _getText('action_monitor'): 'monitor',
+          _getText('action_separate'): 'separate',
+          _getText('action_treatment'): 'treatment',
+          _getText('action_vaccination'): 'vaccination',
+          _getText('action_other'): 'other',
+        };
+        actionValue = actionMap[_selectedAction];
+      }
+
       final response = await http.patch(
         Uri.parse('${ApiConfig.baseUrl}/sick-reports/${widget.reportId}'),
         headers: {
@@ -191,7 +204,10 @@ class _VetSickReportDetailScreenState extends State<VetSickReportDetailScreen> {
           'Content-Type': 'application/json',
         },
         body: jsonEncode({
-          'vetNotes': _diagnosisController.text.trim(),
+          'vetDiagnosis': _diagnosisController.text.trim(),
+          'vetAdvice': _adviceController.text.trim(),
+          'recommendedAction': actionValue,
+          'followUpDate': _followUpDate?.toIso8601String(),
           'status': 'reviewed',
         }),
       ).timeout(const Duration(seconds: 10));
@@ -201,13 +217,20 @@ class _VetSickReportDetailScreenState extends State<VetSickReportDetailScreen> {
       }
 
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(_getText('success')),
-          backgroundColor: primaryGreen,
-        ),
+
+      // Navigate to Response Sent confirmation screen
+      final reporter = _report?['reporter'] as Map<String, dynamic>? ?? {};
+      final farmerName = reporter['name']?.toString() ?? 'the farmer';
+
+      context.pushReplacement(
+        '/vet-response-sent/${widget.reportId}?lang=${widget.languageCode}',
+        extra: {
+          'farmerName': farmerName,
+          'diagnosis': _diagnosisController.text.trim(),
+          'advice': _adviceController.text.trim(),
+          'followUpDate': _followUpDate,
+        },
       );
-      context.pop();
     } catch (error) {
       if (!mounted) return;
       setState(() => _isSubmitting = false);
@@ -241,6 +264,7 @@ class _VetSickReportDetailScreenState extends State<VetSickReportDetailScreen> {
           ),
         ),
       ),
+      bottomNavigationBar: _buildBottomNav(),
       body: _isLoading
           ? Center(child: Text(_getText('loading')))
           : _errorMessage != null
@@ -322,12 +346,75 @@ class _VetSickReportDetailScreenState extends State<VetSickReportDetailScreen> {
                         width: double.infinity,
                         child: OutlinedButton(
                           onPressed: () {
-                            // TODO: Implement contact farmer functionality
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text('Contact farmer functionality'),
-                                backgroundColor: primaryGreen,
-                              ),
+                            // Contact farmer using phone from report data
+                            final reporter = _report?['reporter'] as Map<String, dynamic>? ?? {};
+                            final farmerName = reporter['name']?.toString() ?? 'the farmer';
+                            final farmerPhone = reporter['phone']?.toString() ?? '';
+                            
+                            showDialog(
+                              context: context,
+                              builder: (context) {
+                                final isKhmer = widget.languageCode == 'km';
+                                return AlertDialog(
+                                  title: Text(
+                                    isKhmer ? 'ទំនាក់ទំនងកសិករ' : 'Contact Farmer',
+                                    style: const TextStyle(
+                                      color: primaryGreen,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  content: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        isKhmer ? 'ឈ្មោះ៖' : 'Name:',
+                                        style: const TextStyle(
+                                          color: textMuted,
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        farmerName,
+                                        style: const TextStyle(
+                                          color: textDark,
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 12),
+                                      Text(
+                                        isKhmer ? 'លេខទូរស័ព្ទ៖' : 'Phone:',
+                                        style: const TextStyle(
+                                          color: textMuted,
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        farmerPhone.isNotEmpty ? farmerPhone : '—',
+                                        style: const TextStyle(
+                                          color: textDark,
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () => Navigator.of(context).pop(),
+                                      child: Text(
+                                        isKhmer ? 'បិទ' : 'Close',
+                                        style: const TextStyle(color: primaryGreen),
+                                      ),
+                                    ),
+                                  ],
+                                );
+                              },
                             );
                           },
                           style: OutlinedButton.styleFrom(
@@ -351,6 +438,52 @@ class _VetSickReportDetailScreenState extends State<VetSickReportDetailScreen> {
                     ],
                   ),
                 ),
+    );
+  }
+
+  Widget _buildBottomNav() {
+    return Container(
+      decoration: BoxDecoration(
+        border: Border(top: BorderSide(color: inputBorder, width: 1)),
+      ),
+      child: BottomNavigationBar(
+        currentIndex: 1,
+        onTap: (index) {
+          if (index == 0) {
+            context.go('/vet-dashboard?lang=${widget.languageCode}');
+          } else if (index == 1) {
+            context.go('/vet-reports?lang=${widget.languageCode}');
+          } else if (index == 2) {
+            context.go('/my-farmers/${widget.languageCode}');
+          } else if (index == 3) {
+            context.go('/vet-profile/${widget.languageCode}');
+          }
+        },
+        type: BottomNavigationBarType.fixed,
+        backgroundColor: Colors.white,
+        selectedItemColor: primaryGreen,
+        unselectedItemColor: textMuted,
+        showSelectedLabels: false,
+        showUnselectedLabels: false,
+        items: const [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.home_outlined, size: 24),
+            label: 'Home',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.assignment_outlined, size: 24),
+            label: 'Reports',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.people_outline_rounded, size: 24),
+            label: 'Farmers',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.person_outline_rounded, size: 24),
+            label: 'Profile',
+          ),
+        ],
+      ),
     );
   }
 

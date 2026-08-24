@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:frontend/models/flock.dart';
+import 'package:frontend/models/sick_report.dart';
 import 'package:frontend/services/flock_service.dart';
+import 'package:frontend/services/sick_report_service.dart';
 import 'package:frontend/services/vaccination_service.dart';
 import 'package:frontend/services/storage_service.dart';
+import 'package:frontend/widgets/notification_header_button.dart';
+import 'package:frontend/widgets/farmer_bottom_navigation.dart';
 import 'package:go_router/go_router.dart';
 
 class FarmerDashboardPage extends StatefulWidget {
@@ -22,8 +26,8 @@ class FarmerDashboardPage extends StatefulWidget {
 }
 
 class _FarmerDashboardPageState extends State<FarmerDashboardPage> {
-  int _currentIndex = 2;
   final FlockService _flockService = FlockService();
+  final SickReportService _sickReportService = SickReportService();
   final VaccinationService _vaccinationService = VaccinationService();
   bool _isLoading = true;
   String? _errorMessage;
@@ -33,7 +37,9 @@ class _FarmerDashboardPageState extends State<FarmerDashboardPage> {
   // Dashboard metrics
   int _totalFlocks = 0;
   int _totalBirds = 0;
-  int _healthyFlocks = 0;
+  int _healthyBirds = 0;
+  int _affectedBirds = 0;
+  int _flockHealthPercentage = 0;
   int _overdueFlocks = 0;
   int _upcomingVaccinations = 0;
   int _overdueVaccinations = 0;
@@ -175,19 +181,55 @@ class _FarmerDashboardPageState extends State<FarmerDashboardPage> {
         _errorMessage = null;
       });
 
-      // Fetch flocks and all vaccinations in parallel
+      // All three endpoints are authenticated and return only the current
+      // farmer's records.
       final flocksFuture = _flockService.fetchFlocks();
+      final sickReportsFuture = _sickReportService.fetchMyReports();
       final vaccinationsFuture = _vaccinationService.fetchAllVaccinations();
 
-      final results = await Future.wait([flocksFuture, vaccinationsFuture]);
+      final results = await Future.wait([
+        flocksFuture,
+        sickReportsFuture,
+        vaccinationsFuture,
+      ]);
       final flocks = results[0] as List<Flock>;
-      final vaccinations = results[1];
+      final sickReports = results[1] as List<SickReport>;
+      final allVaccinations = results[2];
+
+      // The API now returns only the current user's own vaccinations,
+      // so no client-side filtering is needed.
+      final vaccinations = allVaccinations;
 
       // Calculate metrics
       final totalFlocks = flocks.length;
       final totalBirds = flocks.fold<int>(0, (s, f) => s + (f.birdCount));
-      final healthyFlocks = flocks.where((f) => f.ageInDays <= 30).length;
       final overdueFlocks = flocks.where((f) => f.ageInDays > 45).length;
+
+      // A report is a current count for its flock, not an additional count.
+      // Keep only its newest report so historical reports are not double-counted.
+      final flockIds = flocks.map((flock) => flock.flockId).toSet();
+      final latestReportByFlock = <int, SickReport>{};
+      for (final report in sickReports) {
+        if (!flockIds.contains(report.flockId)) continue;
+        final existing = latestReportByFlock[report.flockId];
+        if (existing == null ||
+            report.reportDate.isAfter(existing.reportDate) ||
+            (report.reportDate.isAtSameMomentAs(existing.reportDate) &&
+                report.createdAt.isAfter(existing.createdAt))) {
+          latestReportByFlock[report.flockId] = report;
+        }
+      }
+
+      var affectedBirds = 0;
+      for (final flock in flocks) {
+        final latestReport = latestReportByFlock[flock.flockId];
+        final reportedAffected = latestReport?.affectedCount ?? 0;
+        affectedBirds += reportedAffected.clamp(0, flock.birdCount);
+      }
+      final healthyBirds = (totalBirds - affectedBirds).clamp(0, totalBirds);
+      final flockHealthPercentage = totalBirds == 0
+          ? 0
+          : ((healthyBirds / totalBirds) * 100).round();
 
       // Process vaccination data
       final now = DateTime.now();
@@ -208,21 +250,6 @@ class _FarmerDashboardPageState extends State<FarmerDashboardPage> {
             upcomingVaccinations++;
           }
         }
-
-        // Get recent vaccinations (last 5)
-        // if (recentVaccinations.length < 5) {
-        //   final dateGiven = v['date_given'] != null
-        //       ? DateTime.tryParse(v['date_given'])
-        //       : null;
-        //   if (dateGiven != null) {
-        //     recentVaccinations.add({
-        //       'date': dateGiven,
-        //       'flock_name': v['flock']?['batch_name'] ?? 'Unknown Fllock',
-        //       'vaccine_name': v['vaccine']?['name'] ?? 'Unknown Vaccine',
-        //       'status': v['status'] ?? 'on_time',
-        //     });
-        //   }
-        // }
       }
 
       // Sort recent vaccinations by date (most recent first)
@@ -237,7 +264,9 @@ class _FarmerDashboardPageState extends State<FarmerDashboardPage> {
         _errorMessage = null;
         _totalFlocks = totalFlocks;
         _totalBirds = totalBirds;
-        _healthyFlocks = healthyFlocks;
+        _healthyBirds = healthyBirds;
+        _affectedBirds = affectedBirds;
+        _flockHealthPercentage = flockHealthPercentage;
         _overdueFlocks = overdueFlocks;
         _upcomingVaccinations = upcomingVaccinations;
         _overdueVaccinations = overdueVaccinations;
@@ -368,31 +397,29 @@ class _FarmerDashboardPageState extends State<FarmerDashboardPage> {
         elevation: 0,
         scrolledUnderElevation: 0,
         titleSpacing: 16,
-        title: Row(
-          children: [
-            _buildUserAvatar(
-              _profileImageUrl.isNotEmpty ? _profileImageUrl : widget.profileImageUrl,
-              _userName.isNotEmpty ? _userName : "U",
-            ),
-            const SizedBox(width: 10),
-            const Text(
-              "VacTracker",
-              style: TextStyle(
-                color: brandDarkGreen,
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ],
+        title: const Text(
+          'VacTracker',
+          style: TextStyle(
+            color: brandDarkGreen,
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+          ),
         ),
         actions: [
+          NotificationHeaderButton(
+            languageCode: widget.languageCode,
+            color: brandDarkGreen,
+          ),
           IconButton(
-            icon: const Icon(
-              Icons.language_outlined,
-              color: brandDarkGreen,
-              size: 24,
+            tooltip: 'Profile',
+            onPressed: () =>
+                context.push('/farmer-profile/${widget.languageCode}'),
+            icon: _buildUserAvatar(
+              _profileImageUrl.isNotEmpty
+                  ? _profileImageUrl
+                  : widget.profileImageUrl,
+              _userName.isNotEmpty ? _userName : 'U',
             ),
-            onPressed: () {},
           ),
           const SizedBox(width: 8),
         ],
@@ -405,95 +432,106 @@ class _FarmerDashboardPageState extends State<FarmerDashboardPage> {
         child: const Icon(Icons.add, color: Colors.white, size: 28),
       ),
       body: SafeArea(
-        child: SingleChildScrollView(
-          physics: const BouncingScrollPhysics(),
-          padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 12.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Greeting
-              Text(
-                _userName.isNotEmpty
-                    ? '${_getText('greeting_prefix')} $_userName'
-                    : _getText('greeting'),
-                style: const TextStyle(
-                  color: brandDarkGreen,
-                  fontSize: 26,
-                  fontWeight: FontWeight.bold,
+        child: RefreshIndicator(
+          onRefresh: _loadDashboardData,
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(
+              parent: BouncingScrollPhysics(),
+            ),
+            padding: const EdgeInsets.symmetric(
+              horizontal: 20.0,
+              vertical: 12.0,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Greeting
+                Text(
+                  _userName.isNotEmpty
+                      ? '${_getText('greeting_prefix')} $_userName'
+                      : _getText('greeting'),
+                  style: const TextStyle(
+                    color: brandDarkGreen,
+                    fontSize: 26,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                _getText('subtitle'),
-                style: const TextStyle(color: textGrey, fontSize: 15),
-              ),
-              const SizedBox(height: 20),
+                const SizedBox(height: 4),
+                Text(
+                  _getText('subtitle'),
+                  style: const TextStyle(color: textGrey, fontSize: 15),
+                ),
+                const SizedBox(height: 20),
 
-              if (_isLoading) ...[
-                const Center(child: CircularProgressIndicator()),
-                const SizedBox(height: 24),
-              ] else if (_errorMessage != null) ...[
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFFF3F2),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: const Color(0xFFEF4444),
-                      width: 1.2,
+                if (_isLoading) ...[
+                  const Center(child: CircularProgressIndicator()),
+                  const SizedBox(height: 24),
+                ] else if (_errorMessage != null) ...[
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFF3F2),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: const Color(0xFFEF4444),
+                        width: 1.2,
+                      ),
+                    ),
+                    child: Text(
+                      _errorMessage!,
+                      style: const TextStyle(color: Color(0xFF991B1B)),
                     ),
                   ),
-                  child: Text(
-                    _errorMessage!,
-                    style: const TextStyle(color: Color(0xFF991B1B)),
-                  ),
-                ),
-                const SizedBox(height: 24),
-              ] else ...[
-                // Main Metrics Grid
-                _buildMetricsGrid(),
-                const SizedBox(height: 16),
-
-                // Vaccination Alerts Card
-                if (_overdueVaccinations > 0 || _upcomingVaccinations > 0)
-                  _buildVaccinationAlertCard(),
-                if (_overdueVaccinations > 0 || _upcomingVaccinations > 0)
+                  const SizedBox(height: 24),
+                ] else ...[
+                  // Main Metrics Grid
+                  _buildMetricsGrid(),
                   const SizedBox(height: 16),
 
-                // Recent Activity Section
-                if (_recentVaccinations.isNotEmpty) ...[
+                  // Vaccination Alerts Card
+                  if (_overdueVaccinations > 0 || _upcomingVaccinations > 0)
+                    _buildVaccinationAlertCard(),
+                  if (_overdueVaccinations > 0 || _upcomingVaccinations > 0)
+                    const SizedBox(height: 16),
+
+                  // Recent Activity Section
+                  if (_recentVaccinations.isNotEmpty) ...[
+                    _buildSectionHeader(
+                      _getText('recent_activity'),
+                      _getText('view_all'),
+                    ),
+                    const SizedBox(height: 10),
+                    _buildRecentActivityList(),
+                    const SizedBox(height: 16),
+                  ],
+
+                  // Flocks Section
                   _buildSectionHeader(
-                    _getText('recent_activity'),
-                    _getText('view_all'),
+                    _getText('section_title'),
+                    _getText('view_history'),
                   ),
                   const SizedBox(height: 10),
-                  _buildRecentActivityList(),
-                  const SizedBox(height: 16),
-                ],
-
-                // Flocks Section
-                _buildSectionHeader(
-                  _getText('section_title'),
-                  _getText('view_history'),
-                ),
-                const SizedBox(height: 10),
-                if (_flocks.isEmpty) ...[
-                  _buildEmptyState(),
-                  const SizedBox(height: 80),
-                ] else ...[
-                  for (final flock in _flocks) ...[
-                    _buildFlockCard(flock),
-                    const SizedBox(height: 12),
+                  if (_flocks.isEmpty) ...[
+                    _buildEmptyState(),
+                    const SizedBox(height: 80),
+                  ] else ...[
+                    for (final flock in _flocks) ...[
+                      _buildFlockCard(flock),
+                      const SizedBox(height: 12),
+                    ],
+                    const SizedBox(height: 80),
                   ],
-                  const SizedBox(height: 80),
                 ],
               ],
-            ],
+            ),
           ),
         ),
       ),
-      bottomNavigationBar: _buildBottomNav(),
+      bottomNavigationBar: FarmerBottomNavigation(
+        currentIndex: 2,
+        languageCode: widget.languageCode,
+      ),
     );
   }
 
@@ -515,19 +553,7 @@ class _FarmerDashboardPageState extends State<FarmerDashboardPage> {
               ),
             ),
             const SizedBox(width: 12),
-            Expanded(
-              child: _buildMetricCard(
-                title: _getText('flock_health'),
-                value: _totalFlocks > 0
-                    ? '${((_healthyFlocks / _totalFlocks) * 100).round()}%'
-                    : '0%',
-                subtitle: _getText('healthy_flocks'),
-                subtitleValue: '$_healthyFlocks/$_totalFlocks',
-                icon: Icons.health_and_safety_outlined,
-                color: statusGreen,
-                bgColor: statusGreenBg,
-              ),
-            ),
+            Expanded(child: _buildFlockHealthCard()),
           ],
         ),
         const SizedBox(height: 12),
@@ -562,6 +588,98 @@ class _FarmerDashboardPageState extends State<FarmerDashboardPage> {
           ],
         ),
       ],
+    );
+  }
+
+  Widget _buildFlockHealthCard() {
+    final healthColor = _flockHealthPercentage >= 90
+        ? statusGreen
+        : _flockHealthPercentage >= 70
+        ? statusYellow
+        : statusRed;
+    final healthBackground = _flockHealthPercentage >= 90
+        ? statusGreenBg
+        : _flockHealthPercentage >= 70
+        ? statusYellowBg
+        : statusRedBg;
+    final status = _flockHealthPercentage >= 90
+        ? 'Healthy'
+        : _flockHealthPercentage >= 70
+        ? 'Needs Attention'
+        : 'Critical';
+    final progress = (_flockHealthPercentage / 100).clamp(0.0, 1.0);
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.02),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: healthBackground,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(
+              Icons.health_and_safety_outlined,
+              color: healthColor,
+              size: 20,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            _getText('flock_health'),
+            style: const TextStyle(
+              color: textGrey,
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            '$_flockHealthPercentage%',
+            style: TextStyle(
+              color: healthColor,
+              fontSize: 28,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          Text(
+            status,
+            style: TextStyle(
+              color: healthColor,
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            '$_healthyBirds Healthy  $_affectedBirds Affected',
+            style: const TextStyle(color: textGrey, fontSize: 11),
+          ),
+          const SizedBox(height: 6),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: LinearProgressIndicator(
+              value: progress,
+              minHeight: 6,
+              color: healthColor,
+              backgroundColor: healthBackground,
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -979,81 +1097,6 @@ class _FarmerDashboardPageState extends State<FarmerDashboardPage> {
             ),
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _buildBottomNav() {
-    return Container(
-      decoration: BoxDecoration(
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 10,
-            offset: const Offset(0, -2),
-          ),
-        ],
-      ),
-      child: BottomNavigationBar(
-        currentIndex: _currentIndex,
-        onTap: (index) {
-          if (index == 1) {
-            context.push('/log-vaccination-step1/${widget.languageCode}');
-            return;
-          }
-          if (index == 4) {
-            context.push('/farmer-profile/${widget.languageCode}');
-            return;
-          }
-          if (index == 0) {
-            context.push('/notifications/${widget.languageCode}');
-            return;
-          }
-          if (index == 3) {
-            context.push('/vaccine-library/${widget.languageCode}');
-            return;
-          }
-          setState(() => _currentIndex = index);
-        },
-        type: BottomNavigationBarType.fixed,
-        backgroundColor: Colors.white,
-        selectedItemColor: brandDarkGreen,
-        unselectedItemColor: textGrey.withValues(alpha: 0.6),
-        showSelectedLabels: false,
-        showUnselectedLabels: false,
-        items: [
-          const BottomNavigationBarItem(
-            icon: Icon(Icons.notifications_none_outlined, size: 26),
-            label: '',
-          ),
-          const BottomNavigationBarItem(
-            icon: Icon(Icons.vaccines_outlined, size: 26),
-            label: '',
-          ),
-          BottomNavigationBarItem(
-            icon: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-              decoration: BoxDecoration(
-                color: brandDarkGreen.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(100),
-              ),
-              child: const Icon(
-                Icons.home_rounded,
-                color: brandDarkGreen,
-                size: 26,
-              ),
-            ),
-            label: '',
-          ),
-          const BottomNavigationBarItem(
-            icon: Icon(Icons.menu_book_outlined, size: 26),
-            label: '',
-          ),
-          const BottomNavigationBarItem(
-            icon: Icon(Icons.person_outline_rounded, size: 26),
-            label: '',
-          ),
-        ],
       ),
     );
   }

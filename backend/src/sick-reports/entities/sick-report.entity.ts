@@ -22,6 +22,14 @@ export enum ReportType {
   OTHER = 'other',
 }
 
+export enum RecommendedAction {
+  MONITOR = 'monitor',
+  SEPARATE = 'separate',
+  TREATMENT = 'treatment',
+  VACCINATION = 'vaccination',
+  OTHER = 'other',
+}
+
 @Entity('sick_reports')
 export class SickReport {
   @PrimaryGeneratedColumn()
@@ -61,6 +69,34 @@ export class SickReport {
 
   @Column({ name: 'vet_notes', nullable: true })
   vetNotes!: string;
+
+  @Column({ name: 'vet_id', nullable: true })
+  vetId!: number;
+
+  @ManyToOne(() => User, { nullable: true })
+  @JoinColumn({ name: 'vet_id' })
+  veterinarian?: User;
+
+  // Vet response fields
+  @Column({ name: 'vet_diagnosis', nullable: true })
+  vetDiagnosis!: string;
+
+  @Column({ name: 'vet_advice', nullable: true })
+  vetAdvice!: string;
+
+  @Column({
+    name: 'recommended_action',
+    type: 'enum',
+    enum: RecommendedAction,
+    nullable: true,
+  })
+  recommendedAction!: RecommendedAction;
+
+  @Column({ name: 'follow_up_date', type: 'date', nullable: true })
+  followUpDate!: string;
+
+  @Column({ name: 'responded_at', type: 'timestamp', nullable: true })
+  respondedAt!: Date;
 
   @CreateDateColumn()
   created_at!: Date;

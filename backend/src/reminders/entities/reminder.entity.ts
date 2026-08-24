@@ -14,6 +14,7 @@ export enum ReminderStatus {
   PENDING = 'pending',
   SENT = 'sent',
   FAILED = 'failed',
+  COMPLETED = 'completed',
 }
 
 export enum ReminderSender {

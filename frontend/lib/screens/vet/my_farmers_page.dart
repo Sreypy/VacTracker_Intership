@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../../services/auth_service.dart';
 import '../../services/vet_dashboard_service.dart';
 
 class MyFarmersPage extends StatefulWidget {
@@ -25,12 +26,35 @@ class _MyFarmersPageState extends State<MyFarmersPage> {
   bool _isLoading = true;
   String? _errorMessage;
   String _searchQuery = '';
+  String _vetInitials = 'S';
   final VetDashboardService _vetDashboardService = VetDashboardService();
+  final AuthService _authService = AuthService();
 
   @override
   void initState() {
     super.initState();
+    _fetchVetProfile();
     _fetchDashboardStats();
+  }
+
+  Future<void> _fetchVetProfile() async {
+    try {
+      final profile = await _authService.getProfile();
+      if (!mounted) return;
+      final name = profile['name']?.toString() ?? 'Dr. Sokha';
+      setState(() {
+        if (name.isNotEmpty) {
+          final nameParts = name.split(' ');
+          if (nameParts.length >= 2) {
+            _vetInitials = '${nameParts[0][0]}${nameParts[1][0]}'.toUpperCase();
+          } else if (nameParts.length == 1 && nameParts[0].isNotEmpty) {
+            _vetInitials = nameParts[0][0].toUpperCase();
+          }
+        }
+      });
+    } catch (e) {
+      // Keep default values if profile fetch fails
+    }
   }
 
   Future<void> _fetchDashboardStats() async {
@@ -84,7 +108,7 @@ class _MyFarmersPageState extends State<MyFarmersPage> {
               radius: 18,
               backgroundColor: brandDarkGreen.withValues(alpha: 0.15),
               child: Text(
-                "S",
+                _vetInitials,
                 style: TextStyle(
                   color: brandDarkGreen,
                   fontSize: 14,
@@ -110,7 +134,9 @@ class _MyFarmersPageState extends State<MyFarmersPage> {
               color: brandDarkGreen,
               size: 24,
             ),
-            onPressed: () {},
+            onPressed: () {
+              context.push('/notifications/${widget.languageCode}');
+            },
           ),
           const SizedBox(width: 8),
         ],
@@ -423,11 +449,11 @@ class _MyFarmersPageState extends State<MyFarmersPage> {
         currentIndex: 2,
         onTap: (index) {
           if (index == 0) {
-            context.push('/vet-dashboard/${widget.languageCode}');
+            context.go('/vet-dashboard?lang=${widget.languageCode}');
           } else if (index == 1) {
-            context.push('/vet-reports/${widget.languageCode}');
+            context.go('/vet-reports?lang=${widget.languageCode}');
           } else if (index == 3) {
-            context.push('/vet-profile/${widget.languageCode}');
+            context.go('/vet-profile/${widget.languageCode}');
           }
         },
         type: BottomNavigationBarType.fixed,

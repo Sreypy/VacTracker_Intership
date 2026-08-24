@@ -1,5 +1,5 @@
-import { IsEnum, IsInt, IsString, IsOptional } from 'class-validator';
-import { ReportStatus, ReportType } from '../entities/sick-report.entity';
+import { IsEnum, IsInt, IsString, IsOptional, IsDateString } from 'class-validator';
+import { ReportStatus, ReportType, RecommendedAction } from '../entities/sick-report.entity';
 
 export class UpdateSickReportDto {
   @IsOptional()
@@ -25,5 +25,21 @@ export class UpdateSickReportDto {
   @IsOptional()
   @IsString()
   vetNotes?: string;
-}
 
+  // Vet response fields
+  @IsOptional()
+  @IsString()
+  vetDiagnosis?: string;
+
+  @IsOptional()
+  @IsString()
+  vetAdvice?: string;
+
+  @IsOptional()
+  @IsEnum(RecommendedAction)
+  recommendedAction?: RecommendedAction;
+
+  @IsOptional()
+  @IsDateString()
+  followUpDate?: string;
+}

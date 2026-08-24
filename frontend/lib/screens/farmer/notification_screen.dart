@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:frontend/widgets/farmer_bottom_navigation.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:frontend/config/api_config.dart';
 import 'package:frontend/services/reminder_service.dart';
+import 'package:frontend/services/notification_service.dart';
 import 'package:frontend/services/storage_service.dart';
 
 class NotificationScreen extends StatefulWidget {
@@ -46,7 +48,6 @@ class _NotificationScreenState extends State<NotificationScreen>
       'title': 'Notifications',
       'subtitle': 'Your vaccination reminders',
       'action_today_card_title': 'Today\'s Action',
-      'see_vaccinations_btn': 'See Vaccinations →',
       'due_soon': 'Due Soon',
       'due_today': 'Due Today',
       'overdue': 'Overdue',
@@ -70,12 +71,14 @@ class _NotificationScreenState extends State<NotificationScreen>
       'scheduled_title': 'Vaccination scheduled',
       'action_required_header': 'Action Required',
       'view_details_btn': 'View Details',
+      'vet_response_label': 'VET RESPONSE',
+      'vet_response_title': 'Veterinarian Response',
+      'view_report_btn': 'View Report',
     },
     'km': {
       'title': 'ការជូនដំណឹង',
       'subtitle': 'ការរំលឹកចាក់វ៉ាក់សាំងរបស់អ្នក',
       'action_today_card_title': 'សកម្មភាពថ្ងៃនេះ',
-      'see_vaccinations_btn': 'មើលការចាក់វ៉ាក់សាំង →',
       'due_soon': 'ជិតដល់កំណត់',
       'due_today': 'ដល់កំណត់ថ្ងៃនេះ',
       'overdue': 'ហួសកំណត់',
@@ -99,6 +102,9 @@ class _NotificationScreenState extends State<NotificationScreen>
       'scheduled_title': 'ការចាក់វ៉ាក់សាំងត្រូវបានកំណត់ពេល',
       'action_required_header': 'ត្រូវការសកម្មភាព',
       'view_details_btn': 'មើលព័ត៌មានលម្អិត',
+      'vet_response_label': 'ការឆ្លើយតបពីពេទ្យសត្វ',
+      'vet_response_title': 'ការឆ្លើយតបពីពេទ្យសត្វ',
+      'view_report_btn': 'មើលរបាយការណ៍',
     },
   };
 
@@ -214,15 +220,33 @@ class _NotificationScreenState extends State<NotificationScreen>
       });
     }
     try {
-      final reminders = await ReminderService().fetchMyReminders();
-      final items = reminders
-          .map(
-            (reminder) =>
-                _NotificationItem.fromReminder(reminder, widget.languageCode),
-          )
-          .whereType<_NotificationItem>()
-          .toList();
+      // Fetch both vaccination reminders and vet response notifications in parallel
+      final results = await Future.wait([
+        ReminderService().fetchMyReminders(),
+        NotificationService().fetchMyNotifications(),
+      ]);
+
+      final reminders = results[0];
+      final notifications = results[1];
+
+      final items = <_NotificationItem>[];
+
+      // Add vaccination reminders
+      for (final reminder in reminders) {
+        final item = _NotificationItem.fromReminder(reminder, widget.languageCode);
+        if (item != null) items.add(item);
+      }
+
+      // Add vet response notifications
+      for (final notification in notifications) {
+        final item = _NotificationItem.fromVetResponse(notification, widget.languageCode);
+        if (item != null) items.add(item);
+      }
+
       items.sort((first, second) {
+        if (first.isVetResponse != second.isVetResponse) {
+          return first.isVetResponse ? -1 : 1;
+        }
         if (first.isOverdue != second.isOverdue) {
           return first.isOverdue ? -1 : 1;
         }
@@ -257,6 +281,17 @@ class _NotificationScreenState extends State<NotificationScreen>
   }
 
   Future<void> _openNotification(_NotificationItem item) async {
+    if (item.isVetResponse) {
+      // Mark as read and navigate to sick report detail
+      if (item.notificationId != null) {
+        await NotificationService().markAsRead(item.notificationId!);
+      }
+      if (!mounted) return;
+      if (item.reportId != null) {
+        context.push('/my-sick-reports/${item.reportId}?lang=${widget.languageCode}');
+      }
+      return;
+    }
     if (item.flockId == null) return;
     if (item.isOverdue || item.isDueToday) {
       if (item.vaccineId == null) return;
@@ -361,6 +396,10 @@ class _NotificationScreenState extends State<NotificationScreen>
             ),
           ],
         ),
+      ),
+      bottomNavigationBar: FarmerBottomNavigation(
+        currentIndex: 0,
+        languageCode: widget.languageCode,
       ),
     );
   }
@@ -469,28 +508,7 @@ class _NotificationScreenState extends State<NotificationScreen>
           const SizedBox(height: 14),
           _summaryRow(colorDueSoon, _getText('due_soon'), _dueSoonCount),
           const SizedBox(height: 24),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: () {}, // Navigation to vaccinations list
-              style: ElevatedButton.styleFrom(
-                backgroundColor: colorApp,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                elevation: 0,
-              ),
-              child: Text(
-                _getText('see_vaccinations_btn'),
-                style: const TextStyle(
-                  fontWeight: FontWeight.w600,
-                  fontSize: 16,
-                ),
-              ),
-            ),
-          ),
+          SizedBox(width: double.infinity),
         ],
       ),
     );
@@ -631,21 +649,27 @@ class _NotificationScreenState extends State<NotificationScreen>
               ],
             ),
             const SizedBox(height: 20),
-            _detailRow(Icons.home_work_outlined, item.flockName),
-            const SizedBox(height: 10),
-            _detailRow(Icons.vaccines_outlined, item.vaccineName),
-            const SizedBox(height: 10),
-            _detailRow(
-              Icons.calendar_today_outlined,
-              'Due ${_formatDate(item.dueDate)}',
-            ),
+            if (item.isVetResponse)
+              _detailRow(Icons.medical_services_outlined, item.vetMessage ?? '')
+            else ...[
+              _detailRow(Icons.home_work_outlined, item.flockName),
+              const SizedBox(height: 10),
+              _detailRow(Icons.vaccines_outlined, item.vaccineName),
+              const SizedBox(height: 10),
+              _detailRow(
+                Icons.calendar_today_outlined,
+                'Due ${_formatDate(item.dueDate)}',
+              ),
+            ],
             const SizedBox(height: 24),
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: item.flockId == null
-                    ? null
-                    : () => _openNotification(item),
+                onPressed: item.isVetResponse
+                    ? () => _openNotification(item)
+                    : item.flockId == null
+                        ? null
+                        : () => _openNotification(item),
                 style: buttonStyle,
                 child: Text(
                   actionText,
@@ -690,6 +714,10 @@ class _NotificationItem {
   final int? flockId;
   final int? vaccineId;
   final int days;
+  final bool isVetResponse;
+  final String? vetMessage;
+  final int? notificationId;
+  final int? reportId;
 
   const _NotificationItem({
     required this.flockName,
@@ -698,6 +726,10 @@ class _NotificationItem {
     required this.flockId,
     required this.vaccineId,
     required this.days,
+    this.isVetResponse = false,
+    this.vetMessage,
+    this.notificationId,
+    this.reportId,
   });
 
   bool get isOverdue => days < 0;
@@ -709,12 +741,14 @@ class _NotificationItem {
   // Visual Styling Properties
 
   Color get mainColor {
+    if (isVetResponse) return _NotificationScreenState.colorApp;
     if (isOverdue) return _NotificationScreenState.colorOverdue;
     if (isDueToday || isDueSoon) return _NotificationScreenState.colorDueSoon;
     return _NotificationScreenState.colorScheduled;
   }
 
   Color get lightColor {
+    if (isVetResponse) return _NotificationScreenState.colorLightGreen;
     if (isOverdue) return _NotificationScreenState.colorLightRed;
     if (isDueToday || isDueSoon)
       // ignore: curly_braces_in_flow_control_structures
@@ -723,12 +757,14 @@ class _NotificationItem {
   }
 
   IconData get cardIconData {
+    if (isVetResponse) return Icons.medical_services_outlined;
     if (isOverdue) return Icons.report_problem_outlined;
     return Icons.schedule_rounded; // Works well for upcoming too
   }
 
   // Label specific to design requirements
   String labelPrefix(String Function(String) text) {
+    if (isVetResponse) return text('vet_response_label');
     if (isOverdue) return text('action_needed_label');
     if (isDueToday || isDueSoon) return text('upcoming_label');
     return text('scheduled_label');
@@ -736,6 +772,7 @@ class _NotificationItem {
 
   // Card text relative to design
   String timeCountText(String Function(String) text) {
+    if (isVetResponse) return '';
     if (isOverdue) {
       final absDays = days.abs();
       return '$absDays ${absDays == 1 ? text('day_overdue') : text('days_overdue')}';
@@ -747,6 +784,7 @@ class _NotificationItem {
 
   // Specific titles used in design
   String cardTitle(String Function(String) text) {
+    if (isVetResponse) return text('vet_response_title');
     if (isOverdue) return text('overdue_title');
     if (isDueToday || isDueSoon) return text('due_soon_title');
     return text('scheduled_title');
@@ -754,12 +792,14 @@ class _NotificationItem {
 
   // Action Button Configuration
   String actionButtonText(String Function(String) text) {
+    if (isVetResponse) return text('view_report_btn');
     if (isOverdue || isDueToday) return text('vaccinate_now_btn');
     if (isDueSoon) return text('view_flock_btn');
     return text('view_details_btn');
   }
 
   Color get actionButtonColor {
+    if (isVetResponse) return _NotificationScreenState.colorApp;
     if (isOverdue || isDueToday) return _NotificationScreenState.colorOverdue;
     if (isDueSoon) return Colors.transparent; // Outline button style
     return _NotificationScreenState.colorMuted.withValues(
@@ -768,6 +808,7 @@ class _NotificationItem {
   }
 
   Color get actionButtonForegroundColor {
+    if (isVetResponse) return Colors.white;
     if (isDueSoon) return _NotificationScreenState.colorScheduled;
     if (isOverdue || isDueToday) return Colors.white;
     return _NotificationScreenState.colorText;
@@ -812,6 +853,32 @@ class _NotificationItem {
             reminder['vaccine_id'],
       ),
       days: dueDay.difference(todayDay).inDays,
+    );
+  }
+
+  // Mapper for vet response notifications
+  static _NotificationItem? fromVetResponse(dynamic raw, String languageCode) {
+    if (raw is! Map) return null;
+    final notification = Map<String, dynamic>.from(raw);
+    final createdRaw = notification['created_at']?.toString();
+    final createdDate = DateTime.tryParse(createdRaw ?? '');
+    if (createdDate == null) return null;
+
+    final today = DateTime.now();
+    final createdDay = DateTime(createdDate.year, createdDate.month, createdDate.day);
+    final todayDay = DateTime(today.year, today.month, today.day);
+
+    return _NotificationItem(
+      flockName: 'Veterinarian',
+      vaccineName: 'Sick Report',
+      dueDate: createdDay,
+      flockId: null,
+      vaccineId: null,
+      days: createdDay.difference(todayDay).inDays,
+      isVetResponse: true,
+      vetMessage: notification['message']?.toString() ?? '',
+      notificationId: _asInt(notification['notification_id']),
+      reportId: _asInt(notification['reference_id']),
     );
   }
 

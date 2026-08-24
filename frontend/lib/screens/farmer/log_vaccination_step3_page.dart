@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:frontend/models/flock.dart';
 import 'package:frontend/models/vaccine.dart';
 import 'package:go_router/go_router.dart';
+import 'package:frontend/widgets/farmer_bottom_navigation.dart';
 import 'package:frontend/services/flock_service.dart';
 import 'package:frontend/services/vaccine_service.dart';
 import 'package:frontend/services/vaccination_service.dart';
@@ -30,7 +31,6 @@ class LogVaccinationStep3Page extends StatefulWidget {
 }
 
 class _LogVaccinationStep3PageState extends State<LogVaccinationStep3Page> {
-  int _currentIndex = 1; // Vaccine tab active
   late String _currentLang;
 
   // Data State
@@ -851,68 +851,9 @@ class _LogVaccinationStep3PageState extends State<LogVaccinationStep3Page> {
   }
 
   Widget _buildBottomNav() {
-    return Container(
-      decoration: BoxDecoration(
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 10,
-            offset: const Offset(0, -2),
-          ),
-        ],
-      ),
-      child: BottomNavigationBar(
-        currentIndex: _currentIndex,
-        onTap: (index) {
-          setState(() {
-            _currentIndex = index;
-          });
-          if (index == 2) {
-            context.go('/farmer-dashboard?lang=$_currentLang');
-          } else if (index == 4) {
-            context.go('/farmer-profile/$_currentLang');
-          }
-        },
-        type: BottomNavigationBarType.fixed,
-        backgroundColor: Colors.white,
-        selectedItemColor: brandDarkGreen,
-        unselectedItemColor: textGrey.withValues(alpha: 0.6),
-        showSelectedLabels: false,
-        showUnselectedLabels: false,
-        items: [
-          const BottomNavigationBarItem(
-            icon: Icon(Icons.notifications_none_outlined, size: 26),
-            label: '',
-          ),
-          BottomNavigationBarItem(
-            icon: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-              decoration: BoxDecoration(
-                color: brandDarkGreen.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(100),
-              ),
-              child: const Icon(
-                Icons.vaccines,
-                color: brandDarkGreen,
-                size: 24,
-              ),
-            ),
-            label: '',
-          ),
-          const BottomNavigationBarItem(
-            icon: Icon(Icons.home_outlined, size: 26),
-            label: '',
-          ),
-          const BottomNavigationBarItem(
-            icon: Icon(Icons.menu_book_outlined, size: 26),
-            label: '',
-          ),
-          const BottomNavigationBarItem(
-            icon: Icon(Icons.person_outline_rounded, size: 26),
-            label: '',
-          ),
-        ],
-      ),
+    return FarmerBottomNavigation(
+      currentIndex: 1,
+      languageCode: _currentLang,
     );
   }
 }

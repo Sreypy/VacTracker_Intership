@@ -5,6 +5,8 @@ import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:frontend/services/storage_service.dart';
 import 'package:frontend/config/api_config.dart';
+import 'package:frontend/widgets/notification_header_button.dart';
+import 'package:frontend/widgets/farmer_bottom_navigation.dart';
 
 class FarmerProfileModel {
   final int? userId;
@@ -65,7 +67,6 @@ class FarmerProfilePage extends StatefulWidget {
 }
 
 class _FarmerProfilePageState extends State<FarmerProfilePage> {
-  int _currentIndex = 4; // Profile tab active
 
   // Backend User Profile Data State
   FarmerProfileModel? _profile;
@@ -563,14 +564,10 @@ class _FarmerProfilePageState extends State<FarmerProfilePage> {
           ),
         ),
         actions: [
-          Padding(padding: const EdgeInsets.only(right: 8.0)),
-          IconButton(
-            icon: const Icon(
-              Icons.language_rounded,
-              color: brandDarkGreen,
-              size: 24,
-            ),
-            onPressed: () => context.push('/language'),
+          const SizedBox(width: 8),
+          NotificationHeaderButton(
+            languageCode: widget.languageCode,
+            color: brandDarkGreen,
           ),
           const SizedBox(width: 8),
         ],
@@ -1634,64 +1631,9 @@ class _FarmerProfilePageState extends State<FarmerProfilePage> {
   }
 
   Widget _buildBottomNav() {
-    return Container(
-      decoration: BoxDecoration(
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 10,
-            offset: const Offset(0, -2),
-          ),
-        ],
-      ),
-      child: BottomNavigationBar(
-        currentIndex: _currentIndex,
-        onTap: (index) {
-          setState(() {
-            _currentIndex = index;
-          });
-          if (index == 2) {
-            context.go('/farmer-dashboard?lang=$_currentLang');
-          } else if (index == 1) {
-            context.go('/log-vaccination-step1/$_currentLang');
-          }
-        },
-        type: BottomNavigationBarType.fixed,
-        backgroundColor: Colors.white,
-        selectedItemColor: brandDarkGreen,
-        unselectedItemColor: textGrey.withValues(alpha: 0.6),
-        showSelectedLabels: false,
-        showUnselectedLabels: false,
-        items: [
-          const BottomNavigationBarItem(
-            icon: Icon(Icons.notifications_none_outlined, size: 26),
-            label: '',
-          ),
-          const BottomNavigationBarItem(
-            icon: Icon(Icons.vaccines_outlined, size: 26),
-            label: '',
-          ),
-          const BottomNavigationBarItem(
-            icon: Icon(Icons.home_outlined, size: 26),
-            label: '',
-          ),
-          const BottomNavigationBarItem(
-            icon: Icon(Icons.menu_book_outlined, size: 26),
-            label: '',
-          ),
-          BottomNavigationBarItem(
-            icon: Container(
-              padding: const EdgeInsets.all(6),
-              decoration: BoxDecoration(
-                color: brandDarkGreen.withValues(alpha: 0.12),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(Icons.person, color: brandDarkGreen, size: 24),
-            ),
-            label: '',
-          ),
-        ],
-      ),
+    return FarmerBottomNavigation(
+      currentIndex: 4,
+      languageCode: _currentLang,
     );
   }
 }

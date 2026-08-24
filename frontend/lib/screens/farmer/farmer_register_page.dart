@@ -212,14 +212,7 @@ class _FarmerRegisterPageState extends State<FarmerRegisterPage> {
                         letterSpacing: 0.3,
                       ),
                     ),
-                    IconButton(
-                      icon: const Icon(
-                        Icons.language,
-                        color: brandHeaderGreen,
-                        size: 26,
-                      ),
-                      onPressed: () => context.push('/language'),
-                    ),
+                    const SizedBox(width: 48),
                   ],
                 ),
                 const SizedBox(height: 24),

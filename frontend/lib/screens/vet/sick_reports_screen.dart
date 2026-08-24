@@ -433,6 +433,8 @@ class _VetSickReportsScreenState extends State<VetSickReportsScreen> {
       }
     }
 
+    final reportId = report['report_id']?.toString() ?? '';
+
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
@@ -447,150 +449,155 @@ class _VetSickReportsScreenState extends State<VetSickReportsScreen> {
           ),
         ],
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(18),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Header with status badge
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: statusBgColor,
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    statusBadge,
-                    style: TextStyle(
-                      color: statusColor,
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
+      child: InkWell(
+        onTap: () {
+          context.push(
+            '/vet-reports/$reportId?lang=${widget.languageCode}',
+          );
+        },
+        borderRadius: BorderRadius.circular(16),
+        child: Padding(
+          padding: const EdgeInsets.all(18),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header with status badge
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: statusBgColor,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      statusBadge,
+                      style: TextStyle(
+                        color: statusColor,
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            // Flock info
-            Row(
-              children: [
-                const Icon(
-                  Icons.home_work_outlined,
-                  size: 18,
-                  color: textMuted,
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    '$batchName${farmName.isNotEmpty ? " • $farmName" : ""}',
-                    style: const TextStyle(
-                      color: textDark,
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            // Report type and affected count
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 5,
-                  ),
-                  decoration: BoxDecoration(
-                    color: primaryGreen.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    reportType.toUpperCase(),
-                    style: const TextStyle(
-                      color: primaryGreen,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  '$affectedCount ${_getText('label_chickens')} ${_getText('label_affected')}',
-                  style: TextStyle(color: textMuted, fontSize: 13),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            // Date
-            Row(
-              children: [
-                const Icon(
-                  Icons.calendar_today_outlined,
-                  size: 16,
-                  color: textMuted,
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  formattedDate,
-                  style: TextStyle(color: textMuted, fontSize: 13),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            // Symptoms
-            if (symptoms.isNotEmpty) ...[
-              Text(
-                '${_getText('label_symptoms')}:',
-                style: const TextStyle(
-                  color: textDark,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                ),
+                ],
               ),
-              const SizedBox(height: 4),
-              Text(
-                '$symptomsText${hasMoreSymptoms ? "..." : ""}',
-                style: TextStyle(color: textMuted, fontSize: 14),
-              ),
-              const SizedBox(height: 16),
-            ],
-            // Action button
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Report ID: ${report['report_id']}'),
-                      backgroundColor: primaryGreen,
-                    ),
-                  );
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: buttonColor,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
+              const SizedBox(height: 12),
+              // Flock info
+              Row(
+                children: [
+                  const Icon(
+                    Icons.home_work_outlined,
+                    size: 18,
+                    color: textMuted,
                   ),
-                  elevation: 0,
-                ),
-                child: Text(
-                  buttonText,
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      '$batchName${farmName.isNotEmpty ? " • $farmName" : ""}',
+                      style: const TextStyle(
+                        color: textDark,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              // Report type and affected count
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 5,
+                    ),
+                    decoration: BoxDecoration(
+                      color: primaryGreen.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      reportType.toUpperCase(),
+                      style: const TextStyle(
+                        color: primaryGreen,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    '$affectedCount ${_getText('label_chickens')} ${_getText('label_affected')}',
+                    style: TextStyle(color: textMuted, fontSize: 13),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              // Date
+              Row(
+                children: [
+                  const Icon(
+                    Icons.calendar_today_outlined,
+                    size: 16,
+                    color: textMuted,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    formattedDate,
+                    style: TextStyle(color: textMuted, fontSize: 13),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              // Symptoms
+              if (symptoms.isNotEmpty) ...[
+                Text(
+                  '${_getText('label_symptoms')}:',
                   style: const TextStyle(
+                    color: textDark,
+                    fontSize: 13,
                     fontWeight: FontWeight.w600,
-                    fontSize: 15,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '$symptomsText${hasMoreSymptoms ? "..." : ""}',
+                  style: TextStyle(color: textMuted, fontSize: 14),
+                ),
+                const SizedBox(height: 16),
+              ],
+              // Action button
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () {
+                    context.push(
+                      '/vet-reports/$reportId?lang=${widget.languageCode}',
+                    );
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: buttonColor,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    elevation: 0,
+                  ),
+                  child: Text(
+                    buttonText,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 15,
+                    ),
                   ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -625,13 +632,13 @@ class _VetSickReportsScreenState extends State<VetSickReportsScreen> {
         currentIndex: currentIndex,
         onTap: (index) {
           if (index == 0) {
-            context.push('/vet-dashboard?lang=${widget.languageCode}');
+            context.go('/vet-dashboard?lang=${widget.languageCode}');
           } else if (index == 1) {
             // Already on reports screen
           } else if (index == 2) {
-            context.push('/my-farmers/${widget.languageCode}');
+            context.go('/my-farmers/${widget.languageCode}');
           } else if (index == 3) {
-            context.push('/vet-profile/${widget.languageCode}');
+            context.go('/vet-profile/${widget.languageCode}');
           }
         },
         type: BottomNavigationBarType.fixed,

@@ -16,6 +16,10 @@ export class CreateVaccinationDto {
     date_given!: string;
 
   @IsOptional()
+  @IsDateString()
+  next_due_date?: string;
+
+  @IsOptional()
   @IsString()
   photo_url?: string;
 }

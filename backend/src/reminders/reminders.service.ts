@@ -18,20 +18,22 @@ export class RemindersService {
   async findByFarmer(farmerId: number): Promise<Reminder[]> {
     await this.syncRemindersForFarmer(farmerId);
 
-    return this.reminderRepository.find({
-      where: {
-        farmer_id: farmerId,
-      },
-      relations: {
-        vaccination: {
-          flock: true,
-          vaccine: true,
-        },
-      },
-      order: {
-        scheduled_date: 'ASC',
-      },
-    });
+    // Use query builder to sort by status (PENDING first) then by scheduled_date
+    // Exclude COMPLETED reminders so the overdue count decreases when a
+    // vaccination is logged from the reminder screen
+    return this.reminderRepository
+      .createQueryBuilder('reminder')
+      .leftJoinAndSelect('reminder.vaccination', 'vaccination')
+      .leftJoinAndSelect('vaccination.flock', 'flock')
+      .leftJoinAndSelect('vaccination.vaccine', 'vaccine')
+      .where('reminder.farmer_id = :farmerId', { farmerId })
+      .andWhere('reminder.status != :completed', {
+        completed: ReminderStatus.COMPLETED,
+      })
+      .orderBy('CASE WHEN reminder.status = :pending THEN 0 ELSE 1 END', 'ASC')
+      .addOrderBy('reminder.scheduled_date', 'ASC')
+      .setParameter('pending', ReminderStatus.PENDING)
+      .getMany();
   }
 
   async syncRemindersForFarmer(farmerId: number): Promise<void> {
@@ -56,6 +58,23 @@ export class RemindersService {
         await this.createReminder(vaccination);
       }
     }
+  }
+
+  async markRemindersCompleted(farmerId: number, flockId: number): Promise<void> {
+    // Find all pending reminders for this farmer's flock and mark them as completed
+    await this.reminderRepository
+      .createQueryBuilder()
+      .update(Reminder)
+      .set({ status: ReminderStatus.COMPLETED })
+      .where('farmer_id = :farmerId', { farmerId })
+      .andWhere('status IN (:...statuses)', {
+        statuses: [ReminderStatus.PENDING, ReminderStatus.SENT],
+      })
+      .andWhere(
+        'vaccination_id IN (SELECT vaccination_id FROM vaccinations WHERE flock_id = :flockId)',
+        { flockId },
+      )
+      .execute();
   }
 
   async createReminder(vaccination: Vaccination): Promise<Reminder | null> {

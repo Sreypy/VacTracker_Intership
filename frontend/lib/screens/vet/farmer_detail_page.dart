@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../../services/auth_service.dart';
 import '../../services/farmer_detail_service.dart';
 
 class FarmerDetailPage extends StatefulWidget {
@@ -31,13 +32,36 @@ class _FarmerDetailPageState extends State<FarmerDetailPage>
   FarmerDetail? _farmerDetail;
   bool _isLoading = true;
   String? _errorMessage;
+  String _vetInitials = 'S';
   final FarmerDetailService _farmerDetailService = FarmerDetailService();
+  final AuthService _authService = AuthService();
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 4, vsync: this);
+    _fetchVetProfile();
     _fetchFarmerDetail();
+  }
+
+  Future<void> _fetchVetProfile() async {
+    try {
+      final profile = await _authService.getProfile();
+      if (!mounted) return;
+      final name = profile['name']?.toString() ?? 'Dr. Sokha';
+      setState(() {
+        if (name.isNotEmpty) {
+          final nameParts = name.split(' ');
+          if (nameParts.length >= 2) {
+            _vetInitials = '${nameParts[0][0]}${nameParts[1][0]}'.toUpperCase();
+          } else if (nameParts.length == 1 && nameParts[0].isNotEmpty) {
+            _vetInitials = nameParts[0][0].toUpperCase();
+          }
+        }
+      });
+    } catch (e) {
+      // Keep default values if profile fetch fails
+    }
   }
 
   @override
@@ -87,7 +111,7 @@ class _FarmerDetailPageState extends State<FarmerDetailPage>
               radius: 18,
               backgroundColor: brandDarkGreen.withValues(alpha: 0.15),
               child: Text(
-                "S",
+                _vetInitials,
                 style: TextStyle(
                   color: brandDarkGreen,
                   fontSize: 14,
@@ -113,7 +137,9 @@ class _FarmerDetailPageState extends State<FarmerDetailPage>
               color: brandDarkGreen,
               size: 24,
             ),
-            onPressed: () {},
+            onPressed: () {
+              context.push('/notifications/${widget.languageCode}');
+            },
           ),
           const SizedBox(width: 8),
         ],
@@ -277,31 +303,41 @@ class _FarmerDetailPageState extends State<FarmerDetailPage>
   }
 
   Widget _buildSummaryCard(String emoji, String label, String value) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: textGreyLight, width: 1),
-      ),
-      child: Column(
-        children: [
-          Text(emoji, style: const TextStyle(fontSize: 20)),
-          const SizedBox(height: 4),
-          Text(
-            value,
-            style: TextStyle(
-              color: brandDarkGreen,
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
+    return InkWell(
+      onTap: () {
+        if (label == 'Total Flocks') {
+          _tabController.animateTo(1); // Flocks tab
+        } else if (label == 'Total Chickens') {
+          _tabController.animateTo(1); // Flocks tab
+        }
+      },
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: textGreyLight, width: 1),
+        ),
+        child: Column(
+          children: [
+            Text(emoji, style: const TextStyle(fontSize: 20)),
+            const SizedBox(height: 4),
+            Text(
+              value,
+              style: TextStyle(
+                color: brandDarkGreen,
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
             ),
-          ),
-          Text(
-            label,
-            style: TextStyle(color: textGrey, fontSize: 10),
-            textAlign: TextAlign.center,
-          ),
-        ],
+            Text(
+              label,
+              style: TextStyle(color: textGrey, fontSize: 10),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -311,31 +347,41 @@ class _FarmerDetailPageState extends State<FarmerDetailPage>
     final color = isAlert ? statusRed : statusGreen;
     final bgColor = isAlert ? statusRedBg : const Color(0xFFDCFCE7);
 
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: bgColor,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withValues(alpha: 0.2), width: 1),
-      ),
-      child: Column(
-        children: [
-          Text(emoji, style: const TextStyle(fontSize: 20)),
-          const SizedBox(height: 4),
-          Text(
-            value,
-            style: TextStyle(
-              color: color,
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
+    return InkWell(
+      onTap: () {
+        if (label == 'Sick Reports') {
+          _tabController.animateTo(3); // Sick Reports tab
+        } else if (label == 'Vaccinations Due') {
+          _tabController.animateTo(2); // Vaccinations tab
+        }
+      },
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: bgColor,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: color.withValues(alpha: 0.2), width: 1),
+        ),
+        child: Column(
+          children: [
+            Text(emoji, style: const TextStyle(fontSize: 20)),
+            const SizedBox(height: 4),
+            Text(
+              value,
+              style: TextStyle(
+                color: color,
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
             ),
-          ),
-          Text(
-            label,
-            style: TextStyle(color: color, fontSize: 10),
-            textAlign: TextAlign.center,
-          ),
-        ],
+            Text(
+              label,
+              style: TextStyle(color: color, fontSize: 10),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -495,36 +541,58 @@ class _FarmerDetailPageState extends State<FarmerDetailPage>
         final flock = _farmerDetail!.flocks[index];
         return Container(
           margin: const EdgeInsets.only(bottom: 12),
-          padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(color: textGreyLight, width: 1),
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                flock.batchName,
-                style: TextStyle(
-                  color: textDarkBlue,
-                  fontSize: 15,
-                  fontWeight: FontWeight.bold,
-                ),
+          child: InkWell(
+            onTap: () {
+              // Navigate to flock detail
+              context.push(
+                '/flock-detail/${flock.flockId}/${widget.languageCode}',
+              );
+            },
+            borderRadius: BorderRadius.circular(12),
+            child: Padding(
+              padding: const EdgeInsets.all(14),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          flock.batchName,
+                          style: TextStyle(
+                            color: textDarkBlue,
+                            fontSize: 15,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          '${flock.birdCount} chickens',
+                          style: TextStyle(color: textGrey, fontSize: 13),
+                        ),
+                        if (flock.breed.isNotEmpty) ...[
+                          const SizedBox(height: 2),
+                          Text(
+                            'Breed: ${flock.breed}',
+                            style: TextStyle(color: textGrey, fontSize: 12),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                  Icon(
+                    Icons.arrow_forward_ios_rounded,
+                    color: textGrey,
+                    size: 14,
+                  ),
+                ],
               ),
-              const SizedBox(height: 4),
-              Text(
-                '${flock.birdCount} chickens',
-                style: TextStyle(color: textGrey, fontSize: 13),
-              ),
-              if (flock.breed.isNotEmpty) ...[
-                const SizedBox(height: 2),
-                Text(
-                  'Breed: ${flock.breed}',
-                  style: TextStyle(color: textGrey, fontSize: 12),
-                ),
-              ],
-            ],
+            ),
           ),
         );
       },
@@ -551,41 +619,63 @@ class _FarmerDetailPageState extends State<FarmerDetailPage>
         final vax = _farmerDetail!.vaccinations[index];
         return Container(
           margin: const EdgeInsets.only(bottom: 12),
-          padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(color: textGreyLight, width: 1),
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                vax.vaccineName,
-                style: TextStyle(
-                  color: textDarkBlue,
-                  fontSize: 15,
-                  fontWeight: FontWeight.bold,
-                ),
+          child: InkWell(
+            onTap: () {
+              // Navigate to flock detail
+              context.push(
+                '/flock-detail/${vax.flockId}/${widget.languageCode}',
+              );
+            },
+            borderRadius: BorderRadius.circular(12),
+            child: Padding(
+              padding: const EdgeInsets.all(14),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          vax.vaccineName,
+                          style: TextStyle(
+                            color: textDarkBlue,
+                            fontSize: 15,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Flock: ${vax.flockName}',
+                          style: TextStyle(color: textGrey, fontSize: 13),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'Given: ${_formatDate(vax.dateGiven)}',
+                          style: TextStyle(color: textGrey, fontSize: 12),
+                        ),
+                        if (vax.nextDueDate != null) ...[
+                          const SizedBox(height: 2),
+                          Text(
+                            'Next due: ${_formatDate(vax.nextDueDate!)}',
+                            style: TextStyle(color: textGrey, fontSize: 12),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                  Icon(
+                    Icons.arrow_forward_ios_rounded,
+                    color: textGrey,
+                    size: 14,
+                  ),
+                ],
               ),
-              const SizedBox(height: 4),
-              Text(
-                'Flock: ${vax.flockName}',
-                style: TextStyle(color: textGrey, fontSize: 13),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                'Given: ${_formatDate(vax.dateGiven)}',
-                style: TextStyle(color: textGrey, fontSize: 12),
-              ),
-              if (vax.nextDueDate != null) ...[
-                const SizedBox(height: 2),
-                Text(
-                  'Next due: ${_formatDate(vax.nextDueDate!)}',
-                  style: TextStyle(color: textGrey, fontSize: 12),
-                ),
-              ],
-            ],
+            ),
           ),
         );
       },
@@ -624,7 +714,9 @@ class _FarmerDetailPageState extends State<FarmerDetailPage>
           child: InkWell(
             onTap: () {
               // Navigate to sick report detail
-              // context.push('/sick-report-detail/${report.reportId}?lang=${widget.languageCode}');
+              context.push(
+                '/vet-reports/${report.reportId}?lang=${widget.languageCode}',
+              );
             },
             child: Padding(
               padding: const EdgeInsets.all(14),
@@ -743,13 +835,13 @@ class _FarmerDetailPageState extends State<FarmerDetailPage>
         currentIndex: 2,
         onTap: (index) {
           if (index == 0) {
-            context.push('/vet-dashboard/${widget.languageCode}');
+            context.go('/vet-dashboard?lang=${widget.languageCode}');
           } else if (index == 1) {
-            context.push('/vet-reports/${widget.languageCode}');
+            context.go('/vet-reports?lang=${widget.languageCode}');
           } else if (index == 2) {
-            context.push('/my-farmers/${widget.languageCode}');
+            context.go('/my-farmers/${widget.languageCode}');
           } else if (index == 3) {
-            context.push('/vet-profile/${widget.languageCode}');
+            context.go('/vet-profile/${widget.languageCode}');
           }
         },
         type: BottomNavigationBarType.fixed,

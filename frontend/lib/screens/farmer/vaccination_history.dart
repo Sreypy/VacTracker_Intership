@@ -3,7 +3,8 @@ import 'package:frontend/models/flock.dart';
 import 'package:frontend/services/flock_service.dart';
 import 'package:frontend/services/vaccination_pdf_service.dart';
 import 'package:frontend/services/vaccination_service.dart';
-import 'package:go_router/go_router.dart';
+import 'package:frontend/widgets/notification_header_button.dart';
+import 'package:frontend/widgets/farmer_bottom_navigation.dart';
 
 class VaccinationHistoryScreen extends StatefulWidget {
   final String flockId;
@@ -260,9 +261,9 @@ class _VaccinationHistoryScreenState extends State<VaccinationHistoryScreen> {
           ),
         ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.language, color: primaryGreen),
-            onPressed: () => context.push('/language'),
+          NotificationHeaderButton(
+            languageCode: widget.languageCode,
+            color: primaryGreen,
           ),
         ],
       ),
@@ -766,43 +767,9 @@ class _VaccinationHistoryScreenState extends State<VaccinationHistoryScreen> {
   }
 
   Widget _buildBottomNavigationBar() {
-    return BottomNavigationBar(
-      type: BottomNavigationBarType.fixed,
-      backgroundColor: Colors.white,
-      selectedItemColor: primaryGreen,
-      unselectedItemColor: Colors.grey[500],
+    return FarmerBottomNavigation(
       currentIndex: 2,
-      showSelectedLabels: false,
-      showUnselectedLabels: false,
-      items: [
-        const BottomNavigationBarItem(
-          icon: Icon(Icons.notifications_none),
-          label: 'Notifications',
-        ),
-        const BottomNavigationBarItem(
-          icon: Icon(Icons.vaccines_outlined),
-          label: 'Vaccines',
-        ),
-        BottomNavigationBarItem(
-          icon: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-            decoration: BoxDecoration(
-              color: primaryGreen,
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: const Icon(Icons.home, color: Colors.white),
-          ),
-          label: 'Home',
-        ),
-        const BottomNavigationBarItem(
-          icon: Icon(Icons.menu_book_outlined),
-          label: 'Records',
-        ),
-        const BottomNavigationBarItem(
-          icon: Icon(Icons.person_outline),
-          label: 'Profile',
-        ),
-      ],
+      languageCode: widget.languageCode,
     );
   }
 }

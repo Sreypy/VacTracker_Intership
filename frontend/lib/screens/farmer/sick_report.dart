@@ -2,11 +2,12 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:go_router/go_router.dart';
+import 'package:frontend/widgets/farmer_bottom_navigation.dart';
 import 'package:frontend/config/api_config.dart';
 import 'package:frontend/models/flock.dart';
 import 'package:frontend/services/flock_service.dart';
 import 'package:frontend/services/storage_service.dart';
-import 'package:go_router/go_router.dart';
 
 class SickReportScreen extends StatefulWidget {
   final String languageCode; // 'en' or 'km'
@@ -37,6 +38,7 @@ class _SickReportScreenState extends State<SickReportScreen> {
   bool _isLoading = true;
   bool _isSubmitting = false;
   String? _errorMessage;
+  late String _languageCode;
 
   // Localization Dictionary
   static const Map<String, Map<String, String>> _localizedValues = {
@@ -101,14 +103,23 @@ class _SickReportScreenState extends State<SickReportScreen> {
   };
 
   String _getText(String key) {
-    return _localizedValues[widget.languageCode]?[key] ??
+    return _localizedValues[_languageCode]?[key] ??
         _localizedValues['en']![key]!;
   }
 
   @override
   void initState() {
     super.initState();
+    _languageCode = widget.languageCode;
     _loadFlocks();
+  }
+
+  @override
+  void didUpdateWidget(covariant SickReportScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.languageCode != widget.languageCode) {
+      _languageCode = widget.languageCode;
+    }
   }
 
   Future<void> _loadFlocks() async {
@@ -241,8 +252,28 @@ class _SickReportScreenState extends State<SickReportScreen> {
         ),
         actions: [
           IconButton(
+            tooltip: 'My sick reports',
+            icon: const Icon(Icons.assignment_outlined, color: primaryGreen),
+            onPressed: () => context.push('/my-sick-reports?lang=$_languageCode'),
+          ),
+          PopupMenuButton<String>(
+            tooltip: 'Change language',
             icon: const Icon(Icons.language, color: primaryGreen),
-            onPressed: () => context.push('/language'),
+            onSelected: (languageCode) {
+              setState(() => _languageCode = languageCode);
+            },
+            itemBuilder: (context) => [
+              CheckedPopupMenuItem(
+                value: 'en',
+                checked: _languageCode == 'en',
+                child: const Text('English'),
+              ),
+              CheckedPopupMenuItem(
+                value: 'km',
+                checked: _languageCode == 'km',
+                child: const Text('ខ្មែរ'),
+              ),
+            ],
           ),
         ],
       ),
@@ -534,43 +565,9 @@ class _SickReportScreenState extends State<SickReportScreen> {
   }
 
   Widget _buildBottomNavigationBar() {
-    return BottomNavigationBar(
-      type: BottomNavigationBarType.fixed,
-      backgroundColor: Colors.white,
-      selectedItemColor: primaryGreen,
-      unselectedItemColor: Colors.grey[500],
+    return FarmerBottomNavigation(
       currentIndex: 2,
-      showSelectedLabels: false,
-      showUnselectedLabels: false,
-      items: [
-        const BottomNavigationBarItem(
-          icon: Icon(Icons.notifications_none),
-          label: 'Notifications',
-        ),
-        const BottomNavigationBarItem(
-          icon: Icon(Icons.vaccines_outlined),
-          label: 'Vaccines',
-        ),
-        BottomNavigationBarItem(
-          icon: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-            decoration: BoxDecoration(
-              color: primaryGreen,
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: const Icon(Icons.home, color: Colors.white),
-          ),
-          label: 'Home',
-        ),
-        const BottomNavigationBarItem(
-          icon: Icon(Icons.menu_book_outlined),
-          label: 'Records',
-        ),
-        const BottomNavigationBarItem(
-          icon: Icon(Icons.person_outline),
-          label: 'Profile',
-        ),
-      ],
+      languageCode: _languageCode,
     );
   }
 }
