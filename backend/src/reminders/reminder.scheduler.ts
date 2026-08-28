@@ -4,7 +4,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 
 import { Reminder, ReminderSender, ReminderStatus } from './entities/reminder.entity';
-import { Vaccination } from '../vaccinations/entities/vaccination.entity';
+import { Vaccination, VaccinationStatus } from '../vaccinations/entities/vaccination.entity';
+import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class ReminderScheduler {
@@ -16,6 +17,8 @@ export class ReminderScheduler {
 
     @InjectRepository(Vaccination)
     private readonly vaccinationRepository: Repository<Vaccination>,
+
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   @Cron('* * * * *')
@@ -38,6 +41,39 @@ export class ReminderScheduler {
     // Create reminders for each vaccination
     for (const vaccination of vaccinations) {
       await this.createReminderIfNotExists(vaccination);
+    }
+  }
+
+  /**
+   * Runs every minute to detect vaccinations that are already overdue
+   * (next_due_date < today) and creates a notification for each one
+   * that does not already have an unread overdue notification.
+   */
+  @Cron('* * * * *')
+  async generateOverdueNotifications() {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todayStr = today.toISOString().split('T')[0];
+
+    const overdueVaccinations = await this.vaccinationRepository
+      .createQueryBuilder('vaccination')
+      .leftJoinAndSelect('vaccination.flock', 'flock')
+      .leftJoinAndSelect('flock.farmer', 'farmer')
+      .leftJoinAndSelect('vaccination.vaccine', 'vaccine')
+      .where('vaccination.next_due_date < :today', { today: todayStr })
+      .andWhere('vaccination.status != :completed', {
+        completed: VaccinationStatus.COMPLETED,
+      })
+      .getMany();
+
+    this.logger.log(
+      `Found ${overdueVaccinations.length} overdue vaccinations.`,
+    );
+
+    for (const vaccination of overdueVaccinations) {
+      await this.notificationsService.createOverdueVaccinationNotification(
+        vaccination,
+      );
     }
   }
 

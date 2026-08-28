@@ -11,6 +11,7 @@ import { User } from '../../users/entities/user.entity';
 export enum NotificationType {
   VET_RESPONSE = 'vet_response',
   SYSTEM = 'system',
+  VACCINATION_OVERDUE = 'vaccination_overdue',
 }
 
 @Entity('notifications')
@@ -43,6 +44,9 @@ export class Notification {
 
   @Column({ name: 'is_read', default: false })
   isRead!: boolean;
+
+  @Column({ type: 'json', nullable: true })
+  data!: Record<string, any> | null;
 
   @CreateDateColumn()
   created_at!: Date;

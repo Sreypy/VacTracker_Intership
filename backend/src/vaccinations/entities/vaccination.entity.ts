@@ -5,6 +5,7 @@ import {
   CreateDateColumn,
   ManyToOne,
   JoinColumn,
+  Index,
 } from 'typeorm';
 
 import { Flock } from '../../flocks/entities/flock.entity';
@@ -18,7 +19,13 @@ export enum VaccinationStatus {
   COMPLETED = 'completed',
 }
 
+const dateTransformer = {
+  to: (value: Date | null) => value,
+  from: (value: string | null) => (value ? new Date(value) : value),
+};
+
 @Entity('vaccinations')
+@Index(['flock', 'vaccine', 'date_given'])
 export class Vaccination {
   @PrimaryGeneratedColumn()
   vaccination_id!: number;
@@ -35,12 +42,14 @@ export class Vaccination {
   @JoinColumn({ name: 'administered_by' })
   administered_by!: User;
 
-  @Column({ type: 'date' })
+  
+  @Column({ type: 'date', transformer: dateTransformer })
   date_given!: Date;
 
   @Column({
     type: 'date',
     nullable: true,
+    transformer: dateTransformer,
   })
   next_due_date!: Date | null;
 

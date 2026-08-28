@@ -250,32 +250,6 @@ class _SickReportScreenState extends State<SickReportScreen> {
             fontWeight: FontWeight.bold,
           ),
         ),
-        actions: [
-          IconButton(
-            tooltip: 'My sick reports',
-            icon: const Icon(Icons.assignment_outlined, color: primaryGreen),
-            onPressed: () => context.push('/my-sick-reports?lang=$_languageCode'),
-          ),
-          PopupMenuButton<String>(
-            tooltip: 'Change language',
-            icon: const Icon(Icons.language, color: primaryGreen),
-            onSelected: (languageCode) {
-              setState(() => _languageCode = languageCode);
-            },
-            itemBuilder: (context) => [
-              CheckedPopupMenuItem(
-                value: 'en',
-                checked: _languageCode == 'en',
-                child: const Text('English'),
-              ),
-              CheckedPopupMenuItem(
-                value: 'km',
-                checked: _languageCode == 'km',
-                child: const Text('ខ្មែរ'),
-              ),
-            ],
-          ),
-        ],
       ),
       body: _isLoading
           ? Center(child: Text(_getText('loading')))
@@ -565,9 +539,6 @@ class _SickReportScreenState extends State<SickReportScreen> {
   }
 
   Widget _buildBottomNavigationBar() {
-    return FarmerBottomNavigation(
-      currentIndex: 2,
-      languageCode: _languageCode,
-    );
+    return FarmerBottomNavigation(currentIndex: 2, languageCode: _languageCode);
   }
 }

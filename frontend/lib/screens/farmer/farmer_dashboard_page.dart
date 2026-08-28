@@ -37,8 +37,6 @@ class _FarmerDashboardPageState extends State<FarmerDashboardPage> {
   // Dashboard metrics
   int _totalFlocks = 0;
   int _totalBirds = 0;
-  int _healthyBirds = 0;
-  int _affectedBirds = 0;
   int _flockHealthPercentage = 0;
   int _overdueFlocks = 0;
   int _upcomingVaccinations = 0;
@@ -264,8 +262,6 @@ class _FarmerDashboardPageState extends State<FarmerDashboardPage> {
         _errorMessage = null;
         _totalFlocks = totalFlocks;
         _totalBirds = totalBirds;
-        _healthyBirds = healthyBirds;
-        _affectedBirds = affectedBirds;
         _flockHealthPercentage = flockHealthPercentage;
         _overdueFlocks = overdueFlocks;
         _upcomingVaccinations = upcomingVaccinations;
@@ -607,7 +603,7 @@ class _FarmerDashboardPageState extends State<FarmerDashboardPage> {
         : _flockHealthPercentage >= 70
         ? 'Needs Attention'
         : 'Critical';
-    final progress = (_flockHealthPercentage / 100).clamp(0.0, 1.0);
+    (_flockHealthPercentage / 100).clamp(0.0, 1.0);
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -661,21 +657,6 @@ class _FarmerDashboardPageState extends State<FarmerDashboardPage> {
               color: healthColor,
               fontSize: 11,
               fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            '$_healthyBirds Healthy  $_affectedBirds Affected',
-            style: const TextStyle(color: textGrey, fontSize: 11),
-          ),
-          const SizedBox(height: 6),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(4),
-            child: LinearProgressIndicator(
-              value: progress,
-              minHeight: 6,
-              color: healthColor,
-              backgroundColor: healthBackground,
             ),
           ),
         ],

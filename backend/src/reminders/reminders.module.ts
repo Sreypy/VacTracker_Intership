@@ -6,11 +6,15 @@ import { RemindersController } from './reminders.controller';
 import { RemindersService } from './reminders.service';
 import { Vaccination } from 'src/vaccinations/entities/vaccination.entity';
 import { ReminderScheduler } from './reminder.scheduler';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([
-    Reminder,
-    Vaccination])],
+  imports: [
+    TypeOrmModule.forFeature([
+      Reminder,
+      Vaccination]),
+    NotificationsModule,
+  ],
 
   controllers: [RemindersController],
   providers: [

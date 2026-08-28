@@ -69,24 +69,25 @@ export class FarmerDetailService {
       order: { created_at: 'DESC' },
     });
 
-    // Get all vaccinations for these flocks administered by this vet
+    // Get all vaccinations for these flocks, regardless of who administered
+    // them (farmer self-logged or any vet), so the vet has full visibility
+    // into the farmer's flock vaccination history
     const flockIds = flocks.map(f => f.flock_id);
     const vaccinations = flockIds.length > 0 ? await this.vaccinationRepository.find({
       where: {
         flock: In(flockIds),
-        administered_by: {
-          user_id: vet.user_id,
-        },
       },
       relations: {
         flock: true,
         vaccine: true,
+        administered_by: true,
       },
       order: {
         date_given: 'DESC',
       },
     }) : [];
 
+    
     // Get all sick reports for these flocks
     const sickReports = flockIds.length > 0 ? await this.sickReportRepository.find({
       where: {

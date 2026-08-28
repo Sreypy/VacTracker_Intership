@@ -65,4 +65,6 @@ class AuthService {
 
     return response.data;
   }
+
+  Future<void> updateProfile(Map<String, String> updatedData) async {}
 }

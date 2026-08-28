@@ -15,6 +15,7 @@ import { CreateVaccinationDto } from './dto/create-vaccination.dto';
 import { UpdateVaccinationDto } from './dto/update-vaccination.dto';
 import { Reminder } from 'src/reminders/entities/reminder.entity';
 import { RemindersService } from 'src/reminders/reminders.service';
+import { NotificationsService } from 'src/notifications/notifications.service';
 
 @Injectable()
 export class VaccinationsService {
@@ -32,6 +33,7 @@ export class VaccinationsService {
     private userRepository: Repository<User>,
 
     private readonly remindersService: RemindersService,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   // ===========================
@@ -80,7 +82,21 @@ export class VaccinationsService {
       throw new NotFoundException('Vaccine not found');
     }
 
-    // Determine next due date:
+        // Guard against duplicate submissions (e.g. double-tap on slow network,
+    // or a client retry after a timeout where the first request actually succeeded)
+    const existingVaccination = await this.vaccinationRepository.findOne({
+      where: {
+        flock: { flock_id: createVaccinationDto.flock_id },
+        vaccine: { vaccine_id: createVaccinationDto.vaccine_id },
+        date_given: new Date(createVaccinationDto.date_given),
+      },
+    });
+
+    if (existingVaccination) {
+      return existingVaccination;
+    }
+
+    // Determine next due date
     // 1. If farmer provides next_due_date, use it.
     // 2. Otherwise, if vaccine.interval_days exists, calculate suggested date.
     // 3. Otherwise, leave as null.
@@ -118,6 +134,13 @@ export class VaccinationsService {
     // Mark old pending reminders for this flock as completed
     // so the overdue count decreases when a new vaccination is logged
     await this.remindersService.markRemindersCompleted(
+      user.user_id,
+      createVaccinationDto.flock_id,
+    );
+
+    // Clear the overdue notification for this flock now that a new
+    // vaccination has been logged
+    await this.notificationsService.markOverdueNotificationsRead(
       user.user_id,
       createVaccinationDto.flock_id,
     );

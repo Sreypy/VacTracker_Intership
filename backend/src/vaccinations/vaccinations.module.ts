@@ -9,6 +9,7 @@ import { Flock } from '../flocks/entities/flock.entity';
 import { Vaccine } from '../vaccines/entities/vaccine.entity';
 import { User } from '../users/entities/user.entity';
 import { RemindersModule } from 'src/reminders/reminders.module';
+import { NotificationsModule } from 'src/notifications/notifications.module';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { RemindersModule } from 'src/reminders/reminders.module';
       User,
     ]),
     RemindersModule,
+    NotificationsModule,
   ],
   controllers: [VaccinationsController],
   providers: [VaccinationsService],

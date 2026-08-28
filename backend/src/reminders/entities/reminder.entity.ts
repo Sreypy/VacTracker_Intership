@@ -22,6 +22,11 @@ export enum ReminderSender {
   VET = 'vet',
 }
 
+const dateTransformer = {
+  to: (value: Date | null) => value,
+  from: (value: string | null) => (value ? new Date(value) : value),
+};
+
 @Entity('reminders')
 export class Reminder {
   @PrimaryGeneratedColumn()
@@ -47,7 +52,7 @@ export class Reminder {
   @Column('text')
   message!: string;
 
-  @Column({ type: 'date' })
+  @Column({ type: 'date', transformer: dateTransformer })
   scheduled_date!: Date;
 
   @Column({

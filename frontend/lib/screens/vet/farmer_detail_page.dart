@@ -19,20 +19,25 @@ class FarmerDetailPage extends StatefulWidget {
 
 class _FarmerDetailPageState extends State<FarmerDetailPage>
     with SingleTickerProviderStateMixin {
-  static const Color backgroundLight = Color(0xFFF8FAFC);
-  static const Color brandDarkGreen = Color(0xFF034418);
-  static const Color textDarkBlue = Color(0xFF0A1C33);
-  static const Color textGrey = Color(0xFF5A6B82);
-  static const Color textGreyLight = Color(0xFFE2E8F0);
-  static const Color statusGreen = Color(0xFF0D6E28);
-  static const Color statusRed = Color(0xFFA80000);
-  static const Color statusRedBg = Color(0xFFFDE8E8);
+  // Theme Color System
+  static const Color primaryGreen = Color(0xFF025920);
+  static const Color primaryLight = Color(0xFFE8F5E9);
+  static const Color surfaceBg = Color(0xFFF4F6F8);
+  static const Color textMain = Color(0xFF1E293B);
+  static const Color textMuted = Color(0xFF64748B);
+  static const Color cardBorder = Color(0xFFE2E8F0);
+
+  static const Color alertRed = Color(0xFFDC2626);
+  static const Color alertRedBg = Color(0xFFFEF2F2);
+  static const Color successGreen = Color(0xFF16A34A);
+  static const Color successGreenBg = Color(0xFFF0FDF4);
 
   late TabController _tabController;
   FarmerDetail? _farmerDetail;
   bool _isLoading = true;
   String? _errorMessage;
   String _vetInitials = 'S';
+
   final FarmerDetailService _farmerDetailService = FarmerDetailService();
   final AuthService _authService = AuthService();
 
@@ -44,6 +49,12 @@ class _FarmerDetailPageState extends State<FarmerDetailPage>
     _fetchFarmerDetail();
   }
 
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
+
   Future<void> _fetchVetProfile() async {
     try {
       final profile = await _authService.getProfile();
@@ -51,23 +62,15 @@ class _FarmerDetailPageState extends State<FarmerDetailPage>
       final name = profile['name']?.toString() ?? 'Dr. Sokha';
       setState(() {
         if (name.isNotEmpty) {
-          final nameParts = name.split(' ');
-          if (nameParts.length >= 2) {
-            _vetInitials = '${nameParts[0][0]}${nameParts[1][0]}'.toUpperCase();
-          } else if (nameParts.length == 1 && nameParts[0].isNotEmpty) {
-            _vetInitials = nameParts[0][0].toUpperCase();
+          final parts = name.trim().split(' ');
+          if (parts.length >= 2) {
+            _vetInitials = '${parts[0][0]}${parts[1][0]}'.toUpperCase();
+          } else if (parts.isNotEmpty) {
+            _vetInitials = parts[0][0].toUpperCase();
           }
         }
       });
-    } catch (e) {
-      // Keep default values if profile fetch fails
-    }
-  }
-
-  @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
+    } catch (_) {}
   }
 
   Future<void> _fetchFarmerDetail() async {
@@ -80,11 +83,13 @@ class _FarmerDetailPageState extends State<FarmerDetailPage>
       final detail = await _farmerDetailService.getFarmerDetail(
         widget.farmerId,
       );
+      if (!mounted) return;
       setState(() {
         _farmerDetail = detail;
         _isLoading = false;
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _errorMessage = e.toString();
         _isLoading = false;
@@ -95,406 +100,228 @@ class _FarmerDetailPageState extends State<FarmerDetailPage>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: backgroundLight,
-      appBar: AppBar(
-        backgroundColor: backgroundLight,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        titleSpacing: 16,
-        bottom: const PreferredSize(
-          preferredSize: Size.fromHeight(1),
-          child: Divider(height: 1, color: textGreyLight),
-        ),
-        title: Row(
-          children: [
-            CircleAvatar(
-              radius: 18,
-              backgroundColor: brandDarkGreen.withValues(alpha: 0.15),
-              child: Text(
-                _vetInitials,
-                style: TextStyle(
-                  color: brandDarkGreen,
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
+      backgroundColor: surfaceBg,
+      appBar: _buildAppBar(),
+      body: SafeArea(
+        child: _isLoading
+            ? const Center(
+                child: CircularProgressIndicator(color: primaryGreen),
+              )
+            : _errorMessage != null
+            ? _buildErrorView()
+            : DefaultTabController(
+                length: 4,
+                child: NestedScrollView(
+                  headerSliverBuilder: (context, innerBoxIsScrolled) => [
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                        child: Column(
+                          children: [
+                            _buildFarmHeroCard(),
+                            const SizedBox(height: 16),
+                            _buildMetricsSection(),
+                            const SizedBox(height: 16),
+                          ],
+                        ),
+                      ),
+                    ),
+                    SliverPersistentHeader(
+                      pinned: true,
+                      delegate: _SliverTabBarDelegate(
+                        TabBar(
+                          controller: _tabController,
+                          labelColor: primaryGreen,
+                          unselectedLabelColor: textMuted,
+                          indicatorColor: primaryGreen,
+                          indicatorWeight: 3,
+                          labelStyle: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13,
+                          ),
+                          tabs: const [
+                            Tab(text: 'Overview'),
+                            Tab(text: 'Flocks'),
+                            Tab(text: 'Vaccines'),
+                            Tab(text: 'Reports'),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                  body: TabBarView(
+                    controller: _tabController,
+                    children: [
+                      _buildOverviewTab(),
+                      _buildFlocksTab(),
+                      _buildVaccinationsTab(),
+                      _buildSickReportsTab(),
+                    ],
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(width: 10),
-            const Text(
-              "VacTracker",
-              style: TextStyle(
-                color: brandDarkGreen,
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(
-              Icons.notifications_outlined,
-              color: brandDarkGreen,
-              size: 24,
-            ),
-            onPressed: () {
-              context.push('/notifications/${widget.languageCode}');
-            },
-          ),
-          const SizedBox(width: 8),
-        ],
-      ),
-      body: SafeArea(
-        child: Column(
-          children: [
-            // Header Section
-            Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 20.0,
-                vertical: 16.0,
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Farm Details',
-                    style: TextStyle(
-                      color: textDarkBlue,
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Farm Name
-                  if (_farmerDetail != null)
-                    Text(
-                      _farmerDetail!.farmName,
-                      style: TextStyle(
-                        color: textDarkBlue,
-                        fontSize: 20,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  const SizedBox(height: 12),
-
-                  // Farmer Info
-                  if (_farmerDetail != null) ...[
-                    _buildInfoRow('Farmer:', _farmerDetail!.farmer.name),
-                    const SizedBox(height: 4),
-                    _buildInfoRow('Phone:', _farmerDetail!.farmer.phone),
-                    const SizedBox(height: 4),
-                    _buildInfoRow(
-                      'Location:',
-                      '${_farmerDetail!.farmer.village}, ${_farmerDetail!.farmer.province}',
-                    ),
-                    const SizedBox(height: 16),
-                  ],
-
-                  // Summary Cards
-                  if (_farmerDetail != null)
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _buildSummaryCard(
-                            '🐔',
-                            'Total Chickens',
-                            '${_farmerDetail!.summary.totalChickens}',
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: _buildSummaryCard(
-                            '🐔',
-                            'Total Flocks',
-                            '${_farmerDetail!.summary.totalFlocks}',
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: _buildAlertCard(
-                            '🩺',
-                            'Sick Reports',
-                            '${_farmerDetail!.summary.activeSickReports}',
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: _buildAlertCard(
-                            '💉',
-                            'Vaccinations Due',
-                            '${_farmerDetail!.summary.vaccinationsDue}',
-                          ),
-                        ),
-                      ],
-                    ),
-                  const SizedBox(height: 16),
-
-                  // Tabs
-                  Container(
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: textGreyLight, width: 1),
-                    ),
-                    child: TabBar(
-                      controller: _tabController,
-                      indicator: BoxDecoration(
-                        color: brandDarkGreen,
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      indicatorSize: TabBarIndicatorSize.tab,
-                      indicatorPadding: const EdgeInsets.all(4),
-                      labelColor: Colors.white,
-                      unselectedLabelColor: textGrey,
-                      labelStyle: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                      ),
-                      unselectedLabelStyle: const TextStyle(fontSize: 12),
-                      tabs: const [
-                        Tab(text: 'Overview'),
-                        Tab(text: 'Flocks'),
-                        Tab(text: 'Vaccinations'),
-                        Tab(text: 'Sick Reports'),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            // Tab Content
-            Expanded(child: _buildTabContent()),
-          ],
-        ),
       ),
       bottomNavigationBar: _buildBottomNav(),
     );
   }
 
-  Widget _buildInfoRow(String label, String value) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        SizedBox(
-          width: 80,
-          child: Text(
-            label,
-            style: TextStyle(
-              color: textGrey,
-              fontSize: 13,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ),
-        Expanded(
-          child: Text(
-            value,
-            style: TextStyle(
-              color: textDarkBlue,
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildSummaryCard(String emoji, String label, String value) {
-    return InkWell(
-      onTap: () {
-        if (label == 'Total Flocks') {
-          _tabController.animateTo(1); // Flocks tab
-        } else if (label == 'Total Chickens') {
-          _tabController.animateTo(1); // Flocks tab
-        }
-      },
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: textGreyLight, width: 1),
-        ),
-        child: Column(
-          children: [
-            Text(emoji, style: const TextStyle(fontSize: 20)),
-            const SizedBox(height: 4),
-            Text(
-              value,
-              style: TextStyle(
-                color: brandDarkGreen,
-                fontSize: 18,
+  PreferredSizeWidget _buildAppBar() {
+    return AppBar(
+      elevation: 0,
+      backgroundColor: Colors.white,
+      titleSpacing: 16,
+      title: Row(
+        children: [
+          CircleAvatar(
+            radius: 18,
+            backgroundColor: primaryLight,
+            child: Text(
+              _vetInitials,
+              style: const TextStyle(
+                color: primaryGreen,
                 fontWeight: FontWeight.bold,
+                fontSize: 14,
               ),
             ),
-            Text(
-              label,
-              style: TextStyle(color: textGrey, fontSize: 10),
-              textAlign: TextAlign.center,
+          ),
+          const SizedBox(width: 12),
+          const Text(
+            'VacTracker',
+            style: TextStyle(
+              color: textMain,
+              fontWeight: FontWeight.bold,
+              fontSize: 18,
             ),
-          ],
-        ),
+          ),
+        ],
       ),
+      // actions: [
+      //   IconButton(
+      //     icon: const Icon(Icons.notifications_none_rounded, color: textMain),
+      //     onPressed: () =>
+      //         context.push('/notifications/${widget.languageCode}'),
+      //   ),
+      //   const SizedBox(width: 8),
+      // ],
     );
   }
 
-  Widget _buildAlertCard(String emoji, String label, String value) {
-    final isAlert = int.tryParse(value) != null && int.parse(value) > 0;
-    final color = isAlert ? statusRed : statusGreen;
-    final bgColor = isAlert ? statusRedBg : const Color(0xFFDCFCE7);
+  Widget _buildFarmHeroCard() {
+    if (_farmerDetail == null) return const SizedBox.shrink();
+    final farm = _farmerDetail!;
 
-    return InkWell(
-      onTap: () {
-        if (label == 'Sick Reports') {
-          _tabController.animateTo(3); // Sick Reports tab
-        } else if (label == 'Vaccinations Due') {
-          _tabController.animateTo(2); // Vaccinations tab
-        }
-      },
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: bgColor,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: color.withValues(alpha: 0.2), width: 1),
-        ),
-        child: Column(
-          children: [
-            Text(emoji, style: const TextStyle(fontSize: 20)),
-            const SizedBox(height: 4),
-            Text(
-              value,
-              style: TextStyle(
-                color: color,
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            Text(
-              label,
-              style: TextStyle(color: color, fontSize: 10),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: .04),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
-    );
-  }
-
-  Widget _buildTabContent() {
-    if (_isLoading) {
-      return const Center(
-        child: Padding(
-          padding: EdgeInsets.all(32.0),
-          child: CircularProgressIndicator(color: brandDarkGreen),
-        ),
-      );
-    }
-
-    if (_errorMessage != null) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(32.0),
-          child: Column(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Icon(
-                Icons.error_outline_rounded,
-                color: statusRed,
-                size: 48,
-              ),
-              const SizedBox(height: 16),
-              Text(
-                'Unable to load farmer details',
-                style: TextStyle(
-                  color: textDarkBlue,
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      farm.farmName,
+                      style: const TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                        color: textMain,
+                        letterSpacing: -0.5,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.location_on_outlined,
+                          size: 15,
+                          color: textMuted,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          '${farm.farmer.village}, ${farm.farmer.province}',
+                          style: const TextStyle(
+                            color: textMuted,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(height: 8),
-              Text(
-                _errorMessage!,
-                style: const TextStyle(color: textGrey),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 20),
-              ElevatedButton.icon(
-                onPressed: _fetchFarmerDetail,
-                icon: const Icon(Icons.refresh_rounded),
-                label: const Text('Retry'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: brandDarkGreen,
-                  foregroundColor: Colors.white,
+              CircleAvatar(
+                radius: 22,
+                backgroundColor: primaryLight,
+                child: IconButton(
+                  icon: const Icon(Icons.phone, color: primaryGreen, size: 20),
+                  onPressed: () {},
                 ),
               ),
             ],
           ),
-        ),
-      );
-    }
-
-    if (_farmerDetail == null) {
-      return const SizedBox.shrink();
-    }
-
-    return TabBarView(
-      controller: _tabController,
-      children: [
-        _buildOverviewTab(),
-        _buildFlocksTab(),
-        _buildVaccinationsTab(),
-        _buildSickReportsTab(),
-      ],
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 16),
+            child: Divider(height: 1, color: cardBorder),
+          ),
+          Row(
+            children: [
+              _buildCompactInfoTile(
+                icon: Icons.person_outline,
+                label: 'Owner',
+                value: farm.farmer.name,
+              ),
+              _buildCompactInfoTile(
+                icon: Icons.smartphone_outlined,
+                label: 'Phone',
+                value: farm.farmer.phone,
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 
-  Widget _buildOverviewTab() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+  Widget _buildCompactInfoTile({
+    required IconData icon,
+    required String label,
+    required String value,
+  }) {
+    return Expanded(
+      child: Row(
         children: [
-          Text(
-            'Farm Overview',
-            style: TextStyle(
-              color: textDarkBlue,
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 12),
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: textGreyLight, width: 1),
-            ),
+          Icon(icon, size: 18, color: primaryGreen),
+          const SizedBox(width: 8),
+          Expanded(
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildOverviewRow(
-                  'Total Chickens',
-                  '${_farmerDetail!.summary.totalChickens}',
+                Text(
+                  label,
+                  style: const TextStyle(fontSize: 11, color: textMuted),
                 ),
-                const Divider(height: 24),
-                _buildOverviewRow(
-                  'Total Flocks',
-                  '${_farmerDetail!.summary.totalFlocks}',
-                ),
-                const Divider(height: 24),
-                _buildOverviewRow(
-                  'Active Sick Reports',
-                  '${_farmerDetail!.summary.activeSickReports}',
-                ),
-                const Divider(height: 24),
-                _buildOverviewRow(
-                  'Vaccinations Due',
-                  '${_farmerDetail!.summary.vaccinationsDue}',
+                Text(
+                  value,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: textMain,
+                  ),
+                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),
@@ -504,16 +331,159 @@ class _FarmerDetailPageState extends State<FarmerDetailPage>
     );
   }
 
-  Widget _buildOverviewRow(String label, String value) {
+  Widget _buildMetricsSection() {
+    if (_farmerDetail == null) return const SizedBox.shrink();
+    final summary = _farmerDetail!.summary;
+
+    return GridView.count(
+      crossAxisCount: 2,
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      crossAxisSpacing: 12,
+      mainAxisSpacing: 12,
+      childAspectRatio: 2.1,
+      children: [
+        _buildMetricCard(
+          title: 'Total Chickens',
+          value: '${summary.totalChickens}',
+          icon: Icons.pets_outlined,
+          color: primaryGreen,
+          bgColor: primaryLight,
+          onTap: () => _tabController.animateTo(1),
+        ),
+        _buildMetricCard(
+          title: 'Total Flocks',
+          value: '${summary.totalFlocks}',
+          icon: Icons.grid_view_outlined,
+          color: primaryGreen,
+          bgColor: primaryLight,
+          onTap: () => _tabController.animateTo(1),
+        ),
+        _buildMetricCard(
+          title: 'Sick Reports',
+          value: '${summary.activeSickReports}',
+          icon: Icons.medical_information_outlined,
+          color: summary.activeSickReports > 0 ? alertRed : successGreen,
+          bgColor: summary.activeSickReports > 0 ? alertRedBg : successGreenBg,
+          onTap: () => _tabController.animateTo(3),
+        ),
+        _buildMetricCard(
+          title: 'Vaccines Due',
+          value: '${summary.vaccinationsDue}',
+          icon: Icons.vaccines_outlined,
+          color: summary.vaccinationsDue > 0 ? alertRed : successGreen,
+          bgColor: summary.vaccinationsDue > 0 ? alertRedBg : successGreenBg,
+          onTap: () => _tabController.animateTo(2),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMetricCard({
+    required String title,
+    required String value,
+    required IconData icon,
+    required Color color,
+    required Color bgColor,
+    required VoidCallback onTap,
+  }) {
+    return Material(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: cardBorder),
+          ),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: bgColor,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(icon, color: color, size: 20),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      value,
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: color,
+                      ),
+                    ),
+                    Text(
+                      title,
+                      style: const TextStyle(fontSize: 11, color: textMuted),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildOverviewTab() {
+    if (_farmerDetail == null) return const SizedBox.shrink();
+    final summary = _farmerDetail!.summary;
+
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: cardBorder),
+          ),
+          child: Column(
+            children: [
+              _buildListRow('Total Chickens', '${summary.totalChickens}'),
+              const Divider(height: 24, color: cardBorder),
+              _buildListRow('Total Active Flocks', '${summary.totalFlocks}'),
+              const Divider(height: 24, color: cardBorder),
+              _buildListRow(
+                'Active Sick Reports',
+                '${summary.activeSickReports}',
+              ),
+              const Divider(height: 24, color: cardBorder),
+              _buildListRow(
+                'Pending Vaccinations',
+                '${summary.vaccinationsDue}',
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildListRow(String label, String value) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(label, style: TextStyle(color: textGrey, fontSize: 14)),
+        Text(label, style: const TextStyle(color: textMuted, fontSize: 14)),
         Text(
           value,
-          style: TextStyle(
-            color: textDarkBlue,
-            fontSize: 16,
+          style: const TextStyle(
+            color: textMain,
+            fontSize: 15,
             fontWeight: FontWeight.bold,
           ),
         ),
@@ -522,76 +492,45 @@ class _FarmerDetailPageState extends State<FarmerDetailPage>
   }
 
   Widget _buildFlocksTab() {
-    if (_farmerDetail!.flocks.isEmpty) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(32.0),
-          child: Text(
-            'No flocks found',
-            style: TextStyle(color: textGrey, fontSize: 16),
-          ),
-        ),
-      );
-    }
+    if (_farmerDetail!.flocks.isEmpty)
+      return _buildEmptyState('No flocks registered');
 
     return ListView.builder(
-      padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 16.0),
+      padding: const EdgeInsets.all(16),
       itemCount: _farmerDetail!.flocks.length,
       itemBuilder: (context, index) {
         final flock = _farmerDetail!.flocks[index];
-        return Container(
+        return Card(
+          elevation: 0,
           margin: const EdgeInsets.only(bottom: 12),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: textGreyLight, width: 1),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+            side: const BorderSide(color: cardBorder),
           ),
-          child: InkWell(
-            onTap: () {
-              // Navigate to flock detail
-              context.push(
-                '/flock-detail/${flock.flockId}/${widget.languageCode}',
-              );
-            },
-            borderRadius: BorderRadius.circular(12),
-            child: Padding(
-              padding: const EdgeInsets.all(14),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          flock.batchName,
-                          style: TextStyle(
-                            color: textDarkBlue,
-                            fontSize: 15,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          '${flock.birdCount} chickens',
-                          style: TextStyle(color: textGrey, fontSize: 13),
-                        ),
-                        if (flock.breed.isNotEmpty) ...[
-                          const SizedBox(height: 2),
-                          Text(
-                            'Breed: ${flock.breed}',
-                            style: TextStyle(color: textGrey, fontSize: 12),
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-                  Icon(
-                    Icons.arrow_forward_ios_rounded,
-                    color: textGrey,
-                    size: 14,
-                  ),
-                ],
+          child: ListTile(
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 4,
+            ),
+            leading: CircleAvatar(
+              backgroundColor: primaryLight,
+              child: const Icon(
+                Icons.inventory_2_outlined,
+                color: primaryGreen,
+                size: 20,
               ),
+            ),
+            title: Text(
+              flock.batchName,
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                color: textMain,
+              ),
+            ),
+            subtitle: Text('${flock.birdCount} Chickens • ${flock.breed}'),
+            trailing: const Icon(Icons.chevron_right, color: textMuted),
+            onTap: () => context.push(
+              '/flock-detail/${flock.flockId}/${widget.languageCode}',
             ),
           ),
         );
@@ -600,81 +539,48 @@ class _FarmerDetailPageState extends State<FarmerDetailPage>
   }
 
   Widget _buildVaccinationsTab() {
-    if (_farmerDetail!.vaccinations.isEmpty) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(32.0),
-          child: Text(
-            'No vaccinations found',
-            style: TextStyle(color: textGrey, fontSize: 16),
-          ),
-        ),
-      );
-    }
+    if (_farmerDetail!.vaccinations.isEmpty)
+      return _buildEmptyState('No vaccine records');
 
     return ListView.builder(
-      padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 16.0),
+      padding: const EdgeInsets.all(16),
       itemCount: _farmerDetail!.vaccinations.length,
       itemBuilder: (context, index) {
         final vax = _farmerDetail!.vaccinations[index];
-        return Container(
+        return Card(
+          elevation: 0,
           margin: const EdgeInsets.only(bottom: 12),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: textGreyLight, width: 1),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+            side: const BorderSide(color: cardBorder),
           ),
-          child: InkWell(
-            onTap: () {
-              // Navigate to flock detail
-              context.push(
-                '/flock-detail/${vax.flockId}/${widget.languageCode}',
-              );
-            },
-            borderRadius: BorderRadius.circular(12),
-            child: Padding(
-              padding: const EdgeInsets.all(14),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          vax.vaccineName,
-                          style: TextStyle(
-                            color: textDarkBlue,
-                            fontSize: 15,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Flock: ${vax.flockName}',
-                          style: TextStyle(color: textGrey, fontSize: 13),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          'Given: ${_formatDate(vax.dateGiven)}',
-                          style: TextStyle(color: textGrey, fontSize: 12),
-                        ),
-                        if (vax.nextDueDate != null) ...[
-                          const SizedBox(height: 2),
-                          Text(
-                            'Next due: ${_formatDate(vax.nextDueDate!)}',
-                            style: TextStyle(color: textGrey, fontSize: 12),
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-                  Icon(
-                    Icons.arrow_forward_ios_rounded,
-                    color: textGrey,
-                    size: 14,
-                  ),
-                ],
+          child: ListTile(
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 8,
+            ),
+            leading: CircleAvatar(
+              backgroundColor: primaryLight,
+              child: const Icon(
+                Icons.vaccines_outlined,
+                color: primaryGreen,
+                size: 20,
               ),
+            ),
+            title: Text(
+              vax.vaccineName,
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                color: textMain,
+              ),
+            ),
+            subtitle: Text(
+              'Flock: ${vax.flockName}\nDate: ${_formatDate(vax.dateGiven)}',
+            ),
+            isThreeLine: true,
+            trailing: const Icon(Icons.chevron_right, color: textMuted),
+            onTap: () => context.push(
+              '/flock-detail/${vax.flockId}/${widget.languageCode}',
             ),
           ),
         );
@@ -683,120 +589,52 @@ class _FarmerDetailPageState extends State<FarmerDetailPage>
   }
 
   Widget _buildSickReportsTab() {
-    if (_farmerDetail!.sickReports.isEmpty) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(32.0),
-          child: Text(
-            'No sick reports found',
-            style: TextStyle(color: textGrey, fontSize: 16),
-          ),
-        ),
-      );
-    }
+    if (_farmerDetail!.sickReports.isEmpty)
+      return _buildEmptyState('No sick reports');
 
     return ListView.builder(
-      padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 16.0),
+      padding: const EdgeInsets.all(16),
       itemCount: _farmerDetail!.sickReports.length,
       itemBuilder: (context, index) {
         final report = _farmerDetail!.sickReports[index];
-        final isNew = report.status == 'pending';
         final isResolved =
             report.status == 'resolved' || report.status == 'reviewed';
 
-        return Container(
+        return Card(
+          elevation: 0,
           margin: const EdgeInsets.only(bottom: 12),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: textGreyLight, width: 1),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+            side: const BorderSide(color: cardBorder),
           ),
-          child: InkWell(
-            onTap: () {
-              // Navigate to sick report detail
-              context.push(
-                '/vet-reports/${report.reportId}?lang=${widget.languageCode}',
-              );
-            },
-            child: Padding(
-              padding: const EdgeInsets.all(14),
-              child: Row(
-                children: [
-                  Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: isResolved
-                          ? statusGreen.withValues(alpha: 0.1)
-                          : statusRed.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Icon(
-                      isResolved
-                          ? Icons.check_circle_rounded
-                          : Icons.warning_amber_rounded,
-                      color: isResolved ? statusGreen : statusRed,
-                      size: 20,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Text(
-                              report.flockName,
-                              style: TextStyle(
-                                color: textDarkBlue,
-                                fontSize: 14,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            if (isNew) ...[
-                              const SizedBox(width: 8),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 6,
-                                  vertical: 2,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: statusRed,
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
-                                child: const Text(
-                                  'New',
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ],
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          '${report.reportType.toUpperCase()} • ${report.affectedCount} chickens affected',
-                          style: TextStyle(color: textGrey, fontSize: 12),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          _formatDate(report.createdAt),
-                          style: TextStyle(color: textGrey, fontSize: 11),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Icon(
-                    Icons.arrow_forward_ios_rounded,
-                    color: textGrey,
-                    size: 14,
-                  ),
-                ],
+          child: ListTile(
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 4,
+            ),
+            leading: CircleAvatar(
+              backgroundColor: isResolved ? successGreenBg : alertRedBg,
+              child: Icon(
+                isResolved
+                    ? Icons.check_circle_outline
+                    : Icons.warning_amber_rounded,
+                color: isResolved ? successGreen : alertRed,
+                size: 20,
               ),
+            ),
+            title: Text(
+              report.flockName,
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                color: textMain,
+              ),
+            ),
+            subtitle: Text(
+              '${report.reportType.toUpperCase()} • ${report.affectedCount} Affected',
+            ),
+            trailing: const Icon(Icons.chevron_right, color: textMuted),
+            onTap: () => context.push(
+              '/vet-reports/${report.reportId}?lang=${widget.languageCode}',
             ),
           ),
         );
@@ -804,9 +642,56 @@ class _FarmerDetailPageState extends State<FarmerDetailPage>
     );
   }
 
-  String _formatDate(DateTime date) {
-    return '${date.day.toString().padLeft(2, '0')} ${_getMonthName(date.month)} ${date.year}';
+  Widget _buildEmptyState(String message) {
+    return Center(
+      child: Text(
+        message,
+        style: const TextStyle(color: textMuted, fontSize: 14),
+      ),
+    );
   }
+
+  Widget _buildErrorView() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.error_outline, color: alertRed, size: 48),
+            const SizedBox(height: 16),
+            const Text(
+              'Failed to load details',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: textMain,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              _errorMessage!,
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: textMuted),
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton.icon(
+              onPressed: _fetchFarmerDetail,
+              icon: const Icon(Icons.refresh),
+              label: const Text('Retry'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: primaryGreen,
+                foregroundColor: Colors.white,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _formatDate(DateTime date) =>
+      '${date.day.toString().padLeft(2, '0')} ${_getMonthName(date.month)} ${date.year}';
 
   String _getMonthName(int month) {
     const months = [
@@ -828,47 +713,69 @@ class _FarmerDetailPageState extends State<FarmerDetailPage>
 
   Widget _buildBottomNav() {
     return Container(
-      decoration: BoxDecoration(
-        border: Border(top: BorderSide(color: textGreyLight, width: 1)),
+      decoration: const BoxDecoration(
+        border: Border(top: BorderSide(color: cardBorder)),
       ),
       child: BottomNavigationBar(
         currentIndex: 2,
         onTap: (index) {
-          if (index == 0) {
-            context.go('/vet-dashboard?lang=${widget.languageCode}');
-          } else if (index == 1) {
-            context.go('/vet-reports?lang=${widget.languageCode}');
-          } else if (index == 2) {
-            context.go('/my-farmers/${widget.languageCode}');
-          } else if (index == 3) {
-            context.go('/vet-profile/${widget.languageCode}');
-          }
+          final routes = [
+            '/vet-dashboard?lang=${widget.languageCode}',
+            '/vet-reports?lang=${widget.languageCode}',
+            '/my-farmers/${widget.languageCode}',
+            '/vet-profile/${widget.languageCode}',
+          ];
+          context.go(routes[index]);
         },
         type: BottomNavigationBarType.fixed,
         backgroundColor: Colors.white,
-        selectedItemColor: brandDarkGreen,
-        unselectedItemColor: textGrey,
-        showSelectedLabels: false,
-        showUnselectedLabels: false,
+        selectedItemColor: primaryGreen,
+        unselectedItemColor: textMuted,
+        showSelectedLabels: true,
+        selectedFontSize: 11,
+        unselectedFontSize: 11,
         items: const [
           BottomNavigationBarItem(
-            icon: Icon(Icons.home_outlined, size: 24),
+            icon: Icon(Icons.home_outlined),
             label: 'Home',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.assignment_outlined, size: 24),
+            icon: Icon(Icons.assignment_outlined),
             label: 'Reports',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.people_outline_rounded, size: 24),
+            icon: Icon(Icons.people_alt_outlined),
             label: 'Farmers',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.person_outline_rounded, size: 24),
+            icon: Icon(Icons.person_outline),
             label: 'Profile',
           ),
         ],
       ),
     );
   }
+}
+
+class _SliverTabBarDelegate extends SliverPersistentHeaderDelegate {
+  final TabBar _tabBar;
+
+  _SliverTabBarDelegate(this._tabBar);
+
+  @override
+  double get minExtent => _tabBar.preferredSize.height;
+  @override
+  double get maxExtent => _tabBar.preferredSize.height;
+
+  @override
+  Widget build(
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) {
+    return Container(color: Colors.white, child: _tabBar);
+  }
+
+  @override
+  bool shouldRebuild(_SliverTabBarDelegate oldDelegate) => false;
 }

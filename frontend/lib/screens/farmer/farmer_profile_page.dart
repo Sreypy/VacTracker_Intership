@@ -67,7 +67,6 @@ class FarmerProfilePage extends StatefulWidget {
 }
 
 class _FarmerProfilePageState extends State<FarmerProfilePage> {
-
   // Backend User Profile Data State
   FarmerProfileModel? _profile;
   bool _isLoadingProfile = true;
@@ -1631,9 +1630,6 @@ class _FarmerProfilePageState extends State<FarmerProfilePage> {
   }
 
   Widget _buildBottomNav() {
-    return FarmerBottomNavigation(
-      currentIndex: 4,
-      languageCode: _currentLang,
-    );
+    return FarmerBottomNavigation(currentIndex: 4, languageCode: _currentLang);
   }
 }

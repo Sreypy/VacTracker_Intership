@@ -141,12 +141,18 @@ class _LogVaccinationStep2PageState extends State<LogVaccinationStep2Page> {
       'upload_photo': 'បញ្ចូល',
       'err_select_vac': 'សូមជ្រើសរើសវ៉ាក់សាំងមួយជាមុនសិន',
       'custom_title': 'បន្ថែមវ៉ាក់សាំងផ្ទាល់ខ្លួន',
+      'custom_subtitle': 'បង្កើតវ៉ាក់សាំងថ្មីសម្រាប់កន្លែងចិញ្ចឹមរបស់អ្នក',
       'custom_name_en': 'ឈ្មោះវ៉ាក់សាំង (EN)',
       'custom_name_km': 'ឈ្មោះវ៉ាក់សាំង (KM)',
       'custom_disease_en': 'ជំងឺ (EN)',
       'custom_disease_km': 'ជំងឺ (KM)',
       'custom_interval': 'ចន្លោះពេលចាក់ (ថ្ងៃ)',
       'custom_notes': 'ចំណាំ (ជាជម្រើស)',
+      'custom_sec_name': 'ឈ្មោះវ៉ាក់សាំង',
+      'custom_sec_disease': 'ជំងឺដែលការពារ',
+      'custom_sec_interval': 'ចន្លោះពេលចាក់ឡើងវិញ',
+      'custom_sec_notes': 'ចំណាំ (ជាជម្រើស)',
+      'custom_interval_unit': 'ថ្ងៃ',
       'cancel': 'បោះបង់',
       'save': 'រក្សាទុក',
       'next': 'បន្ទាប់',
@@ -177,12 +183,18 @@ class _LogVaccinationStep2PageState extends State<LogVaccinationStep2Page> {
       'upload_photo': 'Upload',
       'err_select_vac': 'Please select a vaccine first',
       'custom_title': 'Add Custom Vaccine',
+      'custom_subtitle': 'Create a new vaccine for your flock',
       'custom_name_en': 'Vaccine name (EN)',
       'custom_name_km': 'Vaccine name (KM)',
       'custom_disease_en': 'Disease (EN)',
       'custom_disease_km': 'Disease (KM)',
       'custom_interval': 'Repeat interval (days)',
       'custom_notes': 'Notes (optional)',
+      'custom_sec_name': 'Vaccine name',
+      'custom_sec_disease': 'Disease prevented',
+      'custom_sec_interval': 'Repeat interval',
+      'custom_sec_notes': 'Notes (optional)',
+      'custom_interval_unit': 'days',
       'cancel': 'Cancel',
       'save': 'Save',
       'next': 'Next',
@@ -264,110 +276,215 @@ class _LogVaccinationStep2PageState extends State<LogVaccinationStep2Page> {
     final result = await showDialog<Map<String, dynamic>>(
       context: context,
       builder: (dialogContext) {
-        return AlertDialog(
-          title: Text(_getText('custom_title')),
-          content: SingleChildScrollView(
-            child: SizedBox(
-              width: 320,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TextField(
-                    controller: nameEnController,
-                    decoration: InputDecoration(
-                      labelText: _getText('custom_name_en'),
-                    ),
+        return Dialog(
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Branded Header
+                Container(
+                  padding: const EdgeInsets.fromLTRB(20, 22, 20, 18),
+                  color: brandDarkGreen,
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: const BoxDecoration(
+                          color: Colors.white,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.vaccines,
+                          color: brandDarkGreen,
+                          size: 26,
+                        ),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              _getText('custom_title'),
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              _getText('custom_subtitle'),
+                              style: const TextStyle(
+                                color: Colors.white70,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 10),
-                  TextField(
-                    controller: nameKmController,
-                    decoration: InputDecoration(
-                      labelText: _getText('custom_name_km'),
-                    ),
+                ),
+                // Form Body
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        _getText('custom_sec_name'),
+                        style: _dialogSectionStyle,
+                      ),
+                      const SizedBox(height: 10),
+                      _buildCustomVacField(
+                        controller: nameEnController,
+                        icon: Icons.badge_outlined,
+                        hint: _getText('custom_name_en'),
+                      ),
+                      const SizedBox(height: 12),
+                      _buildCustomVacField(
+                        controller: nameKmController,
+                        icon: Icons.badge_outlined,
+                        hint: _getText('custom_name_km'),
+                      ),
+                      const SizedBox(height: 18),
+                      Text(
+                        _getText('custom_sec_disease'),
+                        style: _dialogSectionStyle,
+                      ),
+                      const SizedBox(height: 10),
+                      _buildCustomVacField(
+                        controller: diseaseEnController,
+                        icon: Icons.health_and_safety_outlined,
+                        hint: _getText('custom_disease_en'),
+                      ),
+                      const SizedBox(height: 12),
+                      _buildCustomVacField(
+                        controller: diseaseKmController,
+                        icon: Icons.health_and_safety_outlined,
+                        hint: _getText('custom_disease_km'),
+                      ),
+                      const SizedBox(height: 18),
+                      Text(
+                        _getText('custom_sec_interval'),
+                        style: _dialogSectionStyle,
+                      ),
+                      const SizedBox(height: 10),
+                      _buildCustomVacField(
+                        controller: intervalController,
+                        icon: Icons.event_repeat,
+                        hint: _getText('custom_interval'),
+                        keyboardType: TextInputType.number,
+                        suffixText: _getText('custom_interval_unit'),
+                      ),
+                      const SizedBox(height: 18),
+                  Text(
+                        _getText('custom_sec_notes'),
+                        style: _dialogSectionStyle,
+                      ),
+                      const SizedBox(height: 10),
+                      _buildCustomVacField(
+                        controller: notesEnController,
+                        icon: Icons.notes_outlined,
+                        hint: _getText('custom_notes'),
+                        maxLines: 2,
+                      ),
+                      const SizedBox(height: 12),
+                      _buildCustomVacField(
+                        controller: notesKmController,
+                        icon: Icons.notes_outlined,
+                        hint: _getText('custom_notes'),
+                        maxLines: 2,
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 10),
-                  TextField(
-                    controller: diseaseEnController,
-                    decoration: InputDecoration(
-                      labelText: _getText('custom_disease_en'),
-                    ),
+                ),
+                // Actions
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () => Navigator.pop(dialogContext),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: textGrey,
+                            side: const BorderSide(color: textGreyLight),
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          child: Text(_getText('cancel')),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        flex: 2,
+                        child: ElevatedButton(
+                          onPressed: () {
+                            final nameEn = nameEnController.text.trim();
+                            final nameKm = nameKmController.text.trim();
+                            final diseaseEn = diseaseEnController.text.trim();
+                            final diseaseKm = diseaseKmController.text.trim();
+                            final intervalValue = int.tryParse(
+                              intervalController.text.trim(),
+                            );
+
+                            if (nameEn.isEmpty ||
+                                nameKm.isEmpty ||
+                                diseaseEn.isEmpty ||
+                                diseaseKm.isEmpty ||
+                                intervalValue == null) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(_getText('custom_required')),
+                                ),
+                              );
+                              return;
+                            }
+
+                            Navigator.pop(dialogContext, {
+                              'name_en': nameEn,
+                              'name_km': nameKm,
+                              'disease_en': diseaseEn,
+                              'disease_km': diseaseKm,
+                              'interval_days': intervalValue,
+                              'notes_en': notesEnController.text.trim().isEmpty
+                                  ? null
+                                  : notesEnController.text.trim(),
+                              'notes_km': notesKmController.text.trim().isEmpty
+                                  ? null
+                                  : notesKmController.text.trim(),
+                            });
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: brandDarkGreen,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          child: Text(
+                            _getText('save'),
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 10),
-                  TextField(
-                    controller: diseaseKmController,
-                    decoration: InputDecoration(
-                      labelText: _getText('custom_disease_km'),
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  TextField(
-                    controller: intervalController,
-                    keyboardType: TextInputType.number,
-                    decoration: InputDecoration(
-                      labelText: _getText('custom_interval'),
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  TextField(
-                    controller: notesEnController,
-                    decoration: InputDecoration(
-                      labelText: _getText('custom_notes'),
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  TextField(
-                    controller: notesKmController,
-                    decoration: InputDecoration(
-                      labelText: _getText('custom_notes'),
-                    ),
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext),
-              child: Text(_getText('cancel')),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                final nameEn = nameEnController.text.trim();
-                final nameKm = nameKmController.text.trim();
-                final diseaseEn = diseaseEnController.text.trim();
-                final diseaseKm = diseaseKmController.text.trim();
-                final intervalValue = int.tryParse(
-                  intervalController.text.trim(),
-                );
-
-                if (nameEn.isEmpty ||
-                    nameKm.isEmpty ||
-                    diseaseEn.isEmpty ||
-                    diseaseKm.isEmpty ||
-                    intervalValue == null) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text(_getText('custom_required'))),
-                  );
-                  return;
-                }
-
-                Navigator.pop(dialogContext, {
-                  'name_en': nameEn,
-                  'name_km': nameKm,
-                  'disease_en': diseaseEn,
-                  'disease_km': diseaseKm,
-                  'interval_days': intervalValue,
-                  'notes_en': notesEnController.text.trim().isEmpty
-                      ? null
-                      : notesEnController.text.trim(),
-                  'notes_km': notesKmController.text.trim().isEmpty
-                      ? null
-                      : notesKmController.text.trim(),
-                });
-              },
-              child: Text(_getText('save')),
-            ),
-          ],
         );
       },
     );
@@ -400,6 +517,49 @@ class _LogVaccinationStep2PageState extends State<LogVaccinationStep2Page> {
         context,
       ).showSnackBar(SnackBar(content: Text(_getText('custom_error'))));
     }
+  }
+TextStyle get _dialogSectionStyle => const TextStyle(
+        color: brandDarkGreen,
+        fontSize: 13,
+        fontWeight: FontWeight.bold,
+      );
+
+  Widget _buildCustomVacField({
+    required TextEditingController controller,
+    required IconData icon,
+    required String hint,
+    TextInputType? keyboardType,
+    String? suffixText,
+    int maxLines = 1,
+  }) {
+    return TextField(
+      controller: controller,
+      keyboardType: keyboardType,
+      maxLines: maxLines,
+      decoration: InputDecoration(
+        hintText: hint,
+        prefixIcon: Icon(icon, color: brandDarkGreen, size: 20),
+        suffixText: suffixText,
+        filled: true,
+        fillColor: const Color(0xFFF8FAFC),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 14,
+          vertical: 12,
+        ),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide.none,
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: textGreyLight.withValues(alpha: 0.6)),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: brandDarkGreen, width: 1.5),
+        ),
+      ),
+    );
   }
 
   /// Image Picker Logic
@@ -931,11 +1091,6 @@ class _LogVaccinationStep2PageState extends State<LogVaccinationStep2Page> {
   }
 
   Widget _buildBottomNav() {
-    return FarmerBottomNavigation(
-      currentIndex: 1,
-      languageCode: _currentLang,
-    );
+    return FarmerBottomNavigation(currentIndex: 1, languageCode: _currentLang);
   }
 }
-
-// use ImageSource from `package:image_picker` (remove local shim)

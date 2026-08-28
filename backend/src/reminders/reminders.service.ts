@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 
 import { Reminder, ReminderSender, ReminderStatus } from './entities/reminder.entity';
 import { Vaccination } from 'src/vaccinations/entities/vaccination.entity';
+import { NotificationsService } from 'src/notifications/notifications.service';
 
 @Injectable()
 export class RemindersService {
@@ -13,6 +14,8 @@ export class RemindersService {
 
     @InjectRepository(Vaccination)
     private readonly vaccinationRepository: Repository<Vaccination>,
+
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   async findByFarmer(farmerId: number): Promise<Reminder[]> {
@@ -75,6 +78,13 @@ export class RemindersService {
         { flockId },
       )
       .execute();
+
+    // Also mark any overdue-vaccination notifications for this flock as read
+    // so the badge count and notification list are cleared after vaccinating.
+    await this.notificationsService.markOverdueNotificationsRead(
+      farmerId,
+      flockId,
+    );
   }
 
   async createReminder(vaccination: Vaccination): Promise<Reminder | null> {
@@ -114,10 +124,42 @@ export class RemindersService {
       vaccination_id: vaccinationWithRelations.vaccination_id,
       farmer_id: farmerId,
       title: 'Vaccination Reminder',
-      message: `${vaccinationWithRelations.flock.batch_name} is due for ${vaccinationWithRelations.vaccine.name_en} vaccination tomorrow.`,
+      message: this._buildReminderMessage(vaccinationWithRelations),
       scheduled_date: vaccinationWithRelations.next_due_date,
       status: ReminderStatus.PENDING,
       sent_by: ReminderSender.SYSTEM,
     });
+  }
+
+  /**
+   * Build a human-readable reminder message that correctly reflects
+   * whether the vaccination is overdue, due today, or upcoming.
+   */
+  private _buildReminderMessage(vaccination: Vaccination): string {
+    const flockName = vaccination.flock?.batch_name ?? 'your flock';
+    const vaccineName =
+      vaccination.vaccine?.name_en ?? vaccination.vaccine?.name_km ?? 'vaccine';
+    const dueDate = vaccination.next_due_date;
+
+    if (!dueDate) {
+      return `${vaccineName} vaccination reminder for ${flockName}.`;
+    }
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const due = new Date(dueDate);
+    due.setHours(0, 0, 0, 0);
+    const diffDays = Math.ceil(
+      (due.getTime() - today.getTime()) / (1000 * 60 * 60 * 24),
+    );
+
+    if (diffDays < 0) {
+      const absDays = Math.abs(diffDays);
+      return `${vaccineName} vaccination is overdue for ${flockName} (${absDays} ${absDays === 1 ? 'day' : 'days'} ago).`;
+    }
+    if (diffDays === 0) {
+      return `${vaccineName} vaccination is due today for ${flockName}.`;
+    }
+    return `${vaccineName} vaccination is due for ${flockName} on ${dueDate.toISOString().split('T')[0]}.`;
   }
 }

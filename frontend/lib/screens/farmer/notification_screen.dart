@@ -237,10 +237,38 @@ class _NotificationScreenState extends State<NotificationScreen>
         if (item != null) items.add(item);
       }
 
-      // Add vet response notifications
+      // Add notifications (vet response + overdue vaccinations).
+      // Track (flockId, vaccineId) keys already added by reminders/dedup so
+      // an overdue vaccination is not shown twice.
+      final seenKeys = <String>{};
+      for (final item in items) {
+        final key = '${item.flockId}_${item.vaccineId}';
+        if (item.flockId != null && item.vaccineId != null) seenKeys.add(key);
+      }
+
       for (final notification in notifications) {
-        final item = _NotificationItem.fromVetResponse(notification, widget.languageCode);
-        if (item != null) items.add(item);
+        if (notification is! Map) continue;
+        final type = notification['type']?.toString();
+        _NotificationItem? item;
+        if (type == 'vaccination_overdue') {
+          item = _NotificationItem.fromVaccinationOverdue(
+            notification,
+            widget.languageCode,
+          );
+        } else if (type == 'vet_response') {
+          item = _NotificationItem.fromVetResponse(
+            notification,
+            widget.languageCode,
+          );
+        }
+        if (item == null) continue;
+
+        final key = '${item.flockId}_${item.vaccineId}';
+        if (item.flockId != null && item.vaccineId != null && seenKeys.contains(key)) {
+          // Skip the duplicate reminder; the overdue notification wins.
+          continue;
+        }
+        items.add(item);
       }
 
       items.sort((first, second) {
@@ -293,6 +321,11 @@ class _NotificationScreenState extends State<NotificationScreen>
       return;
     }
     if (item.flockId == null) return;
+    // Mark an overdue-vaccination notification as read when the farmer taps it.
+    if (item.notificationId != null) {
+      await NotificationService().markAsRead(item.notificationId!);
+      if (!mounted) return;
+    }
     if (item.isOverdue || item.isDueToday) {
       if (item.vaccineId == null) return;
       context.push(
@@ -879,6 +912,45 @@ class _NotificationItem {
       vetMessage: notification['message']?.toString() ?? '',
       notificationId: _asInt(notification['notification_id']),
       reportId: _asInt(notification['reference_id']),
+    );
+  }
+
+  // Mapper for overdue vaccination notifications (type = vaccination_overdue)
+  static _NotificationItem? fromVaccinationOverdue(
+    dynamic raw,
+    String languageCode,
+  ) {
+    if (raw is! Map) return null;
+    final notification = Map<String, dynamic>.from(raw);
+    final data = vaccinationMap(notification['data']);
+    final dueRaw = (notification['data']?['due_date'] ??
+        data['due_date'])?.toString();
+    final dueDate = DateTime.tryParse(dueRaw ?? '');
+
+    final today = DateTime.now();
+    final todayDay = DateTime(today.year, today.month, today.day);
+    final dueDay = dueDate == null
+        ? todayDay
+        : DateTime(dueDate.year, dueDate.month, dueDate.day);
+
+    final defaultFlock = 'Unknown flock';
+    final defaultVaccine = 'Unknown vaccine';
+
+    final vaccineName = languageCode == 'km'
+        ? (data['vaccine_name_km'] ?? data['vaccine_name'] ?? defaultVaccine)
+            .toString()
+        : (data['vaccine_name'] ?? data['vaccine_name_km'] ?? defaultVaccine)
+            .toString();
+
+    return _NotificationItem(
+      flockName:
+          (data['flock_name'] ?? defaultFlock).toString(),
+      vaccineName: vaccineName,
+      dueDate: dueDay,
+      flockId: _asInt(data['flock_id']),
+      vaccineId: _asInt(data['vaccine_id']),
+      days: dueDay.difference(todayDay).inDays,
+      notificationId: _asInt(notification['notification_id']),
     );
   }
 

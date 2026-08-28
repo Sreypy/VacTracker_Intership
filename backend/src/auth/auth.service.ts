@@ -99,6 +99,7 @@ export class AuthService {
     const token = this.jwtService.sign({
       user_id: user.user_id,
       phone: user.phone,
+      role: user.role,
     });
 
     return {
