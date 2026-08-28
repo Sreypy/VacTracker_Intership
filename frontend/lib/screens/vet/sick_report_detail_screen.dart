@@ -934,7 +934,7 @@ class _VetSickReportDetailScreenState extends State<VetSickReportDetailScreen> {
     final hasPhoto = photoUrl != null && photoUrl.isNotEmpty;
 
     return GestureDetector(
-      onTap: hasPhoto ? () => _showPhoto(photoUrl!) : null,
+      onTap: hasPhoto ? () => _showPhoto(photoUrl) : null,
 
       child: Container(
         width: double.infinity,

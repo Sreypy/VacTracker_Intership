@@ -493,6 +493,7 @@ class _FarmerDetailPageState extends State<FarmerDetailPage>
 
   Widget _buildFlocksTab() {
     if (_farmerDetail!.flocks.isEmpty)
+      // ignore: curly_braces_in_flow_control_structures
       return _buildEmptyState('No flocks registered');
 
     return ListView.builder(
@@ -540,6 +541,7 @@ class _FarmerDetailPageState extends State<FarmerDetailPage>
 
   Widget _buildVaccinationsTab() {
     if (_farmerDetail!.vaccinations.isEmpty)
+      // ignore: curly_braces_in_flow_control_structures
       return _buildEmptyState('No vaccine records');
 
     return ListView.builder(
@@ -590,6 +592,7 @@ class _FarmerDetailPageState extends State<FarmerDetailPage>
 
   Widget _buildSickReportsTab() {
     if (_farmerDetail!.sickReports.isEmpty)
+      // ignore: curly_braces_in_flow_control_structures
       return _buildEmptyState('No sick reports');
 
     return ListView.builder(
