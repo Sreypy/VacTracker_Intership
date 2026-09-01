@@ -12,6 +12,7 @@ import { UpdateSickReportDto } from './dto/update-sick-report.dto';
 import { NotificationsService } from '../notifications/notifications.service';
 import { User, UserRole } from '../users/entities/user.entity';
 import { VetFarmerConnection, ConnectionStatus } from '../users/entities/vet-farmer-connection.entity';
+import { CloudinaryService } from 'src/cloudinary/cloudinary.service';
 
 @Injectable()
 export class SickReportsService {
@@ -26,17 +27,33 @@ export class SickReportsService {
     private connectionRepository: Repository<VetFarmerConnection>,
 
     private readonly notificationsService: NotificationsService,
+    private readonly cloudinaryService: CloudinaryService,
   ) {}
 
-  async create(createSickReportDto: CreateSickReportDto, userId: number) {
+  async create(
+    createSickReportDto: CreateSickReportDto,
+    userId: number,
+    photo?: Express.Multer.File,
+  ) {
     const reportDate = createSickReportDto.reportDate instanceof Date
       ? createSickReportDto.reportDate
       : new Date(createSickReportDto.reportDate);
+
+    // Upload photo to Cloudinary if provided
+    let photoUrl: string | undefined = createSickReportDto.photoUrl;
+    if (photo) {
+      const result = await this.cloudinaryService.uploadImage(
+        photo,
+        'vactracker/sick-reports',
+      );
+      photoUrl = result.secure_url;
+    }
 
     const sickReport = this.sickReportRepository.create({
       ...createSickReportDto,
       reportedBy: userId,
       reportDate: reportDate.toISOString().split('T')[0],
+      photoUrl,
     });
     return await this.sickReportRepository.save(sickReport);
   }

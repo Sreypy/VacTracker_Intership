@@ -9,6 +9,7 @@ import { VetFarmerConnection, ConnectionStatus } from './entities/vet-farmer-con
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { ConnectVetDto } from './dto/connect-vet.dto';
+import { CloudinaryService } from 'src/cloudinary/cloudinary.service';
 
 @Injectable()
 export class UsersService {
@@ -19,6 +20,9 @@ export class UsersService {
 
     @InjectRepository(VetFarmerConnection)
     private readonly connectionRepository: Repository<VetFarmerConnection>,
+
+    private readonly cloudinaryService: CloudinaryService,
+
   ) {}
 
   async create(createUserDto: CreateUserDto) {
@@ -82,13 +86,28 @@ export class UsersService {
     return user;
   }
 
-  async updateProfileImage(phone: string, profileImageUrl: string) {
-    const user = await this.userRepository.findOne({ where: { phone } });
+  async updateProfileImage(
+    phone: string,
+    file: any,
+  ) {
+    const user = await this.userRepository.findOne({
+      where: { phone },
+    });
+
     if (!user) {
-      throw new Error('User not found');
+      throw new NotFoundException('User not found');
     }
 
-    user.profile_image_url = profileImageUrl;
+    if (!file) {
+      throw new Error('No image file provided');
+    }
+
+    // Upload image to Cloudinary
+  const result = await this.cloudinaryService.uploadImage(file, 'vactracker/profile');
+
+    // Save Cloudinary URL to PostgreSQL
+    user.profile_image_url = result.secure_url;
+
     return await this.userRepository.save(user);
   }
 

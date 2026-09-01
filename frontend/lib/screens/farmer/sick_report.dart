@@ -1,7 +1,9 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:image_picker/image_picker.dart';
 import 'package:frontend/widgets/farmer_bottom_navigation.dart';
 import 'package:frontend/config/api_config.dart';
 import 'package:frontend/models/flock.dart';
@@ -39,6 +41,10 @@ class _SickReportScreenState extends State<SickReportScreen> {
   String? _errorMessage;
   late String _languageCode;
 
+  // Photo state
+  XFile? _photoFile;
+  Uint8List? _photoBytes;
+
   // Localization Dictionary
   static const Map<String, Map<String, String>> _localizedValues = {
     'en': {
@@ -51,6 +57,9 @@ class _SickReportScreenState extends State<SickReportScreen> {
       'add_photo': 'Add Photo',
       'photo_hint':
           'Upload clear photos of affected birds for faster diagnostic support.',
+      'camera': 'Take Photo',
+      'gallery': 'Choose from Gallery',
+      'remove_photo': 'Remove Photo',
       'observed_symptoms': 'Observed Symptoms',
       'symptom_lethargy': 'Lethargy / Weakness',
       'symptom_respiratory': 'Respiratory Issues',
@@ -80,6 +89,9 @@ class _SickReportScreenState extends State<SickReportScreen> {
       'add_photo': 'បន្ថែមរូបថត',
       'photo_hint':
           'បង្ហោះរូបថតច្បាស់ៗនៃសត្វដែលប៉ះពាល់ ដើម្បីទទួលបានការគាំទ្ររោគវិនិច្ឆ័យលឿនជាងមុន។',
+      'camera': 'ថតរូប',
+      'gallery': 'ជ្រើសរើសពីវិចិត្រសាល',
+      'remove_photo': 'លុបរូបថត',
       'observed_symptoms': 'រោគសញ្ញាដែលបានសង្កេត',
       'symptom_lethargy': 'ល្ហិតល្ហៃ / ខ្សោយ',
       'symptom_respiratory': 'បញ្ហាផ្លូវដង្ហើម',
@@ -161,27 +173,39 @@ class _SickReportScreenState extends State<SickReportScreen> {
     try {
       final token = await StorageService.getToken();
       if (token == null) throw Exception('Authentication token is missing.');
-      final response = await http
-          .post(
-            Uri.parse('${ApiConfig.baseUrl}/sick-reports'),
-            headers: {
-              'Authorization': 'Bearer $token',
-              'Accept': 'application/json',
-              'Content-Type': 'application/json',
-            },
-            body: jsonEncode({
-              'flockId': _selectedFlockId,
-              'reportType': 'disease',
-              'affectedCount': affectedCount,
-              'symptoms': [
-                ..._selectedSymptoms,
-                if (_detailsController.text.trim().isNotEmpty)
-                  _detailsController.text.trim(),
-              ].join(', '),
-              'reportDate': DateTime.now().toIso8601String(),
-            }),
-          )
-          .timeout(const Duration(seconds: 8));
+
+      final request = http.MultipartRequest(
+        'POST',
+        Uri.parse('${ApiConfig.baseUrl}/sick-reports'),
+      );
+      request.headers['Authorization'] = 'Bearer $token';
+      request.headers['Accept'] = 'application/json';
+
+      request.fields['flockId'] = _selectedFlockId.toString();
+      request.fields['reportType'] = 'disease';
+      request.fields['affectedCount'] = affectedCount.toString();
+      request.fields['symptoms'] = [
+        ..._selectedSymptoms,
+        if (_detailsController.text.trim().isNotEmpty)
+          _detailsController.text.trim(),
+      ].join(', ');
+      request.fields['reportDate'] = DateTime.now().toIso8601String();
+
+      if (_photoFile != null) {
+        final bytes = await _photoFile!.readAsBytes();
+        request.files.add(
+          http.MultipartFile.fromBytes(
+            'photo',
+            bytes,
+            filename: _photoFile!.name,
+          ),
+        );
+      }
+
+      final streamedResponse = await request
+          .send()
+          .timeout(const Duration(seconds: 20));
+      final response = await http.Response.fromStream(streamedResponse);
       if (response.statusCode < 200 || response.statusCode >= 300) {
         var serverMessage = response.body;
         try {
@@ -201,6 +225,8 @@ class _SickReportScreenState extends State<SickReportScreen> {
       _selectedSymptoms.clear();
       _affectedCountController.clear();
       _detailsController.clear();
+      _photoFile = null;
+      _photoBytes = null;
       setState(() {});
     } catch (error) {
       if (!mounted) return;
@@ -220,6 +246,170 @@ class _SickReportScreenState extends State<SickReportScreen> {
         _selectedSymptoms.add(symptomKey);
       }
     });
+  }
+
+  Future<void> _pickPhoto(ImageSource source) async {
+    try {
+      final ImagePicker picker = ImagePicker();
+      final XFile? image = await picker.pickImage(
+        source: source,
+        maxWidth: 1200,
+        imageQuality: 80,
+      );
+      if (image == null) return;
+      final bytes = await image.readAsBytes();
+      if (!mounted) return;
+      setState(() {
+        _photoFile = image;
+        _photoBytes = bytes;
+      });
+    } catch (e) {
+      if (mounted) {
+        setState(() => _errorMessage = '${_getText('failed')} $e');
+      }
+    }
+  }
+
+  void _showPhotoSourceDialog() {
+    showModalBottomSheet<void>(
+      context: context,
+      builder: (sheetContext) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.photo_camera_outlined),
+                title: Text(_getText('camera')),
+                onTap: () {
+                  Navigator.of(sheetContext).pop();
+                  _pickPhoto(ImageSource.camera);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.photo_library_outlined),
+                title: Text(_getText('gallery')),
+                onTap: () {
+                  Navigator.of(sheetContext).pop();
+                  _pickPhoto(ImageSource.gallery);
+                },
+              ),
+              if (_photoFile != null)
+                ListTile(
+                  leading: const Icon(Icons.delete_outline, color: Colors.red),
+                  title: Text(
+                    _getText('remove_photo'),
+                    style: const TextStyle(color: Colors.red),
+                  ),
+                  onTap: () {
+                    Navigator.of(sheetContext).pop();
+                    setState(() {
+                      _photoFile = null;
+                      _photoBytes = null;
+                    });
+                  },
+                ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildPhotoSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          _getText('visual_evidence'),
+          style: const TextStyle(
+            color: textDark,
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 8),
+        InkWell(
+          onTap: _showPhotoSourceDialog,
+          borderRadius: BorderRadius.circular(12),
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: cardBg,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: inputBorder),
+            ),
+            child: _photoBytes != null
+                ? Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(10),
+                        child: Image.memory(
+                          _photoBytes!,
+                          width: double.infinity,
+                          height: 180,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) =>
+                              const Icon(
+                                Icons.broken_image_outlined,
+                                size: 48,
+                                color: textMuted,
+                              ),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      Row(
+                        children: [
+                          const Icon(
+                            Icons.edit_rounded,
+                            size: 18,
+                            color: primaryGreen,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            _getText('add_photo'),
+                            style: const TextStyle(
+                              color: primaryGreen,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  )
+                : Column(
+                    children: [
+                      const Icon(
+                        Icons.add_a_photo_outlined,
+                        size: 40,
+                        color: primaryGreen,
+                      ),
+                      const SizedBox(height: 10),
+                      Text(
+                        _getText('add_photo'),
+                        style: const TextStyle(
+                          color: primaryGreen,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        _getText('photo_hint'),
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          color: textMuted,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ],
+                  ),
+          ),
+        ),
+      ],
+    );
   }
 
   @override
@@ -367,6 +557,10 @@ class _SickReportScreenState extends State<SickReportScreen> {
                         ),
                       ),
                     ),
+                    const SizedBox(height: 20),
+
+                    // Visual Evidence (Photo) Section
+                    _buildPhotoSection(),
                     const SizedBox(height: 20),
 
                     // Observed Symptoms Section

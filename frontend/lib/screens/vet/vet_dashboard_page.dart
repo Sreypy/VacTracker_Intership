@@ -497,11 +497,11 @@ class _VetDashboardPageState extends State<VetDashboardPage> {
                 style: TextStyle(
                   color: accentGreen,
                   fontSize: 13,
-                  fontWeight: FontWeight.w600,
+                  fontWeight: FontWeight.w500,
                 ),
               ),
               SizedBox(width: 2),
-              Icon(Icons.chevron_right_rounded, color: accentGreen, size: 18),
+              Icon(Icons.chevron_right_rounded, color: accentGreen, size: 16),
             ],
           ),
         ),
@@ -533,7 +533,7 @@ class _VetDashboardPageState extends State<VetDashboardPage> {
       margin: const EdgeInsets.only(bottom: 10),
       decoration: BoxDecoration(
         color: cardSurface,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(color: borderSubtle),
         boxShadow: [
           BoxShadow(
@@ -679,29 +679,23 @@ class _VetDashboardPageState extends State<VetDashboardPage> {
         backgroundColor: cardSurface,
         selectedItemColor: primaryGreen,
         unselectedItemColor: textMuted,
-        selectedFontSize: 12,
-        unselectedFontSize: 12,
-        selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600),
-        unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w500),
+        showSelectedLabels: false,
+        showUnselectedLabels: false,
         items: const [
           BottomNavigationBarItem(
-            icon: Icon(Icons.grid_view_outlined),
-            activeIcon: Icon(Icons.grid_view_rounded),
+            icon: Icon(Icons.home_outlined, size: 24),
             label: 'Home',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.description_outlined),
-            activeIcon: Icon(Icons.description_rounded),
+            icon: Icon(Icons.assignment_outlined, size: 24),
             label: 'Reports',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.group_outlined),
-            activeIcon: Icon(Icons.group_rounded),
+            icon: Icon(Icons.people_outline_rounded, size: 24),
             label: 'Farmers',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.person_outline_rounded),
-            activeIcon: Icon(Icons.person_rounded),
+            icon: Icon(Icons.person_outline_rounded, size: 24),
             label: 'Profile',
           ),
         ],

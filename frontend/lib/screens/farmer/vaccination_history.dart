@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:frontend/models/flock.dart';
 import 'package:frontend/services/flock_service.dart';
-import 'package:frontend/services/vaccination_pdf_service.dart';
 import 'package:frontend/services/vaccination_service.dart';
 import 'package:frontend/widgets/notification_header_button.dart';
 import 'package:frontend/widgets/farmer_bottom_navigation.dart';
@@ -26,7 +25,6 @@ class VaccinationHistoryScreen extends StatefulWidget {
 class _VaccinationHistoryScreenState extends State<VaccinationHistoryScreen> {
   final FlockService _flockService = FlockService();
   final VaccinationService _vaccinationService = VaccinationService();
-  final VaccinationPdfService _pdfService = VaccinationPdfService();
 
   // Theme Colors
   static const Color primaryGreen = Color(0xFF034418);
@@ -145,6 +143,7 @@ class _VaccinationHistoryScreenState extends State<VaccinationHistoryScreen> {
           'isMissed': status == 'overdue',
           'note': status == 'overdue' ? _getText('missed') : null,
           'next_due': vaccination['next_due_date'],
+          'photo_url': vaccination['photo_url']?.toString(),
           'raw_status': status,
           'date_value': parsedDate,
         });
@@ -315,7 +314,7 @@ class _VaccinationHistoryScreenState extends State<VaccinationHistoryScreen> {
                       value: _completedCount.toString(),
                     ),
                   ),
-                  const SizedBox(width: 14),
+                  const SizedBox(width: 10),
                   Expanded(
                     child: _buildMetricCard(
                       icon: Icons.medical_services_rounded,
@@ -452,60 +451,6 @@ class _VaccinationHistoryScreenState extends State<VaccinationHistoryScreen> {
                     return _buildTimelineItem(record, isLast);
                   },
                 ),
-              const SizedBox(height: 24),
-
-              // Download PDF Button
-              OutlinedButton.icon(
-                onPressed:
-                    _isLoading || _errorMessage != null || _records.isEmpty
-                    ? null
-                    : () async {
-                        final scaffoldMessenger = ScaffoldMessenger.of(context);
-                        final result = await _pdfService.exportHistoryPdf(
-                          flockId: widget.flockId,
-                          flockName: _flock?.batchName ?? widget.flockDetails,
-                          languageCode: widget.languageCode,
-                          records: _records.map((record) {
-                            return {
-                              'title': record['title'],
-                              'subtitle': record['subtitle'],
-                              'date': record['date'],
-                              'status': record['status'],
-                            };
-                          }).toList(),
-                          context: context,
-                        );
-
-                        if (!mounted) return;
-                        if (result == null) {
-                          scaffoldMessenger.showSnackBar(
-                            const SnackBar(
-                              content: Text('Unable to export PDF right now.'),
-                            ),
-                          );
-                        }
-                      },
-                icon: const Icon(
-                  Icons.file_download_outlined,
-                  color: primaryGreen,
-                ),
-                label: Text(
-                  _getText('download_pdf'),
-                  style: const TextStyle(
-                    color: primaryGreen,
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                style: OutlinedButton.styleFrom(
-                  minimumSize: const Size(double.infinity, 52),
-                  side: const BorderSide(color: primaryGreen, width: 1.5),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(28),
-                  ),
-                  backgroundColor: Colors.white,
-                ),
-              ),
               const SizedBox(height: 24),
             ],
           ),
@@ -681,6 +626,44 @@ class _VaccinationHistoryScreenState extends State<VaccinationHistoryScreen> {
                           ),
                         ),
 
+                        if ((record['photo_url']?.toString() ?? '')
+                            .trim()
+                            .isNotEmpty) ...[
+                          const SizedBox(height: 12),
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(10),
+                            child: Image.network(
+                              record['photo_url'].toString(),
+                              width: double.infinity,
+                              height: 160,
+                              fit: BoxFit.cover,
+                              loadingBuilder: (context, child, progress) {
+                                if (progress == null) return child;
+                                return Container(
+                                  height: 160,
+                                  color: const Color(0xFFE2E8F0),
+                                  alignment: Alignment.center,
+                                  child: const CircularProgressIndicator(
+                                    color: primaryGreen,
+                                    strokeWidth: 2,
+                                  ),
+                                );
+                              },
+                              errorBuilder: (context, error, stackTrace) =>
+                                  Container(
+                                    height: 160,
+                                    color: const Color(0xFFE2E8F0),
+                                    alignment: Alignment.center,
+                                    child: const Icon(
+                                      Icons.broken_image_outlined,
+                                      color: textMuted,
+                                      size: 36,
+                                    ),
+                                  ),
+                            ),
+                          ),
+                        ],
+
                         if (isMissed && record['note'] != null) ...[
                           const SizedBox(height: 12),
                           Container(
@@ -730,7 +713,7 @@ class _VaccinationHistoryScreenState extends State<VaccinationHistoryScreen> {
                               style: const TextStyle(
                                 color: textDark,
                                 fontSize: 13,
-                                fontWeight: FontWeight.w500,
+                                fontWeight: FontWeight.w200,
                               ),
                             ),
                             if (record['administrator'] != null) ...[

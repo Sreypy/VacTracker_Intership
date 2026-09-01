@@ -6,6 +6,11 @@ import { JwtService } from '@nestjs/jwt';
 
 import { OtpCode } from './entities/otp-code.entity';
 import { User } from '../users/entities/user.entity';
+import { randomInt } from 'crypto';
+
+
+const OTP_LENGTH = 6;
+const OTP_TTL_MINUTES = 5;
 
 @Injectable()
 export class AuthService {
@@ -41,12 +46,11 @@ export class AuthService {
     }
 
     // Static OTP for testing/development
-    const otp = '123456';
-
+const otp = this.generateOtp();
     const hashedOtp = await bcrypt.hash(otp, 10);
 
     const expiresAt = new Date();
-    expiresAt.setMinutes(expiresAt.getMinutes() + 5);
+    expiresAt.setMinutes(expiresAt.getMinutes() + OTP_TTL_MINUTES);
 
     const otpCode = this.otpRepository.create({
       phone,
@@ -116,4 +120,12 @@ export class AuthService {
       },
     });
   }
+
+  private generateOtp(length: number = OTP_LENGTH): string {
+  let otp = '';
+  for (let i = 0; i < length; i++) {
+    otp += randomInt(0, 10).toString();
+  }
+  return otp;
+}
 }

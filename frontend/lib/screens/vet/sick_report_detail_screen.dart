@@ -1759,30 +1759,23 @@ class _VetSickReportDetailScreenState extends State<VetSickReportDetailScreen> {
         elevation: 0,
 
         items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home_outlined, size: 24),
-            activeIcon: Icon(Icons.home_rounded, size: 24),
-            label: 'Home',
-          ),
-
-          BottomNavigationBarItem(
-            icon: Icon(Icons.assignment_outlined, size: 24),
-            activeIcon: Icon(Icons.assignment_rounded, size: 24),
-            label: 'Reports',
-          ),
-
-          BottomNavigationBarItem(
-            icon: Icon(Icons.people_outline_rounded, size: 24),
-            activeIcon: Icon(Icons.people_rounded, size: 24),
-            label: 'Farmers',
-          ),
-
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person_outline_rounded, size: 24),
-            activeIcon: Icon(Icons.person_rounded, size: 24),
-            label: 'Profile',
-          ),
-        ],
+        BottomNavigationBarItem(
+          icon: Icon(Icons.home_outlined, size: 24),
+          label: 'Home',
+        ),
+        BottomNavigationBarItem(
+          icon: Icon(Icons.assignment_outlined, size: 24),
+          label: 'Reports',
+        ),
+        BottomNavigationBarItem(
+          icon: Icon(Icons.people_outline_rounded, size: 24),
+          label: 'Farmers',
+        ),
+        BottomNavigationBarItem(
+          icon: Icon(Icons.person_outline_rounded, size: 24),
+          label: 'Profile',
+        ),
+      ],
       ),
     );
   }

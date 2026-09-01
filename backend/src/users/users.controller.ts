@@ -1,9 +1,11 @@
-import { Body, Controller, Get, Param, Patch, Post, UseGuards, Request, ForbiddenException } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, UseGuards, Request, ForbiddenException, UseInterceptors, UploadedFile } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { ConnectVetDto } from './dto/connect-vet.dto';
 import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
+import { FileInterceptor } from '@nestjs/platform-express';
+import multer from 'multer';
 
 @Controller('users')
 export class UsersController {
@@ -42,8 +44,15 @@ export class UsersController {
 
   @UseGuards(JwtAuthGuard)
   @Post('upload-profile-image')
-  async uploadProfileImage(@Request() req, @Body() body: { profile_image_url: string }) {
-    return this.usersService.updateProfileImage(req.user.phone, body.profile_image_url);
+  @UseInterceptors(FileInterceptor('file'))
+  async uploadProfileImage(
+    @UploadedFile() file: File,
+    @Request() req,
+  ) {
+    return this.usersService.updateProfileImage(
+      req.user.phone,
+      file,
+    );
   }
 
   @UseGuards(JwtAuthGuard)

@@ -1,3 +1,5 @@
+// ignore_for_file: avoid_print
+
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -94,6 +96,12 @@ class _FarmerProfilePageState extends State<FarmerProfilePage> {
   static const Color badgeGreenBg = Color(0xFFD1E7DD);
   static const Color alertRed = Color(0xFFC5221F);
 
+  // Edit Profile Dialog palette
+  static const Color dialogLightGreen = Color(0xFFEAF5EE);
+  static const Color dialogInputBg = Color(0xFFF8FAF9);
+  static const Color dialogInputBorder = Color(0xFFE0E7E2);
+  static const Color dialogTextMain = Color(0xFF10251A);
+
   // Localized Dictionary
   final Map<String, Map<String, String>> _localizedValues = const {
     'en': {
@@ -127,6 +135,24 @@ class _FarmerProfilePageState extends State<FarmerProfilePage> {
       'msg_select_image_source': 'Select image source',
       'msg_image_uploaded': 'Profile image updated successfully',
       'msg_image_upload_failed': 'Failed to update profile image',
+
+      // Edit Profile Dialog
+      'edit_title': 'Edit Profile',
+      'edit_subtitle': 'Update your personal information',
+      'sec_personal_info': 'Personal Information',
+      'lbl_full_name': 'Full name *',
+      'hint_full_name': 'Enter your full name',
+      'lbl_phone': 'Phone number *',
+      'hint_phone': 'Enter phone number',
+      'sec_location': 'Location',
+      'lbl_village': 'Village',
+      'hint_village': 'Enter village',
+      'lbl_province': 'Province',
+      'hint_province': 'Enter province',
+      'lbl_info_box': 'Please check your information before saving.',
+      'btn_save_changes': 'Save Changes',
+      'btn_saving': 'Saving...',
+      'msg_required_fields': 'Name and phone are required.',
     },
     'km': {
       'app_bar_title': 'VacTracker',
@@ -160,6 +186,24 @@ class _FarmerProfilePageState extends State<FarmerProfilePage> {
       'msg_image_uploaded': 'បានធ្វើបច្ចុប្បន្នភាពរូបថតប្រវត្តិរូប',
       'msg_image_upload_failed':
           'បរាជ័យក្នុងការធ្វើបច្ចុប្បន្នភាពរូបថតប្រវត្តិរូប',
+
+      // Edit Profile Dialog
+      'edit_title': 'កែសម្រួលប្រវត្តិរូប',
+      'edit_subtitle': 'ធ្វើបច្ចុប្បន្នភាពព័ត៌មានផ្ទាល់ខ្លួនរបស់អ្នក',
+      'sec_personal_info': 'ព័ត៌មានផ្ទាល់ខ្លួន',
+      'lbl_full_name': 'ឈ្មោះពេញ *',
+      'hint_full_name': 'បញ្ចូលឈ្មោះពេញរបស់អ្នក',
+      'lbl_phone': 'លេខទូរស័ព្ទ *',
+      'hint_phone': 'បញ្ចូលលេខទូរស័ព្ទ',
+      'sec_location': 'ទីតាំង',
+      'lbl_village': 'ភូមិ',
+      'hint_village': 'បញ្ចូលភូមិ',
+      'lbl_province': 'ខេត្ត',
+      'hint_province': 'បញ្ចូលខេត្ត',
+      'lbl_info_box': 'សូមពិនិត្យព័ត៌មានរបស់អ្នកមុនពេលរក្សាទុក។',
+      'btn_save_changes': 'រក្សាទុកការផ្លាស់ប្តូរ',
+      'btn_saving': 'កំពុងរក្សាទុក...',
+      'msg_required_fields': 'សូមបំពេញឈ្មោះ និងលេខទូរស័ព្ទ។',
     },
   };
 
@@ -1263,92 +1307,381 @@ class _FarmerProfilePageState extends State<FarmerProfilePage> {
 
     await showDialog<void>(
       context: context,
+      barrierDismissible: !_isSavingProfile,
       builder: (dialogContext) {
-        return AlertDialog(
-          title: Text(_getText('app_bar_title')),
-          content: SingleChildScrollView(
+        return Dialog(
+          backgroundColor: Colors.white,
+          clipBehavior: Clip.antiAlias,
+          insetPadding: const EdgeInsets.symmetric(
+            horizontal: 20,
+            vertical: 24,
+          ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
+          ),
+          child: LayoutBuilder(
+            builder: (context, viewport) {
+              return ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxHeight: viewport.maxHeight - 48,
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _buildDialogHeader(dialogContext),
+                    Flexible(
+                      child: SingleChildScrollView(
+                        padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            _buildDialogSectionHeader(
+                              icon: Icons.person_outline_rounded,
+                              title: _getText('sec_personal_info'),
+                            ),
+                            const SizedBox(height: 12),
+                            _buildDialogField(
+                              controller: nameController,
+                              icon: Icons.person_outline_rounded,
+                              label: _getText('lbl_full_name'),
+                              hint: _getText('hint_full_name'),
+                              keyboardType: TextInputType.name,
+                            ),
+                            const SizedBox(height: 16),
+                            _buildDialogField(
+                              controller: phoneController,
+                              icon: Icons.phone_outlined,
+                              label: _getText('lbl_phone'),
+                              hint: _getText('hint_phone'),
+                              keyboardType: TextInputType.phone,
+                            ),
+                            const SizedBox(height: 20),
+                            _buildDialogSectionHeader(
+                              icon: Icons.location_on_outlined,
+                              title: _getText('sec_location'),
+                            ),
+                            const SizedBox(height: 12),
+                            _buildDialogField(
+                              controller: villageController,
+                              icon: Icons.home_outlined,
+                              label: _getText('lbl_village'),
+                              hint: _getText('hint_village'),
+                            ),
+                            const SizedBox(height: 16),
+                            _buildDialogField(
+                              controller: provinceController,
+                              icon: Icons.map_outlined,
+                              label: _getText('lbl_province'),
+                              hint: _getText('hint_province'),
+                            ),
+                            const SizedBox(height: 18),
+                            _buildDialogInfoBox(),
+                          ],
+                        ),
+                      ),
+                    ),
+                    _buildDialogActions(
+                      dialogContext,
+                      nameController,
+                      phoneController,
+                      villageController,
+                      provinceController,
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildDialogHeader(BuildContext dialogContext) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(20, 18, 12, 18),
+      decoration: const BoxDecoration(
+        color: brandDarkGreen,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.14),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Icon(
+              Icons.person_outline_rounded,
+              color: Colors.white,
+              size: 26,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                TextField(
-                  controller: nameController,
-                  decoration: InputDecoration(
-                    labelText: _currentLang == 'km' ? 'ឈ្មោះពេញ' : 'Full name',
+                Text(
+                  _getText('edit_title'),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 17,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: phoneController,
-                  decoration: InputDecoration(
-                    labelText: _currentLang == 'km'
-                        ? 'លេខទូរស័ព្ទ'
-                        : 'Phone number',
-                  ),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: villageController,
-                  decoration: InputDecoration(
-                    labelText: _currentLang == 'km' ? 'ភូមិ' : 'Village',
-                  ),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: provinceController,
-                  decoration: InputDecoration(
-                    labelText: _currentLang == 'km' ? 'ខេត្ត' : 'Province',
+                const SizedBox(height: 2),
+                Text(
+                  _getText('edit_subtitle'),
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.82),
+                    fontSize: 12,
                   ),
                 ),
               ],
             ),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(),
-              child: Text(_getText('lbl_cancel')),
-            ),
-            FilledButton(
-              onPressed: () async {
-                final name = nameController.text.trim();
-                final phone = phoneController.text.trim();
-                final village = villageController.text.trim();
-                final province = provinceController.text.trim();
+          IconButton(
+            onPressed: _isSavingProfile
+                ? null
+                : () => Navigator.of(dialogContext).pop(),
+            icon: const Icon(Icons.close_rounded, color: Colors.white),
+            tooltip: _getText('lbl_cancel'),
+          ),
+        ],
+      ),
+    );
+  }
 
-                if (name.isEmpty || phone.isEmpty) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(
-                        _currentLang == 'km'
-                            ? 'ឈ្មោះ និងលេខទូរស័ព្ទត្រូវតែមាន។'
-                            : 'Name and phone are required.',
-                      ),
-                    ),
-                  );
-                  return;
-                }
+  Widget _buildDialogSectionHeader({
+    required IconData icon,
+    required String title,
+  }) {
+    return Row(
+      children: [
+        Container(
+          width: 34,
+          height: 34,
+          decoration: BoxDecoration(
+            color: dialogLightGreen,
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Icon(icon, color: brandDarkGreen, size: 18),
+        ),
+        const SizedBox(width: 10),
+        Text(
+          title,
+          style: const TextStyle(
+            color: dialogTextMain,
+            fontSize: 14,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ],
+    );
+  }
 
-                Navigator.of(dialogContext).pop();
-                await _updateProfile(
-                  name: name,
-                  phone: phone,
-                  village: village,
-                  province: province,
-                );
-              },
-              child: _isSavingProfile
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.white,
-                      ),
-                    )
-                  : Text(_currentLang == 'km' ? 'រក្សាទុក' : 'Save'),
+  Widget _buildDialogField({
+    required TextEditingController controller,
+    required IconData icon,
+    required String label,
+    required String hint,
+    TextInputType? keyboardType,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            color: dialogTextMain,
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 6),
+        TextField(
+          controller: controller,
+          keyboardType: keyboardType,
+          style: const TextStyle(color: dialogTextMain, fontSize: 14),
+          decoration: InputDecoration(
+            hintText: hint,
+            hintStyle: const TextStyle(color: textGrey, fontSize: 14),
+            prefixIcon: Icon(icon, color: brandDarkGreen, size: 20),
+            filled: true,
+            fillColor: dialogInputBg,
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 14,
+              vertical: 14,
             ),
-          ],
-        );
-      },
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide.none,
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: dialogInputBorder),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(
+                color: brandDarkGreen,
+                width: 1.5,
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDialogInfoBox() {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: dialogLightGreen,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(
+            Icons.info_outline_rounded,
+            size: 17,
+            color: brandDarkGreen,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              _getText('lbl_info_box'),
+              style: const TextStyle(
+                color: brandDarkGreen,
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDialogActions(
+    BuildContext dialogContext,
+    TextEditingController nameController,
+    TextEditingController phoneController,
+    TextEditingController villageController,
+    TextEditingController provinceController,
+  ) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        border: Border(
+          top: BorderSide(color: dialogInputBorder),
+        ),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: SizedBox(
+              height: 48,
+              child: OutlinedButton(
+                onPressed: _isSavingProfile
+                    ? null
+                    : () => Navigator.of(dialogContext).pop(),
+                style: OutlinedButton.styleFrom(
+                  backgroundColor: Colors.white,
+                  foregroundColor: brandDarkGreen,
+                  side: const BorderSide(color: dialogInputBorder),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: Text(
+                  _getText('lbl_cancel'),
+                  style: const TextStyle(fontWeight: FontWeight.w600),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            flex: 2,
+            child: SizedBox(
+              height: 48,
+              child: FilledButton.icon(
+                onPressed: _isSavingProfile
+                    ? null
+                    : () => _saveEditProfile(
+                        dialogContext,
+                        nameController,
+                        phoneController,
+                        villageController,
+                        provinceController,
+                      ),
+                style: FilledButton.styleFrom(
+                  backgroundColor: brandDarkGreen,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                icon: _isSavingProfile
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : const Icon(Icons.check_rounded, size: 18),
+                label: Text(
+                  _isSavingProfile
+                      ? _getText('btn_saving')
+                      : _getText('btn_save_changes'),
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _saveEditProfile(
+    BuildContext dialogContext,
+    TextEditingController nameController,
+    TextEditingController phoneController,
+    TextEditingController villageController,
+    TextEditingController provinceController,
+  ) async {
+    final name = nameController.text.trim();
+    final phone = phoneController.text.trim();
+    final village = villageController.text.trim();
+    final province = provinceController.text.trim();
+
+    if (name.isEmpty || phone.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(_getText('msg_required_fields'))),
+      );
+      return;
+    }
+
+    Navigator.of(dialogContext).pop();
+    await _updateProfile(
+      name: name,
+      phone: phone,
+      village: village,
+      province: province,
     );
   }
 
@@ -1398,118 +1731,83 @@ class _FarmerProfilePageState extends State<FarmerProfilePage> {
 
   Future<void> _pickImage(ImageSource source) async {
     try {
-      // Use very small dimensions for profile picture to avoid payload too large error
-      // Profile pictures don't need to be high resolution
       final ImagePicker picker = ImagePicker();
+
       final XFile? image = await picker.pickImage(
         source: source,
-        maxWidth: 150,
-        maxHeight: 150,
-        imageQuality: 40,
+        maxWidth: 500,
+        maxHeight: 500,
+        imageQuality: 80,
       );
 
       if (image == null) return;
 
-      // Convert image to base64 with compression
-      final bytes = await image.readAsBytes();
 
-      // Check file size - if still too large (over 50KB), compress further
-      if (bytes.length > 50000) {
-        // Try to compress even more by creating a smaller version
-        final XFile? smallerImage = await picker.pickImage(
-          source: source,
-          maxWidth: 100,
-          maxHeight: 100,
-          imageQuality: 30,
-        );
-
-        if (smallerImage == null) return;
-
-        final smallerBytes = await smallerImage.readAsBytes();
-
-        // If still too large, show error
-        if (smallerBytes.length > 50000) {
-          if (!mounted) return;
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                _currentLang == 'km'
-                    ? 'រូបភាពធំពេក។ សូមជ្រើសរើសរូបភាពតូចជាង។'
-                    : 'Image is too large. Please select a smaller image.',
-              ),
-              backgroundColor: alertRed,
-            ),
-          );
-          return;
-        }
-
-        final base64Image = base64Encode(smallerBytes);
-        final String imageUrl = 'data:image/jpeg;base64,$base64Image';
-        await _uploadProfileImage(imageUrl);
-      } else {
-        final base64Image = base64Encode(bytes);
-        final String imageUrl = 'data:image/jpeg;base64,$base64Image';
-        await _uploadProfileImage(imageUrl);
-      }
+      await _uploadProfileImage(image);
     } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(_getText('msg_image_upload_failed')),
-          backgroundColor: alertRed,
-        ),
-      );
+      print('❌ Pick image error: $e');
     }
   }
 
-  Future<void> _uploadProfileImage(String imageUrl) async {
+  Future<void> _uploadProfileImage(XFile image) async {
     final token = await StorageService.getToken();
+
     if (token == null || token.isEmpty) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please log in again to update your profile image.'),
-        ),
-      );
+      print('❌ No JWT token');
       return;
     }
-
-    if (_profile?.userId == null) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Profile is not available for update right now.'),
-        ),
-      );
-      return;
-    }
-
-    setState(() {
-      _isSavingProfile = true;
-      _profileError = null;
-    });
 
     try {
-      // Use the existing update endpoint instead of creating a new one
-      final url = Uri.parse('${ApiConfig.baseUrl}/users/${_profile!.userId}');
-      final response = await http.patch(
-        url,
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-        body: jsonEncode({'profile_image_url': imageUrl}),
+      setState(() {
+        _isSavingProfile = true;
+      });
+
+      final url = '${ApiConfig.baseUrl}/users/upload-profile-image';
+
+      print('📤 Upload URL: $url');
+      print('📤 Image path: ${image.path}');
+      print('📤 Token exists: ${token.isNotEmpty}');
+
+      // Read image as bytes - works on Web, Android, iOS
+      final bytes = await image.readAsBytes();
+
+      print('📦 Image size: ${bytes.length} bytes');
+
+      final request = http.MultipartRequest('POST', Uri.parse(url));
+
+      request.headers['Authorization'] = 'Bearer $token';
+
+      // Upload bytes instead of using fromPath()
+      request.files.add(
+        http.MultipartFile.fromBytes('file', bytes, filename: image.name),
       );
 
+      print('📤 Sending image...');
+
+      final streamedResponse = await request.send();
+
+      final response = await http.Response.fromStream(streamedResponse);
+
+      print('📥 Status code: ${response.statusCode}');
+      print('📥 Response: ${response.body}');
+
       if (response.statusCode == 200 || response.statusCode == 201) {
-        final updatedData = jsonDecode(response.body);
+        final data = jsonDecode(response.body);
+
+        print('✅ Upload successful');
+        print('☁️ Cloudinary URL: ${data['profile_image_url']}');
+
         if (!mounted) return;
+
         setState(() {
-          _profile = FarmerProfileModel.fromJson(updatedData);
+          _profile = FarmerProfileModel.fromJson(data);
           _isSavingProfile = false;
         });
-        await StorageService.saveUser(updatedData);
+
+        await StorageService.saveUser(data);
+
         if (!mounted) return;
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(_getText('msg_image_uploaded')),
@@ -1517,17 +1815,23 @@ class _FarmerProfilePageState extends State<FarmerProfilePage> {
           ),
         );
       } else {
+        print('❌ Upload failed: ${response.statusCode}');
+        print('❌ Response: ${response.body}');
+
         if (!mounted) return;
+
         setState(() {
           _isSavingProfile = false;
-          _profileError = 'Unable to update profile image right now.';
         });
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
+      print('❌ Upload exception: $e');
+      print(stackTrace);
+
       if (!mounted) return;
+
       setState(() {
         _isSavingProfile = false;
-        _profileError = 'Unable to update profile image right now.';
       });
     }
   }

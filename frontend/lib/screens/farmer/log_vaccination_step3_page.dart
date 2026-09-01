@@ -240,11 +240,15 @@ class _LogVaccinationStep3PageState extends State<LogVaccinationStep3Page> {
           ? summaryData!['administrationDate'] as DateTime
           : DateTime.now();
 
-      await _vaccinationService.createVaccination({
-        'flock_id': int.parse(flockId),
-        'vaccine_id': int.parse(vaccineId),
-        'date_given': administrationDate.toIso8601String(),
-      });
+      await _vaccinationService.createVaccination(
+        {
+          'flock_id': int.parse(flockId),
+          'vaccine_id': int.parse(vaccineId),
+          'date_given': administrationDate.toIso8601String(),
+        },
+        photoBytes: _photoBytes,
+        photoPath: _photoPath,
+      );
 
       if (mounted) {
         setState(() => _isSubmitting = false);

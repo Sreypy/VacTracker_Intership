@@ -233,7 +233,10 @@ class _NotificationScreenState extends State<NotificationScreen>
 
       // Add vaccination reminders
       for (final reminder in reminders) {
-        final item = _NotificationItem.fromReminder(reminder, widget.languageCode);
+        final item = _NotificationItem.fromReminder(
+          reminder,
+          widget.languageCode,
+        );
         if (item != null) items.add(item);
       }
 
@@ -256,6 +259,8 @@ class _NotificationScreenState extends State<NotificationScreen>
             widget.languageCode,
           );
         } else if (type == 'vet_response') {
+          debugPrint('vet_response raw: $notification'); // 👈 add this
+
           item = _NotificationItem.fromVetResponse(
             notification,
             widget.languageCode,
@@ -264,7 +269,9 @@ class _NotificationScreenState extends State<NotificationScreen>
         if (item == null) continue;
 
         final key = '${item.flockId}_${item.vaccineId}';
-        if (item.flockId != null && item.vaccineId != null && seenKeys.contains(key)) {
+        if (item.flockId != null &&
+            item.vaccineId != null &&
+            seenKeys.contains(key)) {
           // Skip the duplicate reminder; the overdue notification wins.
           continue;
         }
@@ -310,13 +317,21 @@ class _NotificationScreenState extends State<NotificationScreen>
 
   Future<void> _openNotification(_NotificationItem item) async {
     if (item.isVetResponse) {
-      // Mark as read and navigate to sick report detail
       if (item.notificationId != null) {
         await NotificationService().markAsRead(item.notificationId!);
       }
       if (!mounted) return;
+
+      debugPrint(
+        'reportId: ${item.reportId}, languageCode: ${widget.languageCode}',
+      );
+
       if (item.reportId != null) {
-        context.push('/my-sick-reports/${item.reportId}?lang=${widget.languageCode}');
+        context.push(
+          '/my-sick-reports/${item.reportId}?lang=${widget.languageCode}',
+        );
+      } else {
+        debugPrint('reportId is null — navigation skipped');
       }
       return;
     }
@@ -701,8 +716,8 @@ class _NotificationScreenState extends State<NotificationScreen>
                 onPressed: item.isVetResponse
                     ? () => _openNotification(item)
                     : item.flockId == null
-                        ? null
-                        : () => _openNotification(item),
+                    ? null
+                    : () => _openNotification(item),
                 style: buttonStyle,
                 child: Text(
                   actionText,
@@ -898,7 +913,11 @@ class _NotificationItem {
     if (createdDate == null) return null;
 
     final today = DateTime.now();
-    final createdDay = DateTime(createdDate.year, createdDate.month, createdDate.day);
+    final createdDay = DateTime(
+      createdDate.year,
+      createdDate.month,
+      createdDate.day,
+    );
     final todayDay = DateTime(today.year, today.month, today.day);
 
     return _NotificationItem(
@@ -911,7 +930,7 @@ class _NotificationItem {
       isVetResponse: true,
       vetMessage: notification['message']?.toString() ?? '',
       notificationId: _asInt(notification['notification_id']),
-      reportId: _asInt(notification['reference_id']),
+      reportId: _asInt(notification['referenceId']),
     );
   }
 
@@ -923,8 +942,8 @@ class _NotificationItem {
     if (raw is! Map) return null;
     final notification = Map<String, dynamic>.from(raw);
     final data = vaccinationMap(notification['data']);
-    final dueRaw = (notification['data']?['due_date'] ??
-        data['due_date'])?.toString();
+    final dueRaw = (notification['data']?['due_date'] ?? data['due_date'])
+        ?.toString();
     final dueDate = DateTime.tryParse(dueRaw ?? '');
 
     final today = DateTime.now();
@@ -938,13 +957,12 @@ class _NotificationItem {
 
     final vaccineName = languageCode == 'km'
         ? (data['vaccine_name_km'] ?? data['vaccine_name'] ?? defaultVaccine)
-            .toString()
+              .toString()
         : (data['vaccine_name'] ?? data['vaccine_name_km'] ?? defaultVaccine)
-            .toString();
+              .toString();
 
     return _NotificationItem(
-      flockName:
-          (data['flock_name'] ?? defaultFlock).toString(),
+      flockName: (data['flock_name'] ?? defaultFlock).toString(),
       vaccineName: vaccineName,
       dueDate: dueDay,
       flockId: _asInt(data['flock_id']),

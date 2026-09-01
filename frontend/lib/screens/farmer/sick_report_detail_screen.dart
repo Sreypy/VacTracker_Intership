@@ -207,6 +207,10 @@ class _FarmerSickReportDetailScreenState
           ],
         ),
       ),
+      if (r.photoUrl?.trim().isNotEmpty == true) ...[
+        const SizedBox(height: 24),
+        _photo(r.photoUrl!),
+      ],
       const SizedBox(height: 24),
 
       // Veterinarian Response or Waiting Status
@@ -323,6 +327,57 @@ class _FarmerSickReportDetailScreenState
     );
   }
 
+  Widget _photo(String url) {
+    return Container(
+      width: double.infinity,
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.02),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Image.network(
+        url,
+        width: double.infinity,
+        fit: BoxFit.cover,
+        loadingBuilder: (context, child, progress) {
+          if (progress == null) return child;
+          return const SizedBox(
+            height: 240,
+            child: Center(
+              child: CircularProgressIndicator(color: Color(0xFF034418)),
+            ),
+          );
+        },
+        errorBuilder: (context, error, stackTrace) => Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            children: [
+              const Icon(
+                Icons.broken_image_outlined,
+                size: 48,
+                color: Color(0xFF64748B),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                _km ? 'មិនអាចបង្ហាញរូបភាព' : 'Cannot display image',
+                style: const TextStyle(color: Color(0xFF64748B)),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _response(SickReport r) => Container(
     width: double.infinity,
     padding: const EdgeInsets.all(20),
@@ -352,7 +407,7 @@ class _FarmerSickReportDetailScreenState
               child: const Icon(
                 Icons.medical_services_rounded,
                 color: Color(0xFF15803D),
-                size: 22,
+                size: 20,
               ),
             ),
             const SizedBox(width: 12),

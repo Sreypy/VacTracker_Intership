@@ -16,6 +16,7 @@ import { UpdateVaccinationDto } from './dto/update-vaccination.dto';
 import { Reminder } from 'src/reminders/entities/reminder.entity';
 import { RemindersService } from 'src/reminders/reminders.service';
 import { NotificationsService } from 'src/notifications/notifications.service';
+import { CloudinaryService } from 'src/cloudinary/cloudinary.service';
 
 @Injectable()
 export class VaccinationsService {
@@ -34,6 +35,8 @@ export class VaccinationsService {
 
     private readonly remindersService: RemindersService,
     private readonly notificationsService: NotificationsService,
+    private readonly cloudinaryService: CloudinaryService, // add this
+
   ) {}
 
   // ===========================
@@ -42,6 +45,7 @@ export class VaccinationsService {
   async create(
     createVaccinationDto: CreateVaccinationDto,
     phone: string,
+    photo?: Express.Multer.File,
   ) {
     // Find logged-in user
     const user = await this.userRepository.findOne({
@@ -82,8 +86,7 @@ export class VaccinationsService {
       throw new NotFoundException('Vaccine not found');
     }
 
-        // Guard against duplicate submissions (e.g. double-tap on slow network,
-    // or a client retry after a timeout where the first request actually succeeded)
+    // Guard against duplicate submissions
     const existingVaccination = await this.vaccinationRepository.findOne({
       where: {
         flock: { flock_id: createVaccinationDto.flock_id },
@@ -97,25 +100,26 @@ export class VaccinationsService {
     }
 
     // Determine next due date
-    // 1. If farmer provides next_due_date, use it.
-    // 2. Otherwise, if vaccine.interval_days exists, calculate suggested date.
-    // 3. Otherwise, leave as null.
     let nextDueDate: Date | null = null;
 
     if (createVaccinationDto.next_due_date) {
-      // Use farmer/vet selected date
       nextDueDate = new Date(createVaccinationDto.next_due_date);
     } else if (vaccine.interval_days && vaccine.interval_days > 0) {
-      // Calculate suggested next due date based on interval_days
       nextDueDate = new Date(createVaccinationDto.date_given);
-      nextDueDate.setDate(
-        nextDueDate.getDate() + vaccine.interval_days,
-      );
+      nextDueDate.setDate(nextDueDate.getDate() + vaccine.interval_days);
     }
-    // Otherwise, nextDueDate remains null
 
-    // Calculate vaccination status based on next_due_date
     const status = this.calculateVaccinationStatus(nextDueDate);
+
+    // Upload photo to Cloudinary if provided
+    let photoUrl: string | undefined = createVaccinationDto.photo_url;
+    if (photo) {
+      const result = await this.cloudinaryService.uploadImage(
+        photo,
+        'vactracker/vaccinations',
+      );
+      photoUrl = result.secure_url;
+    }
 
     // Create vaccination
     const vaccination = this.vaccinationRepository.create({
@@ -125,27 +129,21 @@ export class VaccinationsService {
       date_given: new Date(createVaccinationDto.date_given),
       next_due_date: nextDueDate,
       status,
-      photo_url: createVaccinationDto.photo_url,
+      photo_url: photoUrl,
     });
 
-    const savedVaccination =
-      await this.vaccinationRepository.save(vaccination);
+    const savedVaccination = await this.vaccinationRepository.save(vaccination);
 
-    // Mark old pending reminders for this flock as completed
-    // so the overdue count decreases when a new vaccination is logged
     await this.remindersService.markRemindersCompleted(
       user.user_id,
       createVaccinationDto.flock_id,
     );
 
-    // Clear the overdue notification for this flock now that a new
-    // vaccination has been logged
     await this.notificationsService.markOverdueNotificationsRead(
       user.user_id,
       createVaccinationDto.flock_id,
     );
 
-    // Create reminder if next due date exists
     if (savedVaccination.next_due_date) {
       await this.remindersService.createReminder(savedVaccination);
     }

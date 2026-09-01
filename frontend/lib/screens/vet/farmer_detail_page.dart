@@ -528,11 +528,11 @@ class _FarmerDetailPageState extends State<FarmerDetailPage>
                 color: textMain,
               ),
             ),
-            subtitle: Text('${flock.birdCount} Chickens • ${flock.breed}'),
-            trailing: const Icon(Icons.chevron_right, color: textMuted),
-            onTap: () => context.push(
-              '/flock-detail/${flock.flockId}/${widget.languageCode}',
-            ),
+            // subtitle: Text('${flock.birdCount} Chickens • ${flock.breed}'),
+            // trailing: const Icon(Icons.chevron_right, color: textMuted),
+            // onTap: () => context.push(
+            //   '/flock-detail/${flock.flockId}/${widget.languageCode}',
+            // ),
           ),
         );
       },
@@ -579,11 +579,11 @@ class _FarmerDetailPageState extends State<FarmerDetailPage>
             subtitle: Text(
               'Flock: ${vax.flockName}\nDate: ${_formatDate(vax.dateGiven)}',
             ),
-            isThreeLine: true,
-            trailing: const Icon(Icons.chevron_right, color: textMuted),
-            onTap: () => context.push(
-              '/flock-detail/${vax.flockId}/${widget.languageCode}',
-            ),
+            // isThreeLine: true,
+            // trailing: const Icon(Icons.chevron_right, color: textMuted),
+            // onTap: () => context.push(
+            //   '/flock-detail/${vax.flockId}/${widget.languageCode}',
+            // ),
           ),
         );
       },
@@ -734,24 +734,23 @@ class _FarmerDetailPageState extends State<FarmerDetailPage>
         backgroundColor: Colors.white,
         selectedItemColor: primaryGreen,
         unselectedItemColor: textMuted,
-        showSelectedLabels: true,
-        selectedFontSize: 11,
-        unselectedFontSize: 11,
+        showSelectedLabels: false,
+        showUnselectedLabels: false,
         items: const [
           BottomNavigationBarItem(
-            icon: Icon(Icons.home_outlined),
+            icon: Icon(Icons.home_outlined, size: 24),
             label: 'Home',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.assignment_outlined),
+            icon: Icon(Icons.assignment_outlined, size: 24),
             label: 'Reports',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.people_alt_outlined),
+            icon: Icon(Icons.people_outline_rounded, size: 24),
             label: 'Farmers',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.person_outline),
+            icon: Icon(Icons.person_outline_rounded, size: 24),
             label: 'Profile',
           ),
         ],

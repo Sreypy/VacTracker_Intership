@@ -586,33 +586,23 @@ class _MyFarmersPageState extends State<MyFarmersPage> {
         backgroundColor: Colors.white,
         selectedItemColor: brandDarkGreen,
         unselectedItemColor: textGrey,
-        selectedLabelStyle: const TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.w600,
-        ),
-        unselectedLabelStyle: const TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.w500,
-        ),
+        showSelectedLabels: false,
+        showUnselectedLabels: false,
         items: const [
           BottomNavigationBarItem(
-            icon: Icon(Icons.dashboard_outlined),
-            activeIcon: Icon(Icons.dashboard_rounded),
+            icon: Icon(Icons.home_outlined, size: 24),
             label: 'Home',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.assignment_outlined),
-            activeIcon: Icon(Icons.assignment_rounded),
+            icon: Icon(Icons.assignment_outlined, size: 24),
             label: 'Reports',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.people_outline_rounded),
-            activeIcon: Icon(Icons.people_rounded),
+            icon: Icon(Icons.people_outline_rounded, size: 24),
             label: 'Farmers',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.person_outline_rounded),
-            activeIcon: Icon(Icons.person_rounded),
+            icon: Icon(Icons.person_outline_rounded, size: 24),
             label: 'Profile',
           ),
         ],

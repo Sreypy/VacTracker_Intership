@@ -4,16 +4,19 @@ import {
   IsOptional,
   IsString,
 } from 'class-validator';
+import { Type } from 'class-transformer';
 
 export class CreateVaccinationDto {
+  @Type(() => Number)
   @IsInt()
-    flock_id!: number;
+  flock_id!: number;
 
+  @Type(() => Number)
   @IsInt()
-    vaccine_id!: number;
+  vaccine_id!: number;
 
   @IsDateString()
-    date_given!: string;
+  date_given!: string;
 
   @IsOptional()
   @IsDateString()

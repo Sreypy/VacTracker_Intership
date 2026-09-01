@@ -10,6 +10,7 @@ import { Vaccine } from '../vaccines/entities/vaccine.entity';
 import { User } from '../users/entities/user.entity';
 import { RemindersModule } from 'src/reminders/reminders.module';
 import { NotificationsModule } from 'src/notifications/notifications.module';
+import { CloudinaryModule } from 'src/cloudinary/cloudinary.module';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { NotificationsModule } from 'src/notifications/notifications.module';
     ]),
     RemindersModule,
     NotificationsModule,
+    CloudinaryModule,
   ],
   controllers: [VaccinationsController],
   providers: [VaccinationsService],

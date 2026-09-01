@@ -1,4 +1,5 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Request } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Request, UseInterceptors, UploadedFile } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
 import { SickReportsService } from './sick-reports.service';
 import { CreateSickReportDto } from './dto/create-sick-report.dto';
@@ -10,9 +11,18 @@ export class SickReportsController {
   constructor(private readonly sickReportsService: SickReportsService) {}
 
   @Post()
-  async create(@Request() req, @Body() createSickReportDto: CreateSickReportDto) {
+  @UseInterceptors(FileInterceptor('photo'))
+  async create(
+    @Request() req,
+    @Body() createSickReportDto: CreateSickReportDto,
+    @UploadedFile() photo?: Express.Multer.File,
+  ) {
     try {
-      return await this.sickReportsService.create(createSickReportDto, req.user.user_id);
+      return await this.sickReportsService.create(
+        createSickReportDto,
+        req.user.user_id,
+        photo,
+      );
     } catch (error) {
       console.error('Error creating sick report:', error);
       console.error('DTO:', createSickReportDto);

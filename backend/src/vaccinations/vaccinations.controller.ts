@@ -7,7 +7,9 @@ import {
   Patch,
   Post,
   Request,
+  UploadedFile,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
 
 import { VaccinationsService } from './vaccinations.service';
@@ -15,6 +17,7 @@ import { CreateVaccinationDto } from './dto/create-vaccination.dto';
 import { UpdateVaccinationDto } from './dto/update-vaccination.dto';
 
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { FileInterceptor } from '@nestjs/platform-express';
 
 @Controller('vaccinations')
 @UseGuards(JwtAuthGuard)
@@ -24,13 +27,16 @@ export class VaccinationsController {
   ) {}
 
   @Post()
+  @UseInterceptors(FileInterceptor('photo'))
   create(
     @Body() dto: CreateVaccinationDto,
     @Request() req,
+    @UploadedFile() photo?: Express.Multer.File,
   ) {
     return this.vaccinationsService.create(
       dto,
       req.user.phone,
+      photo,
     );
   }
 

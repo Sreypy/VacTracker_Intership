@@ -7,6 +7,7 @@ class SickReport {
   final String reportType;
   final String symptoms;
   final String status;
+  final String? photoUrl;
   final String? flockName;
   final String? vetDiagnosis;
   final String? vetAdvice;
@@ -24,6 +25,7 @@ class SickReport {
     required this.reportType,
     required this.symptoms,
     required this.status,
+    this.photoUrl,
     this.flockName,
     this.vetDiagnosis,
     this.vetAdvice,
@@ -56,6 +58,7 @@ class SickReport {
       reportType: (json['reportType'] ?? json['report_type'] ?? '').toString(),
       symptoms: (json['symptoms'] ?? '').toString(),
       status: (json['status'] ?? 'pending').toString(),
+      photoUrl: (json['photoUrl'] ?? json['photo_url'])?.toString(),
       flockName: (json['flock'] is Map
               ? json['flock']['batch_name'] ?? json['flock']['batchName']
               : json['flockName'] ?? json['flock_name'])
