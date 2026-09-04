@@ -110,7 +110,9 @@ export class SickReportsService {
     const sickReport = await this.sickReportRepository.findOne({
       where: { report_id: id },
       relations: {
-        flock: true,
+        flock: {
+          farmer: true,
+        },
         reporter: true,
         veterinarian: true,
       },
@@ -120,9 +122,7 @@ export class SickReportsService {
       throw new NotFoundException('Sick report not found');
     }
 
-    // Ownership check
     if (role === UserRole.VETERINARIAN) {
-      // Vet: verify they are connected to the farmer who reported this
       const connection = await this.connectionRepository.findOne({
         where: {
           vetId: userId,
@@ -132,12 +132,12 @@ export class SickReportsService {
       });
 
       if (!connection) {
-        // Return 404 (not 403) to avoid confirming record existence
         throw new NotFoundException('Sick report not found');
       }
     } else {
-      // Farmer: can only see their own reports
-      if (sickReport.reportedBy !== userId) {
+      const flockOwnerMatches = sickReport.flock?.farmer?.user_id === userId;
+      const reporterMatches = sickReport.reportedBy === userId;
+      if (!reporterMatches && !flockOwnerMatches) {
         throw new NotFoundException('Sick report not found');
       }
     }
@@ -162,43 +162,88 @@ export class SickReportsService {
     userId: number,
     role: string,
   ) {
-    const sickReport = await this.findOne(id, userId, role);
-    const hadVetResponse = sickReport.respondedAt != null;
-    const hasVetResponseFields =
-      Object.prototype.hasOwnProperty.call(updateSickReportDto, 'vetDiagnosis') ||
-      Object.prototype.hasOwnProperty.call(updateSickReportDto, 'vetAdvice') ||
-      Object.prototype.hasOwnProperty.call(updateSickReportDto, 'vetNotes');
+    const sickReport = await this.sickReportRepository.findOne({
+      where: { report_id: id },
+      relations: {
+        flock: {
+          farmer: true,
+        },
+        reporter: true,
+        veterinarian: true,
+      },
+    });
 
-    const isFarmerChangingVetFields =
-      role !== UserRole.VETERINARIAN &&
-      (hasVetResponseFields ||
-          updateSickReportDto.recommendedAction != null ||
-          updateSickReportDto.followUpDate != null ||
-          updateSickReportDto.status != null);
-    if (isFarmerChangingVetFields) {
-      throw new ForbiddenException('Farmers cannot update veterinarian responses');
+    if (!sickReport) {
+      throw new NotFoundException('Sick report not found');
     }
 
-    if (hasVetResponseFields) {
-      if (role !== UserRole.VETERINARIAN) {
-        throw new ForbiddenException('Only veterinarians can respond to sick reports');
+    const isFarmer = role === UserRole.FARMER;
+    const isVeterinarian = role === UserRole.VETERINARIAN;
+    const isOwner = sickReport.flock?.farmer?.user_id === userId;
+
+    if (!isFarmer && !isVeterinarian) {
+      throw new ForbiddenException('Unsupported user role');
+    }
+
+    if (isFarmer && !isOwner) {
+      throw new ForbiddenException('You do not own this sick report');
+    }
+
+    const hadVetResponse = sickReport.respondedAt != null;
+    const hasVetResponseFields =
+      updateSickReportDto.vetDiagnosis != null ||
+      updateSickReportDto.vetAdvice != null ||
+      updateSickReportDto.vetNotes != null ||
+      updateSickReportDto.recommendedAction != null ||
+      updateSickReportDto.followUpDate != null;
+
+    const requestedStatus =
+      updateSickReportDto.status == null
+        ? null
+        : String(updateSickReportDto.status).toLowerCase();
+
+    if (isFarmer) {
+      if (hasVetResponseFields) {
+        throw new ForbiddenException('Farmers cannot update veterinarian responses');
       }
 
-      if (!hadVetResponse && !updateSickReportDto.vetDiagnosis?.trim()) {
-        throw new BadRequestException('A veterinarian diagnosis is required');
+      if (requestedStatus != null) {
+        if (requestedStatus === ReportStatus.RESOLVED) {
+          if (sickReport.status !== ReportStatus.REVIEWED || !sickReport.respondedAt) {
+            throw new BadRequestException(
+              'A veterinarian response is required before resolving the report',
+            );
+          }
+          sickReport.status = ReportStatus.RESOLVED;
+          sickReport.farmerFollowUpMessage = null;
+          sickReport.farmerFollowUpAt = null;
+        } else if (requestedStatus === ReportStatus.PENDING) {
+          if (!sickReport.respondedAt) {
+            throw new BadRequestException(
+              'A veterinarian response is required before reopening the report for follow-up',
+            );
+          }
+          sickReport.status = ReportStatus.PENDING;
+        } else {
+          throw new BadRequestException('Invalid status transition for farmer update');
+        }
       }
+    } else {
+      if (hasVetResponseFields) {
+        if (!hadVetResponse && !updateSickReportDto.vetDiagnosis?.trim()) {
+          throw new BadRequestException('A veterinarian diagnosis is required');
+        }
 
-      sickReport.vetId = userId;
-      sickReport.respondedAt ??= new Date();
-      sickReport.status = updateSickReportDto.status ?? ReportStatus.REVIEWED;
+        sickReport.vetId = userId;
+        sickReport.respondedAt ??= new Date();
+        sickReport.status = updateSickReportDto.status ?? ReportStatus.REVIEWED;
+      }
     }
 
     Object.assign(sickReport, updateSickReportDto);
     const saved = await this.sickReportRepository.save(sickReport);
 
-    // Notify once when a veterinarian creates the response. Subsequent edits
-    // update the response without producing duplicate notifications.
-    if (hasVetResponseFields && !hadVetResponse) {
+    if (!isFarmer && hasVetResponseFields && !hadVetResponse) {
       const farmerId = sickReport.reportedBy;
       await this.notificationsService.createVetResponseNotification({
         farmerId,
@@ -207,6 +252,55 @@ export class SickReportsService {
         flockName: sickReport.flock?.batch_name,
       });
     }
+
+    return saved;
+  }
+
+  async resolveReport(id: number, userId: number, role: string) {
+    const sickReport = await this.findOne(id, userId, role);
+
+    if (role === UserRole.VETERINARIAN) {
+      throw new ForbiddenException('Only the farmer who owns the report can resolve it');
+    }
+
+    if (sickReport.reportedBy !== userId) {
+      throw new ForbiddenException('You do not own this sick report');
+    }
+
+    if (!sickReport.respondedAt) {
+      throw new BadRequestException('A veterinarian response is required before resolving the report');
+    }
+
+    sickReport.status = ReportStatus.RESOLVED;
+    sickReport.farmerFollowUpMessage = null;
+    sickReport.farmerFollowUpAt = null;
+
+    const saved = await this.sickReportRepository.save(sickReport);
+
+    return saved;
+  }
+
+  async sendFollowUp(id: number, userId: number, role: string, message: string) {
+    const sickReport = await this.findOne(id, userId, role);
+
+    if (role === UserRole.VETERINARIAN) {
+      throw new ForbiddenException('Only the farmer who owns the report can send a follow-up');
+    }
+
+    if (sickReport.reportedBy !== userId) {
+      throw new ForbiddenException('You do not own this sick report');
+    }
+
+    const cleaned = message?.trim();
+    if (!cleaned) {
+      throw new BadRequestException('Follow-up message is required');
+    }
+
+    sickReport.farmerFollowUpMessage = cleaned;
+    sickReport.farmerFollowUpAt = new Date();
+    sickReport.status = ReportStatus.PENDING;
+
+    const saved = await this.sickReportRepository.save(sickReport);
 
     return saved;
   }

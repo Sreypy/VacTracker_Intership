@@ -578,61 +578,73 @@ class _VetDashboardPageState extends State<VetDashboardPage> {
                         farmer.name,
                         style: const TextStyle(
                           color: textPrimary,
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w400,
                         ),
                       ),
                       const SizedBox(height: 4),
-                      Row(
-                        children: [
-                          const Icon(
-                            Icons.grid_view,
-                            size: 12,
-                            color: textMuted,
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            '${farmer.flockCount} Flocks',
-                            style: const TextStyle(
-                              color: textSecondary,
-                              fontSize: 12,
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: Row(
+                          children: [
+                            const Icon(
+                              Icons.grid_view,
+                              size: 12,
+                              color: textMuted,
                             ),
-                          ),
-                          const SizedBox(width: 8),
-                          const Text(
-                            '•',
-                            style: TextStyle(color: textMuted, fontSize: 12),
-                          ),
-                          const SizedBox(width: 8),
-                          const Icon(Icons.pets, size: 12, color: textMuted),
-                          const SizedBox(width: 4),
-                          Text(
-                            '${farmer.totalBirds} Birds',
-                            style: const TextStyle(
-                              color: textSecondary,
-                              fontSize: 12,
+                            const SizedBox(width: 4),
+                            Text(
+                              '${farmer.flockCount} Flocks',
+                              style: const TextStyle(
+                                color: textSecondary,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w400,
+                              ),
                             ),
-                          ),
-                        ],
+                            const SizedBox(width: 8),
+                            const Text(
+                              '•',
+                              style: TextStyle(
+                                color: textMuted,
+                                fontSize: 12,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            const Icon(
+                              Icons.pets,
+                              size: 12,
+                              color: textMuted,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              '${farmer.totalBirds} Birds',
+                              style: const TextStyle(
+                                color: textSecondary,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ],
                   ),
                 ),
                 Container(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 5,
+                    horizontal: 12,
+                    vertical: 10,
                   ),
                   decoration: BoxDecoration(
                     color: statusBg,
-                    borderRadius: BorderRadius.circular(20),
+                    borderRadius: BorderRadius.circular(15),
                   ),
                   child: Text(
                     farmer.statusText,
                     style: TextStyle(
                       color: statusFg,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w400,
                     ),
                   ),
                 ),
@@ -640,7 +652,7 @@ class _VetDashboardPageState extends State<VetDashboardPage> {
                 const Icon(
                   Icons.chevron_right_rounded,
                   color: textMuted,
-                  size: 20,
+                  size: 10,
                 ),
               ],
             ),

@@ -29,6 +29,7 @@ class _VetResponseSentScreenState extends State<VetResponseSentScreen> {
     'en': {
       'title': 'Response Sent',
       'subtitle': 'Your advice has been sent to',
+      'status_vet_responded': 'Responded',
       'label_diagnosis': 'Diagnosis',
       'label_advice': 'Advice',
       'label_followup': 'Follow-up',
@@ -37,6 +38,7 @@ class _VetResponseSentScreenState extends State<VetResponseSentScreen> {
     'km': {
       'title': 'ការឆ្លើយតបត្រូវបានផ្ញើ',
       'subtitle': 'ដំបូន្មានរបស់អ្នកត្រូវបានផ្ញើទៅកាន់',
+      'status_vet_responded': 'បានឆ្លើយតប',
       'label_diagnosis': 'ការធ្វើរោគវិនិច្ឆ័យ',
       'label_advice': 'ដំបូន្មាន',
       'label_followup': 'តាមដានបន្ទាប់',
@@ -52,17 +54,27 @@ class _VetResponseSentScreenState extends State<VetResponseSentScreen> {
   String _formatDate(DateTime? date) {
     if (date == null) return '—';
     const months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
     ];
     return '${date.day.toString().padLeft(2, '0')} ${months[date.month - 1]} ${date.year}';
   }
 
   @override
   Widget build(BuildContext context) {
-    final extra = (GoRouterState.of(context).extra ??
-            <String, dynamic>{})
-        as Map<String, dynamic>;
+    final extra =
+        (GoRouterState.of(context).extra ?? <String, dynamic>{})
+            as Map<String, dynamic>;
     final farmerName = extra['farmerName']?.toString() ?? 'the farmer';
     final diagnosis = extra['diagnosis']?.toString() ?? '';
     final advice = extra['advice']?.toString() ?? '';
@@ -128,13 +140,43 @@ class _VetResponseSentScreenState extends State<VetResponseSentScreen> {
                 child: Text(
                   '${_getText('subtitle')} $farmerName.',
                   textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    color: textMuted,
-                    fontSize: 15,
-                  ),
+                  style: const TextStyle(color: textMuted, fontSize: 15),
                 ),
               ),
               const SizedBox(height: 32),
+
+              Center(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 8,
+                  ),
+                  decoration: BoxDecoration(
+                    color: successGreenBg,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.check_circle_outline_rounded,
+                        color: successGreen,
+                        size: 17,
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        _getText('status_vet_responded'),
+                        style: const TextStyle(
+                          color: successGreen,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 28),
 
               // Diagnosis Card
               _buildSummaryCard(
@@ -196,7 +238,9 @@ class _VetResponseSentScreenState extends State<VetResponseSentScreen> {
   Widget _buildBottomNav() {
     return Container(
       decoration: BoxDecoration(
-        border: Border(top: BorderSide(color: const Color(0xFFCBD5E1), width: 1)),
+        border: Border(
+          top: BorderSide(color: const Color(0xFFCBD5E1), width: 1),
+        ),
       ),
       child: BottomNavigationBar(
         currentIndex: 1,

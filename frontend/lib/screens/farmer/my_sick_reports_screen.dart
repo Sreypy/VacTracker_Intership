@@ -1,7 +1,12 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'package:frontend/config/api_config.dart';
+import 'package:frontend/services/storage_service.dart';
 import 'package:frontend/models/sick_report.dart';
 import 'package:frontend/services/sick_report_service.dart';
 import 'package:frontend/widgets/farmer_bottom_navigation.dart';
+import 'package:frontend/widgets/notification_header_button.dart';
 import 'package:go_router/go_router.dart';
 
 class MySickReportsScreen extends StatefulWidget {
@@ -13,20 +18,109 @@ class MySickReportsScreen extends StatefulWidget {
 }
 
 class _MySickReportsScreenState extends State<MySickReportsScreen> {
+  String _profileName = '';
+  String _profileImageUrl = '';
+
+  static const Color backgroundLight = Color(0xFFF8FAFC);
+  static const Color brandDarkGreen = Color(0xFF034418);
+
   final _service = SickReportService();
   bool _loading = true;
   String? _error;
   List<SickReport> _reports = const [];
 
   bool get _km => widget.languageCode == 'km';
-  String get _title => _km ? 'របាយការណ៍សត្វឈឺរបស់ខ្ញុំ' : 'My Sick Reports';
   String get _waiting => _km ? 'កំពុងរង់ចាំពេទ្យសត្វ' : 'Waiting for Vet';
   String get _responded => _km ? 'ពេទ្យសត្វបានឆ្លើយតប' : 'Vet Responded';
   String get _resolved => _km ? 'បានដោះស្រាយ' : 'Resolved';
 
+  Future<void> _loadProfile() async {
+    final storedName = await StorageService.getName();
+    final storedImageUrl = await StorageService.getProfileImageUrl();
+    if (!mounted) return;
+    setState(() {
+      if (storedName?.trim().isNotEmpty == true) {
+        _profileName = storedName!.trim();
+      }
+      if (storedImageUrl?.trim().isNotEmpty == true) {
+        _profileImageUrl = storedImageUrl!.trim();
+      }
+    });
+
+    try {
+      final token = await StorageService.getToken();
+      if (token == null || token.isEmpty) return;
+      final response = await http.get(
+        Uri.parse('${ApiConfig.baseUrl}/users/profile'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+      if (response.statusCode != 200 || !mounted) return;
+      final profile = jsonDecode(response.body) as Map<String, dynamic>;
+      final name = (profile['name'] ?? '').toString().trim();
+      final imageUrl =
+          (profile['profile_image_url'] ??
+                  profile['avatar_url'] ??
+                  profile['profile_image'] ??
+                  profile['image_url'] ??
+                  profile['photo_url'] ??
+                  '')
+              .toString()
+              .trim();
+      setState(() {
+        if (name.isNotEmpty) _profileName = name;
+        if (imageUrl.isNotEmpty) _profileImageUrl = imageUrl;
+      });
+      await StorageService.saveUser(profile);
+    } catch (_) {
+      // Stored profile data or initials remain available as a fallback.
+    }
+  }
+
+  Widget _buildProfileAvatar() {
+    final initial = _profileName.trim().isNotEmpty
+        ? _profileName.trim()[0].toUpperCase()
+        : 'U';
+    final bool hasImage = _profileImageUrl.isNotEmpty;
+    return Container(
+      width: 34,
+      height: 34,
+      decoration: BoxDecoration(
+        color: brandDarkGreen.withValues(alpha: 0.1),
+        shape: BoxShape.circle,
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: hasImage
+          ? Image.network(
+              _profileImageUrl,
+              fit: BoxFit.cover,
+              errorBuilder: (_, _, _) => Center(
+                child: Text(
+                  initial,
+                  style: const TextStyle(
+                    color: brandDarkGreen,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                  ),
+                ),
+              ),
+            )
+          : Center(
+              child: Text(
+                initial,
+                style: const TextStyle(
+                  color: brandDarkGreen,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                ),
+              ),
+            ),
+    );
+  }
+
   @override
   void initState() {
     super.initState();
+    _loadProfile();
     _load();
   }
 
@@ -94,14 +188,31 @@ class _MySickReportsScreenState extends State<MySickReportsScreen> {
   Widget build(BuildContext context) => Scaffold(
     backgroundColor: const Color(0xFFF8FAFC),
     appBar: AppBar(
-      title: Text(
-        _title,
-        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-      ),
-      foregroundColor: const Color(0xFF034418),
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: backgroundLight,
       elevation: 0,
       scrolledUnderElevation: 0,
+      titleSpacing: 16,
+      title: const Text(
+        'VacTracker',
+        style: TextStyle(
+          color: brandDarkGreen,
+          fontSize: 18,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+      actions: [
+        NotificationHeaderButton(
+          languageCode: widget.languageCode,
+          color: brandDarkGreen,
+        ),
+        IconButton(
+          tooltip: 'Profile',
+          onPressed: () =>
+              context.push('/farmer-profile/${widget.languageCode}'),
+          icon: _buildProfileAvatar(),
+        ),
+        const SizedBox(width: 8),
+      ],
     ),
     body: _loading
         ? const Center(

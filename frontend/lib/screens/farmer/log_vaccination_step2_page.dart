@@ -1,9 +1,14 @@
 import 'dart:io';
 import 'dart:typed_data';
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:http/http.dart' as http;
+import 'package:frontend/config/api_config.dart';
+import 'package:frontend/services/storage_service.dart';
 import 'package:frontend/widgets/farmer_bottom_navigation.dart';
+import 'package:frontend/widgets/notification_header_button.dart';
 import 'package:image_picker/image_picker.dart';
 
 import 'package:frontend/services/vaccine_service.dart';
@@ -90,6 +95,8 @@ class LogVaccinationStep2Page extends StatefulWidget {
 
 class _LogVaccinationStep2PageState extends State<LogVaccinationStep2Page> {
   late String _currentLang;
+  String _profileName = '';
+  String _profileImageUrl = '';
 
   // State Management
   List<VaccineModel> _allVaccines = [];
@@ -204,9 +211,93 @@ class _LogVaccinationStep2PageState extends State<LogVaccinationStep2Page> {
     },
   };
 
+  Future<void> _loadProfile() async {
+    final storedName = await StorageService.getName();
+    final storedImageUrl = await StorageService.getProfileImageUrl();
+    if (!mounted) return;
+    setState(() {
+      if (storedName?.trim().isNotEmpty == true) {
+        _profileName = storedName!.trim();
+      }
+      if (storedImageUrl?.trim().isNotEmpty == true) {
+        _profileImageUrl = storedImageUrl!.trim();
+      }
+    });
+
+    try {
+      final token = await StorageService.getToken();
+      if (token == null || token.isEmpty) return;
+      final response = await http.get(
+        Uri.parse('${ApiConfig.baseUrl}/users/profile'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+      if (response.statusCode != 200 || !mounted) return;
+      final profile = jsonDecode(response.body) as Map<String, dynamic>;
+      final name = (profile['name'] ?? '').toString().trim();
+      final imageUrl =
+          (profile['profile_image_url'] ??
+                  profile['avatar_url'] ??
+                  profile['profile_image'] ??
+                  profile['image_url'] ??
+                  profile['photo_url'] ??
+                  '')
+              .toString()
+              .trim();
+      setState(() {
+        if (name.isNotEmpty) _profileName = name;
+        if (imageUrl.isNotEmpty) _profileImageUrl = imageUrl;
+      });
+      await StorageService.saveUser(profile);
+    } catch (_) {
+      // Stored profile data or initials remain available as a fallback.
+    }
+  }
+
+  Widget _buildProfileAvatar() {
+    final initial = _profileName.trim().isNotEmpty
+        ? _profileName.trim()[0].toUpperCase()
+        : 'U';
+    final bool hasImage = _profileImageUrl.isNotEmpty;
+    return Container(
+      width: 34,
+      height: 34,
+      decoration: BoxDecoration(
+        color: brandDarkGreen.withValues(alpha: 0.1),
+        shape: BoxShape.circle,
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: hasImage
+          ? Image.network(
+              _profileImageUrl,
+              fit: BoxFit.cover,
+              errorBuilder: (_, _, _) => Center(
+                child: Text(
+                  initial,
+                  style: const TextStyle(
+                    color: brandDarkGreen,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                  ),
+                ),
+              ),
+            )
+          : Center(
+              child: Text(
+                initial,
+                style: const TextStyle(
+                  color: brandDarkGreen,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                ),
+              ),
+            ),
+    );
+  }
+
   @override
   void initState() {
     super.initState();
+    _loadProfile();
     _currentLang = widget.languageCode;
     _fetchVaccines();
     _fetchServerDate();
@@ -385,7 +476,7 @@ class _LogVaccinationStep2PageState extends State<LogVaccinationStep2Page> {
                         suffixText: _getText('custom_interval_unit'),
                       ),
                       const SizedBox(height: 18),
-                  Text(
+                      Text(
                         _getText('custom_sec_notes'),
                         style: _dialogSectionStyle,
                       ),
@@ -518,11 +609,12 @@ class _LogVaccinationStep2PageState extends State<LogVaccinationStep2Page> {
       ).showSnackBar(SnackBar(content: Text(_getText('custom_error'))));
     }
   }
-TextStyle get _dialogSectionStyle => const TextStyle(
-        color: brandDarkGreen,
-        fontSize: 13,
-        fontWeight: FontWeight.bold,
-      );
+
+  TextStyle get _dialogSectionStyle => const TextStyle(
+    color: brandDarkGreen,
+    fontSize: 13,
+    fontWeight: FontWeight.bold,
+  );
 
   Widget _buildCustomVacField({
     required TextEditingController controller,
@@ -613,10 +705,13 @@ TextStyle get _dialogSectionStyle => const TextStyle(
       };
 
       if (!mounted) return;
-      context.push(
+      final result = await context.push<bool>(
         '/log-vaccination-step3/${todayVaccine.id}/$_currentLang',
         extra: summaryData,
       );
+      if (result == true && mounted) {
+        Navigator.of(context).pop(true);
+      }
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(
@@ -688,32 +783,26 @@ TextStyle get _dialogSectionStyle => const TextStyle(
           icon: const Icon(Icons.arrow_back, color: brandDarkGreen),
           onPressed: () => context.pop(),
         ),
-        title: Text(
-          _getText('page_title'),
-          style: const TextStyle(
+        titleSpacing: 16,
+        title: const Text(
+          'VacTracker',
+          style: TextStyle(
             color: brandDarkGreen,
-            fontSize: 20,
+            fontSize: 18,
             fontWeight: FontWeight.bold,
           ),
         ),
         actions: [
-          // Step Progress Chip Badge
-          Container(
-            margin: const EdgeInsets.only(right: 16),
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-            decoration: BoxDecoration(
-              color: brandDarkGreen,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Text(
-              _getText('step_badge'),
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 11,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
+          NotificationHeaderButton(
+            languageCode: _currentLang,
+            color: brandDarkGreen,
           ),
+          IconButton(
+            tooltip: 'Profile',
+            onPressed: () => context.push('/farmer-profile/$_currentLang'),
+            icon: _buildProfileAvatar(),
+          ),
+          const SizedBox(width: 8),
         ],
       ),
       body: SafeArea(

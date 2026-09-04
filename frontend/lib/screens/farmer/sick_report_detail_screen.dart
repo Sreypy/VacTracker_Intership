@@ -1,7 +1,13 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'package:frontend/config/api_config.dart';
+import 'package:frontend/services/storage_service.dart';
 import 'package:frontend/models/sick_report.dart';
 import 'package:frontend/services/sick_report_service.dart';
 import 'package:frontend/widgets/farmer_bottom_navigation.dart';
+import 'package:frontend/widgets/notification_header_button.dart';
+import 'package:go_router/go_router.dart';
 
 class FarmerSickReportDetailScreen extends StatefulWidget {
   final int reportId;
@@ -19,6 +25,12 @@ class FarmerSickReportDetailScreen extends StatefulWidget {
 
 class _FarmerSickReportDetailScreenState
     extends State<FarmerSickReportDetailScreen> {
+  String _profileName = '';
+  String _profileImageUrl = '';
+
+  static const Color backgroundLight = Color(0xFFF8FAFC);
+  static const Color brandDarkGreen = Color(0xFF034418);
+
   final _service = SickReportService();
   SickReport? _report;
   bool _loading = true;
@@ -26,9 +38,93 @@ class _FarmerSickReportDetailScreenState
 
   bool get _km => widget.languageCode == 'km';
 
+  Future<void> _loadProfile() async {
+    final storedName = await StorageService.getName();
+    final storedImageUrl = await StorageService.getProfileImageUrl();
+    if (!mounted) return;
+    setState(() {
+      if (storedName?.trim().isNotEmpty == true) {
+        _profileName = storedName!.trim();
+      }
+      if (storedImageUrl?.trim().isNotEmpty == true) {
+        _profileImageUrl = storedImageUrl!.trim();
+      }
+    });
+
+    try {
+      final token = await StorageService.getToken();
+      if (token == null || token.isEmpty) return;
+      final response = await http.get(
+        Uri.parse('${ApiConfig.baseUrl}/users/profile'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+      if (response.statusCode != 200 || !mounted) return;
+      final profile = jsonDecode(response.body) as Map<String, dynamic>;
+      final name = (profile['name'] ?? '').toString().trim();
+      final imageUrl =
+          (profile['profile_image_url'] ??
+                  profile['avatar_url'] ??
+                  profile['profile_image'] ??
+                  profile['image_url'] ??
+                  profile['photo_url'] ??
+                  '')
+              .toString()
+              .trim();
+      setState(() {
+        if (name.isNotEmpty) _profileName = name;
+        if (imageUrl.isNotEmpty) _profileImageUrl = imageUrl;
+      });
+      await StorageService.saveUser(profile);
+    } catch (_) {
+      // Stored profile data or initials remain available as a fallback.
+    }
+  }
+
+  Widget _buildProfileAvatar() {
+    final initial = _profileName.trim().isNotEmpty
+        ? _profileName.trim()[0].toUpperCase()
+        : 'U';
+    final bool hasImage = _profileImageUrl.isNotEmpty;
+    return Container(
+      width: 34,
+      height: 34,
+      decoration: BoxDecoration(
+        color: brandDarkGreen.withValues(alpha: 0.1),
+        shape: BoxShape.circle,
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: hasImage
+          ? Image.network(
+              _profileImageUrl,
+              fit: BoxFit.cover,
+              errorBuilder: (_, _, _) => Center(
+                child: Text(
+                  initial,
+                  style: const TextStyle(
+                    color: brandDarkGreen,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                  ),
+                ),
+              ),
+            )
+          : Center(
+              child: Text(
+                initial,
+                style: const TextStyle(
+                  color: brandDarkGreen,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                ),
+              ),
+            ),
+    );
+  }
+
   @override
   void initState() {
     super.initState();
+    _loadProfile();
     _load();
   }
 
@@ -78,14 +174,31 @@ class _FarmerSickReportDetailScreenState
   Widget build(BuildContext context) => Scaffold(
     backgroundColor: const Color(0xFFF8FAFC),
     appBar: AppBar(
-      title: Text(
-        _km ? 'របាយការណ៍សត្វឈឺ' : 'Sick Report Details',
-        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-      ),
-      foregroundColor: const Color(0xFF034418),
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: backgroundLight,
       elevation: 0,
       scrolledUnderElevation: 0,
+      titleSpacing: 16,
+      title: const Text(
+        'VacTracker',
+        style: TextStyle(
+          color: brandDarkGreen,
+          fontSize: 18,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+      actions: [
+        NotificationHeaderButton(
+          languageCode: widget.languageCode,
+          color: brandDarkGreen,
+        ),
+        IconButton(
+          tooltip: 'Profile',
+          onPressed: () =>
+              context.push('/farmer-profile/${widget.languageCode}'),
+          icon: _buildProfileAvatar(),
+        ),
+        const SizedBox(width: 8),
+      ],
     ),
     body: _loading
         ? const Center(
@@ -117,9 +230,115 @@ class _FarmerSickReportDetailScreenState
     ),
   );
 
+  Future<void> _markResolved() async {
+    final messenger = ScaffoldMessenger.maybeOf(context);
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(_km ? 'បញ្ជាក់' : 'Confirm'),
+        content: Text(
+          _km
+              ? 'តើអ្នកប្រាកដថាបញ្ហាត្រូវបានដោះស្រាយហើយឬទេ?'
+              : 'Are you sure the problem has been resolved?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: Text(_km ? 'បោះបង់' : 'Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: Text(_km ? 'បញ្ជាក់' : 'Confirm'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    try {
+      setState(() => _loading = true);
+      await _service.markResolved(widget.reportId);
+      await _load();
+      if (!mounted) return;
+      messenger?.showSnackBar(
+        SnackBar(
+          content: Text(
+            _km
+                ? 'បានដាក់សម្គាល់របាយការណ៍ថាជាបញ្ហាដោះស្រាយរួចរាល់។'
+                : 'Sick report marked as resolved.',
+          ),
+          backgroundColor: const Color(0xFF034418),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      messenger?.showSnackBar(
+        SnackBar(
+          content: Text(
+            _km
+                ? 'មិនអាចដាក់សម្គាល់ថាជាបញ្ហាដោះស្រាយបានទេ៖ ${error.toString()}'
+                : 'Could not mark the sick report as resolved: ${error.toString()}',
+          ),
+          backgroundColor: Colors.red.shade700,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      setState(() => _loading = false);
+    }
+  }
+
   Widget _content(SickReport r) => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
+      Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: r.isResolved
+              ? const Color(0xFFE8F5E9)
+              : (r.hasVetResponse
+                    ? const Color(0xFFE0F2FE)
+                    : const Color(0xFFFFFBEB)),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: r.isResolved
+                ? const Color(0xFFBBF7D0)
+                : (r.hasVetResponse
+                      ? const Color(0xFFBAE6FD)
+                      : const Color(0xFFFDE68A)),
+          ),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 10,
+              height: 10,
+              decoration: BoxDecoration(
+                color: r.isResolved
+                    ? const Color(0xFF16A34A)
+                    : (r.hasVetResponse
+                          ? const Color(0xFF2563EB)
+                          : const Color(0xFFB45309)),
+                shape: BoxShape.circle,
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                r.displayStatusLabel(widget.languageCode),
+                style: const TextStyle(
+                  color: Color(0xFF0F172A),
+                  fontWeight: FontWeight.w700,
+                  fontSize: 14,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+      const SizedBox(height: 24),
       // Primary Report Overview Card
       Container(
         padding: const EdgeInsets.all(20),
@@ -253,6 +472,13 @@ class _FarmerSickReportDetailScreenState
         )
       else
         _response(r),
+      if (r.isResolved) ...[
+        const SizedBox(height: 24),
+        _resolvedActions(),
+      ] else if (r.hasVetResponse) ...[
+        const SizedBox(height: 24),
+        _decisionActions(),
+      ],
     ],
   );
 
@@ -474,6 +700,73 @@ class _FarmerSickReportDetailScreenState
             ],
           ),
         ],
+      ],
+    ),
+  );
+
+  Widget _decisionActions() => Container(
+    width: double.infinity,
+    padding: const EdgeInsets.all(20),
+    decoration: BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(16),
+      border: Border.all(color: const Color(0xFFE2E8F0)),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          _km ? 'បញ្ហាត្រូវបានដោះស្រាយមែនទេ?' : 'Problem solved?',
+          style: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            color: Color(0xFF0F172A),
+          ),
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: FilledButton.icon(
+                onPressed: _markResolved,
+                icon: const Icon(Icons.check_circle_rounded),
+                label: Text(_km ? 'បានដោះស្រាយ' : 'Mark as Resolved'),
+                style: FilledButton.styleFrom(
+                  backgroundColor: const Color(0xFF034418),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+          ],
+        ),
+      ],
+    ),
+  );
+
+  Widget _resolvedActions() => Container(
+    width: double.infinity,
+    padding: const EdgeInsets.all(20),
+    decoration: BoxDecoration(
+      color: const Color(0xFFE8F5E9),
+      borderRadius: BorderRadius.circular(16),
+      border: Border.all(color: const Color(0xFFBBF7D0)),
+    ),
+    child: Row(
+      children: [
+        const Icon(Icons.check_circle_rounded, color: Color(0xFF15803D)),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Text(
+            _km ? '🟢 បានដោះស្រាយ' : '🟢 Resolved',
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF15803D),
+            ),
+          ),
+        ),
       ],
     ),
   );

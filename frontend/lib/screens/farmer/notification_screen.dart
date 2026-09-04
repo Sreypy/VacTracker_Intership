@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:frontend/widgets/farmer_bottom_navigation.dart';
+import 'package:frontend/widgets/notification_header_button.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:frontend/config/api_config.dart';
-import 'package:frontend/services/reminder_service.dart';
 import 'package:frontend/services/notification_service.dart';
 import 'package:frontend/services/storage_service.dart';
+import 'package:frontend/services/vaccination_service.dart';
+import 'package:frontend/services/vaccination_schedule_service.dart';
 
 class NotificationScreen extends StatefulWidget {
   final String languageCode;
@@ -25,6 +27,8 @@ class _NotificationScreenState extends State<NotificationScreen>
   static const Color colorMuted = Color(0xFF6B7280);
   static const Color colorApp = Color(0xFF228B22); // Forest Green
   static const Color colorSurface = Color(0xFFFFFFFF);
+  static const Color backgroundLight = Color(0xFFF8FAFC);
+  static const Color brandDarkGreen = Color(0xFF034418);
 
   // Status colors
   static const Color colorOverdue = Color(0xFFDC2626); // Alert Red
@@ -222,45 +226,35 @@ class _NotificationScreenState extends State<NotificationScreen>
     try {
       // Fetch both vaccination reminders and vet response notifications in parallel
       final results = await Future.wait([
-        ReminderService().fetchMyReminders(),
+        VaccinationService().fetchAllVaccinations(),
         NotificationService().fetchMyNotifications(),
       ]);
 
-      final reminders = results[0];
+      final vaccinations = results[0];
       final notifications = results[1];
 
       final items = <_NotificationItem>[];
+      final schedule = VaccinationScheduleSummary.fromRecords(vaccinations);
 
-      // Add vaccination reminders
-      for (final reminder in reminders) {
-        final item = _NotificationItem.fromReminder(
-          reminder,
+      // Build vaccination notifications from the canonical vaccination data.
+      for (final vaccination in vaccinations) {
+        if (VaccinationScheduleService.dueDateFor(vaccination) == null ||
+            VaccinationScheduleService.isCompleted(vaccination)) {
+          continue;
+        }
+        final item = _NotificationItem.fromVaccination(
+          vaccination,
           widget.languageCode,
         );
         if (item != null) items.add(item);
       }
 
-      // Add notifications (vet response + overdue vaccinations).
-      // Track (flockId, vaccineId) keys already added by reminders/dedup so
-      // an overdue vaccination is not shown twice.
-      final seenKeys = <String>{};
-      for (final item in items) {
-        final key = '${item.flockId}_${item.vaccineId}';
-        if (item.flockId != null && item.vaccineId != null) seenKeys.add(key);
-      }
-
+      // Add server notifications such as veterinarian responses.
       for (final notification in notifications) {
         if (notification is! Map) continue;
         final type = notification['type']?.toString();
         _NotificationItem? item;
-        if (type == 'vaccination_overdue') {
-          item = _NotificationItem.fromVaccinationOverdue(
-            notification,
-            widget.languageCode,
-          );
-        } else if (type == 'vet_response') {
-          debugPrint('vet_response raw: $notification'); // 👈 add this
-
+        if (type == 'vet_response') {
           item = _NotificationItem.fromVetResponse(
             notification,
             widget.languageCode,
@@ -268,13 +262,6 @@ class _NotificationScreenState extends State<NotificationScreen>
         }
         if (item == null) continue;
 
-        final key = '${item.flockId}_${item.vaccineId}';
-        if (item.flockId != null &&
-            item.vaccineId != null &&
-            seenKeys.contains(key)) {
-          // Skip the duplicate reminder; the overdue notification wins.
-          continue;
-        }
         items.add(item);
       }
 
@@ -289,21 +276,11 @@ class _NotificationScreenState extends State<NotificationScreen>
       });
 
       // Calculate summaries
-      int od = 0;
-      int ds = 0;
-      for (final item in items) {
-        if (item.isOverdue) {
-          od++;
-        } else if (item.isDueSoon) {
-          ds++;
-        }
-      }
-
       if (!mounted) return;
       setState(() {
         _notifications = items;
-        _overdueCount = od;
-        _dueSoonCount = ds;
+        _overdueCount = schedule.overdueCount;
+        _dueSoonCount = schedule.dueSoonCount;
         _isLoading = false;
       });
     } catch (_) {
@@ -343,11 +320,14 @@ class _NotificationScreenState extends State<NotificationScreen>
     }
     if (item.isOverdue || item.isDueToday) {
       if (item.vaccineId == null) return;
-      context.push(
+      final result = await context.push<bool>(
         '/log-vaccination-step2/${widget.languageCode}'
         '?flockId=${item.flockId}&batchTitle=${Uri.encodeComponent(item.flockName)}'
         '&vaccineId=${item.vaccineId}',
       );
+      if (result == true && mounted) {
+        await _loadNotifications();
+      }
       return;
     }
     await context.push('/flock-detail/${item.flockId}/${widget.languageCode}');
@@ -383,18 +363,31 @@ class _NotificationScreenState extends State<NotificationScreen>
     return Scaffold(
       backgroundColor: colorBackground,
       appBar: AppBar(
-        backgroundColor: colorBackground,
+        backgroundColor: backgroundLight,
         elevation: 0,
-        centerTitle: true,
-        title: Text(
+        scrolledUnderElevation: 0,
+        titleSpacing: 16,
+        title: const Text(
           'VacTracker',
-          style: const TextStyle(
-            color: colorApp,
+          style: TextStyle(
+            color: brandDarkGreen,
+            fontSize: 18,
             fontWeight: FontWeight.bold,
-            fontSize: 22,
           ),
         ),
-        actions: [_buildProfileAvatar(), const SizedBox(width: 20)],
+        actions: [
+          NotificationHeaderButton(
+            languageCode: widget.languageCode,
+            color: brandDarkGreen,
+          ),
+          IconButton(
+            tooltip: 'Profile',
+            onPressed: () =>
+                context.push('/farmer-profile/${widget.languageCode}'),
+            icon: _buildProfileAvatar(),
+          ),
+          const SizedBox(width: 8),
+        ],
       ),
       body: RefreshIndicator(
         onRefresh: _loadNotifications,
@@ -862,48 +855,6 @@ class _NotificationItem {
     return _NotificationScreenState.colorText;
   }
 
-  // Mapper logic is unchanged as per original screen logic.
-  static _NotificationItem? fromReminder(dynamic raw, String languageCode) {
-    if (raw is! Map) return null;
-    final reminder = Map<String, dynamic>.from(raw);
-    final dueDateRaw = reminder['scheduled_date']?.toString();
-    final dueDate = DateTime.tryParse(dueDateRaw ?? '');
-    if (dueDate == null) return null;
-
-    final vaccination = vaccinationMap(reminder['vaccination']);
-    final flock = vaccinationMap(vaccination['flock']);
-    final vaccine = vaccinationMap(vaccination['vaccine']);
-    final today = DateTime.now();
-    final dueDay = DateTime(dueDate.year, dueDate.month, dueDate.day);
-    final todayDay = DateTime(today.year, today.month, today.day);
-
-    final defaultFlock =
-        'Unknown flock'; // Use keys later if specific Khmer required here.
-    final defaultVaccine = 'Unknown vaccine';
-
-    return _NotificationItem(
-      flockName: (flock['batch_name'] ?? reminder['flock_name'] ?? defaultFlock)
-          .toString(),
-      vaccineName:
-          ((languageCode == 'km'
-                      ? vaccine['name_km'] ?? vaccine['name_en']
-                      : vaccine['name_en'] ?? vaccine['name_km']) ??
-                  reminder['vaccine_name'] ??
-                  defaultVaccine)
-              .toString(),
-      dueDate: dueDay,
-      flockId: _asInt(
-        flock['flock_id'] ?? vaccination['flock_id'] ?? reminder['flock_id'],
-      ),
-      vaccineId: _asInt(
-        vaccine['vaccine_id'] ??
-            vaccination['vaccine_id'] ??
-            reminder['vaccine_id'],
-      ),
-      days: dueDay.difference(todayDay).inDays,
-    );
-  }
-
   // Mapper for vet response notifications
   static _NotificationItem? fromVetResponse(dynamic raw, String languageCode) {
     if (raw is! Map) return null;
@@ -935,40 +886,32 @@ class _NotificationItem {
   }
 
   // Mapper for overdue vaccination notifications (type = vaccination_overdue)
-  static _NotificationItem? fromVaccinationOverdue(
-    dynamic raw,
-    String languageCode,
-  ) {
+  static _NotificationItem? fromVaccination(dynamic raw, String languageCode) {
     if (raw is! Map) return null;
-    final notification = Map<String, dynamic>.from(raw);
-    final data = vaccinationMap(notification['data']);
-    final dueRaw = (notification['data']?['due_date'] ?? data['due_date'])
-        ?.toString();
-    final dueDate = DateTime.tryParse(dueRaw ?? '');
+    final vaccination = Map<String, dynamic>.from(raw);
+    final dueDate = VaccinationScheduleService.dueDateFor(vaccination);
+    if (dueDate == null) return null;
 
-    final today = DateTime.now();
-    final todayDay = DateTime(today.year, today.month, today.day);
-    final dueDay = dueDate == null
-        ? todayDay
-        : DateTime(dueDate.year, dueDate.month, dueDate.day);
-
-    final defaultFlock = 'Unknown flock';
-    final defaultVaccine = 'Unknown vaccine';
-
-    final vaccineName = languageCode == 'km'
-        ? (data['vaccine_name_km'] ?? data['vaccine_name'] ?? defaultVaccine)
-              .toString()
-        : (data['vaccine_name'] ?? data['vaccine_name_km'] ?? defaultVaccine)
-              .toString();
+    final flock = vaccinationMap(vaccination['flock']);
+    final vaccine = vaccinationMap(vaccination['vaccine']);
+    final today = VaccinationScheduleService.calendarDate(DateTime.now());
+    final dueDay = VaccinationScheduleService.calendarDate(dueDate);
 
     return _NotificationItem(
-      flockName: (data['flock_name'] ?? defaultFlock).toString(),
-      vaccineName: vaccineName,
+      flockName: (flock['batch_name'] ?? 'Unknown flock').toString(),
+      vaccineName:
+          (languageCode == 'km'
+                  ? vaccine['name_km'] ??
+                        vaccine['name_en'] ??
+                        'Unknown vaccine'
+                  : vaccine['name_en'] ??
+                        vaccine['name_km'] ??
+                        'Unknown vaccine')
+              .toString(),
       dueDate: dueDay,
-      flockId: _asInt(data['flock_id']),
-      vaccineId: _asInt(data['vaccine_id']),
-      days: dueDay.difference(todayDay).inDays,
-      notificationId: _asInt(notification['notification_id']),
+      flockId: VaccinationScheduleService.flockIdFor(vaccination),
+      vaccineId: _asInt(vaccine['vaccine_id'] ?? vaccination['vaccine_id']),
+      days: dueDay.difference(today).inDays,
     );
   }
 

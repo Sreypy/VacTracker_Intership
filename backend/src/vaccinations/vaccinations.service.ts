@@ -99,6 +99,30 @@ export class VaccinationsService {
       return existingVaccination;
     }
 
+    const administrationDate = new Date(createVaccinationDto.date_given);
+    const priorVaccinations = await this.vaccinationRepository.find({
+      where: {
+        flock: { flock_id: createVaccinationDto.flock_id },
+        vaccine: { vaccine_id: createVaccinationDto.vaccine_id },
+      },
+    });
+
+    const completedPriorVaccinations = priorVaccinations.filter(
+      (vaccination) =>
+        vaccination.status !== VaccinationStatus.COMPLETED &&
+        vaccination.next_due_date != null &&
+        vaccination.next_due_date <= administrationDate,
+    );
+
+    if (completedPriorVaccinations.length > 0) {
+      await this.vaccinationRepository.save(
+        completedPriorVaccinations.map((vaccination) => ({
+          ...vaccination,
+          status: VaccinationStatus.COMPLETED,
+        })),
+      );
+    }
+
     // Determine next due date
     let nextDueDate: Date | null = null;
 
@@ -126,7 +150,7 @@ export class VaccinationsService {
       flock,
       vaccine,
       administered_by: user,
-      date_given: new Date(createVaccinationDto.date_given),
+      date_given: administrationDate,
       next_due_date: nextDueDate,
       status,
       photo_url: photoUrl,

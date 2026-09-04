@@ -39,6 +39,18 @@ class SickReport {
       (vetDiagnosis?.trim().isNotEmpty ?? false) ||
       (vetAdvice?.trim().isNotEmpty ?? false);
 
+  bool get isResolved => status.toLowerCase() == 'resolved';
+
+  String displayStatusLabel(String languageCode) {
+    if (isResolved) {
+      return languageCode == 'km' ? 'បានដោះស្រាយ' : 'Resolved';
+    }
+    if (status.toLowerCase() == 'reviewed' || hasVetResponse) {
+      return languageCode == 'km' ? 'ពេទ្យសត្វបានឆ្លើយតប' : 'Vet Responded';
+    }
+    return languageCode == 'km' ? 'កំពុងរង់ចាំពេទ្យសត្វ' : 'Waiting for Vet';
+  }
+
   factory SickReport.fromJson(Map<String, dynamic> json) {
     DateTime parseDate(dynamic value) =>
         DateTime.tryParse(value?.toString() ?? '') ?? DateTime(1970);
@@ -59,19 +71,23 @@ class SickReport {
       symptoms: (json['symptoms'] ?? '').toString(),
       status: (json['status'] ?? 'pending').toString(),
       photoUrl: (json['photoUrl'] ?? json['photo_url'])?.toString(),
-      flockName: (json['flock'] is Map
-              ? json['flock']['batch_name'] ?? json['flock']['batchName']
-              : json['flockName'] ?? json['flock_name'])
-          ?.toString(),
+      flockName:
+          (json['flock'] is Map
+                  ? json['flock']['batch_name'] ?? json['flock']['batchName']
+                  : json['flockName'] ?? json['flock_name'])
+              ?.toString(),
       vetDiagnosis: (json['vetDiagnosis'] ?? json['vetNotes'])?.toString(),
       vetAdvice: json['vetAdvice']?.toString(),
       recommendedAction: json['recommendedAction']?.toString(),
       followUpDate: parseOptionalDate(json['followUpDate']),
-      respondedAt: parseOptionalDate(json['respondedAt'] ?? json['responded_at']),
-      veterinarianName: (json['veterinarian'] is Map
-              ? json['veterinarian']['name']
-              : json['vetName'] ?? json['vet_name'])
-          ?.toString(),
+      respondedAt: parseOptionalDate(
+        json['respondedAt'] ?? json['responded_at'],
+      ),
+      veterinarianName:
+          (json['veterinarian'] is Map
+                  ? json['veterinarian']['name']
+                  : json['vetName'] ?? json['vet_name'])
+              ?.toString(),
     );
   }
 }

@@ -98,6 +98,12 @@ export class SickReport {
   @Column({ name: 'responded_at', type: 'timestamp', nullable: true })
   respondedAt!: Date;
 
+  @Column({ name: 'farmer_follow_up_message', type: 'text', nullable: true })
+  farmerFollowUpMessage!: string | null;
+
+  @Column({ name: 'farmer_follow_up_at', type: 'timestamp', nullable: true })
+  farmerFollowUpAt!: Date | null;
+
   @CreateDateColumn()
   created_at!: Date;
 }

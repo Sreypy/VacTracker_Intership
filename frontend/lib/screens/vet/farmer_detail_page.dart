@@ -263,14 +263,6 @@ class _FarmerDetailPageState extends State<FarmerDetailPage>
                   ],
                 ),
               ),
-              CircleAvatar(
-                radius: 22,
-                backgroundColor: primaryLight,
-                child: IconButton(
-                  icon: const Icon(Icons.phone, color: primaryGreen, size: 20),
-                  onPressed: () {},
-                ),
-              ),
             ],
           ),
           const Padding(
@@ -492,47 +484,54 @@ class _FarmerDetailPageState extends State<FarmerDetailPage>
   }
 
   Widget _buildFlocksTab() {
-    if (_farmerDetail!.flocks.isEmpty)
-      // ignore: curly_braces_in_flow_control_structures
+    if (_farmerDetail!.flocks.isEmpty) {
       return _buildEmptyState('No flocks registered');
+    }
 
     return ListView.builder(
       padding: const EdgeInsets.all(16),
       itemCount: _farmerDetail!.flocks.length,
       itemBuilder: (context, index) {
         final flock = _farmerDetail!.flocks[index];
-        return Card(
-          elevation: 0,
+        return Container(
           margin: const EdgeInsets.only(bottom: 12),
-          shape: RoundedRectangleBorder(
+          decoration: BoxDecoration(
+            color: Colors.white,
             borderRadius: BorderRadius.circular(14),
-            side: const BorderSide(color: cardBorder),
+            border: Border.all(color: cardBorder),
           ),
-          child: ListTile(
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 16,
-              vertical: 4,
-            ),
-            leading: CircleAvatar(
-              backgroundColor: primaryLight,
-              child: const Icon(
-                Icons.inventory_2_outlined,
-                color: primaryGreen,
-                size: 20,
+          child: Material(
+            color: Colors.transparent,
+            borderRadius: BorderRadius.circular(14),
+            child: ListTile(
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 8,
+              ),
+              leading: CircleAvatar(
+                backgroundColor: primaryLight,
+                child: const Icon(
+                  Icons.inventory_2_outlined,
+                  color: primaryGreen,
+                  size: 20,
+                ),
+              ),
+              title: Text(
+                flock.batchName,
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: textMain,
+                ),
+              ),
+              subtitle: Text(
+                '${flock.birdCount} Chickens • ${flock.breed}',
+                style: const TextStyle(color: textMuted),
+              ),
+              trailing: const Icon(Icons.chevron_right, color: textMuted),
+              onTap: () => context.push(
+                '/flock-detail/${flock.flockId}/${widget.languageCode}',
               ),
             ),
-            title: Text(
-              flock.batchName,
-              style: const TextStyle(
-                fontWeight: FontWeight.bold,
-                color: textMain,
-              ),
-            ),
-            // subtitle: Text('${flock.birdCount} Chickens • ${flock.breed}'),
-            // trailing: const Icon(Icons.chevron_right, color: textMuted),
-            // onTap: () => context.push(
-            //   '/flock-detail/${flock.flockId}/${widget.languageCode}',
-            // ),
           ),
         );
       },
@@ -540,50 +539,55 @@ class _FarmerDetailPageState extends State<FarmerDetailPage>
   }
 
   Widget _buildVaccinationsTab() {
-    if (_farmerDetail!.vaccinations.isEmpty)
-      // ignore: curly_braces_in_flow_control_structures
+    if (_farmerDetail!.vaccinations.isEmpty) {
       return _buildEmptyState('No vaccine records');
+    }
 
     return ListView.builder(
       padding: const EdgeInsets.all(16),
       itemCount: _farmerDetail!.vaccinations.length,
       itemBuilder: (context, index) {
         final vax = _farmerDetail!.vaccinations[index];
-        return Card(
-          elevation: 0,
+        return Container(
           margin: const EdgeInsets.only(bottom: 12),
-          shape: RoundedRectangleBorder(
+          decoration: BoxDecoration(
+            color: Colors.white,
             borderRadius: BorderRadius.circular(14),
-            side: const BorderSide(color: cardBorder),
+            border: Border.all(color: cardBorder),
           ),
-          child: ListTile(
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 16,
-              vertical: 8,
-            ),
-            leading: CircleAvatar(
-              backgroundColor: primaryLight,
-              child: const Icon(
-                Icons.vaccines_outlined,
-                color: primaryGreen,
-                size: 20,
+          child: Material(
+            color: Colors.transparent,
+            borderRadius: BorderRadius.circular(14),
+            child: ListTile(
+              isThreeLine: true,
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 8,
+              ),
+              leading: CircleAvatar(
+                backgroundColor: primaryLight,
+                child: const Icon(
+                  Icons.vaccines_outlined,
+                  color: primaryGreen,
+                  size: 20,
+                ),
+              ),
+              title: Text(
+                vax.vaccineName,
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: textMain,
+                ),
+              ),
+              subtitle: Text(
+                'Flock: ${vax.flockName}\nDate: ${_formatDate(vax.dateGiven)}',
+                style: const TextStyle(color: textMuted, height: 1.3),
+              ),
+              trailing: const Icon(Icons.chevron_right, color: textMuted),
+              onTap: () => context.push(
+                '/flock-detail/${vax.flockId}/${widget.languageCode}',
               ),
             ),
-            title: Text(
-              vax.vaccineName,
-              style: const TextStyle(
-                fontWeight: FontWeight.bold,
-                color: textMain,
-              ),
-            ),
-            subtitle: Text(
-              'Flock: ${vax.flockName}\nDate: ${_formatDate(vax.dateGiven)}',
-            ),
-            // isThreeLine: true,
-            // trailing: const Icon(Icons.chevron_right, color: textMuted),
-            // onTap: () => context.push(
-            //   '/flock-detail/${vax.flockId}/${widget.languageCode}',
-            // ),
           ),
         );
       },
@@ -591,53 +595,57 @@ class _FarmerDetailPageState extends State<FarmerDetailPage>
   }
 
   Widget _buildSickReportsTab() {
-    if (_farmerDetail!.sickReports.isEmpty)
-      // ignore: curly_braces_in_flow_control_structures
+    if (_farmerDetail!.sickReports.isEmpty) {
       return _buildEmptyState('No sick reports');
+    }
 
     return ListView.builder(
       padding: const EdgeInsets.all(16),
       itemCount: _farmerDetail!.sickReports.length,
       itemBuilder: (context, index) {
         final report = _farmerDetail!.sickReports[index];
-        final isResolved =
-            report.status == 'resolved' || report.status == 'reviewed';
+        final isResolved = report.status == 'resolved';
 
-        return Card(
-          elevation: 0,
+        return Container(
           margin: const EdgeInsets.only(bottom: 12),
-          shape: RoundedRectangleBorder(
+          decoration: BoxDecoration(
+            color: Colors.white,
             borderRadius: BorderRadius.circular(14),
-            side: const BorderSide(color: cardBorder),
+            border: Border.all(color: cardBorder),
           ),
-          child: ListTile(
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 16,
-              vertical: 4,
-            ),
-            leading: CircleAvatar(
-              backgroundColor: isResolved ? successGreenBg : alertRedBg,
-              child: Icon(
-                isResolved
-                    ? Icons.check_circle_outline
-                    : Icons.warning_amber_rounded,
-                color: isResolved ? successGreen : alertRed,
-                size: 20,
+          child: Material(
+            color: Colors.transparent,
+            borderRadius: BorderRadius.circular(14),
+            child: ListTile(
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 8,
               ),
-            ),
-            title: Text(
-              report.flockName,
-              style: const TextStyle(
-                fontWeight: FontWeight.bold,
-                color: textMain,
+              leading: CircleAvatar(
+                backgroundColor: isResolved ? successGreenBg : alertRedBg,
+                child: Icon(
+                  isResolved
+                      ? Icons.check_circle_outline
+                      : Icons.warning_amber_rounded,
+                  color: isResolved ? successGreen : alertRed,
+                  size: 20,
+                ),
               ),
-            ),
-            subtitle: Text(
-              '${report.reportType.toUpperCase()} • ${report.affectedCount} Affected',
-            ),
-            trailing: const Icon(Icons.chevron_right, color: textMuted),
-            onTap: () => context.push(
-              '/vet-reports/${report.reportId}?lang=${widget.languageCode}',
+              title: Text(
+                report.flockName,
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: textMain,
+                ),
+              ),
+              subtitle: Text(
+                '${report.reportType.toUpperCase()} • ${report.affectedCount} Affected',
+                style: const TextStyle(color: textMuted),
+              ),
+              trailing: const Icon(Icons.chevron_right, color: textMuted),
+              onTap: () => context.push(
+                '/vet-reports/${report.reportId}?lang=${widget.languageCode}',
+              ),
             ),
           ),
         );

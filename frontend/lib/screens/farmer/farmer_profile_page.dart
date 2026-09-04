@@ -588,29 +588,31 @@ class _FarmerProfilePageState extends State<FarmerProfilePage> {
         backgroundColor: backgroundLight,
         elevation: 0,
         scrolledUnderElevation: 0,
-        leading: Padding(
-          padding: const EdgeInsets.all(8.0),
-          child: _buildHeaderAvatar(
-            avatarUrl: _profile?.profileImageUrl,
-            displayName: profileName,
-            radius: 20,
-            backgroundColor: textGreyLight,
-            foregroundColor: brandDarkGreen,
-          ),
-        ),
-        title: Text(
-          _getText('app_bar_title'),
-          style: const TextStyle(
+        titleSpacing: 16,
+        title: const Text(
+          'VacTracker',
+          style: TextStyle(
             color: brandDarkGreen,
-            fontSize: 20,
+            fontSize: 18,
             fontWeight: FontWeight.bold,
           ),
         ),
         actions: [
-          const SizedBox(width: 8),
           NotificationHeaderButton(
             languageCode: widget.languageCode,
             color: brandDarkGreen,
+          ),
+          IconButton(
+            tooltip: 'Profile',
+            onPressed: () =>
+                context.push('/farmer-profile/${widget.languageCode}'),
+            icon: _buildHeaderAvatar(
+              avatarUrl: _profile?.profileImageUrl,
+              displayName: profileName,
+              radius: 18,
+              backgroundColor: textGreyLight,
+              foregroundColor: brandDarkGreen,
+            ),
           ),
           const SizedBox(width: 8),
         ],

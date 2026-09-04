@@ -4,6 +4,7 @@ import 'package:frontend/models/sick_report.dart';
 import 'package:frontend/services/flock_service.dart';
 import 'package:frontend/services/sick_report_service.dart';
 import 'package:frontend/services/vaccination_service.dart';
+import 'package:frontend/services/vaccination_schedule_service.dart';
 import 'package:frontend/services/storage_service.dart';
 import 'package:frontend/widgets/notification_header_button.dart';
 import 'package:frontend/widgets/farmer_bottom_navigation.dart';
@@ -25,7 +26,8 @@ class FarmerDashboardPage extends StatefulWidget {
   State<FarmerDashboardPage> createState() => _FarmerDashboardPageState();
 }
 
-class _FarmerDashboardPageState extends State<FarmerDashboardPage> {
+class _FarmerDashboardPageState extends State<FarmerDashboardPage>
+    with WidgetsBindingObserver {
   final FlockService _flockService = FlockService();
   final SickReportService _sickReportService = SickReportService();
   final VaccinationService _vaccinationService = VaccinationService();
@@ -38,7 +40,6 @@ class _FarmerDashboardPageState extends State<FarmerDashboardPage> {
   int _totalFlocks = 0;
   int _totalBirds = 0;
   int _flockHealthPercentage = 0;
-  int _overdueFlocks = 0;
   int _upcomingVaccinations = 0;
   int _overdueVaccinations = 0;
   List<Map<String, dynamic>> _recentVaccinations = [];
@@ -55,6 +56,11 @@ class _FarmerDashboardPageState extends State<FarmerDashboardPage> {
   static const Color statusYellowBg = Color(0xFFFFF7E5);
   static const Color statusRed = Color(0xFFA80000);
   static const Color statusRedBg = Color(0xFFFDE8E8);
+
+  // --- Slate design tokens (UI refresh) ---
+  static const Color cardBorder = Color(0xFFE2E8F0);
+  static const Color textPrimary = Color(0xFF0F172A);
+  static const Color textSecondary = Color(0xFF64748B);
 
   final Map<String, Map<String, String>> _localizedValues = const {
     'en': {
@@ -136,6 +142,7 @@ class _FarmerDashboardPageState extends State<FarmerDashboardPage> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _loadUserName();
     _loadDashboardData();
     if (widget.showSavedMessage) {
@@ -149,6 +156,19 @@ class _FarmerDashboardPageState extends State<FarmerDashboardPage> {
           ),
         );
       });
+    }
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && mounted) {
+      _loadDashboardData();
     }
   }
 
@@ -201,7 +221,6 @@ class _FarmerDashboardPageState extends State<FarmerDashboardPage> {
       // Calculate metrics
       final totalFlocks = flocks.length;
       final totalBirds = flocks.fold<int>(0, (s, f) => s + (f.birdCount));
-      final overdueFlocks = flocks.where((f) => f.ageInDays > 45).length;
 
       // A report is a current count for its flock, not an additional count.
       // Keep only its newest report so historical reports are not double-counted.
@@ -229,26 +248,11 @@ class _FarmerDashboardPageState extends State<FarmerDashboardPage> {
           ? 0
           : ((healthyBirds / totalBirds) * 100).round();
 
-      // Process vaccination data
-      final now = DateTime.now();
-      int upcomingVaccinations = 0;
-      int overdueVaccinations = 0;
+      // Use one calendar-date/status calculation for every vaccination screen.
+      final vaccinationSchedule = VaccinationScheduleSummary.fromRecords(
+        vaccinations,
+      );
       final recentVaccinations = <Map<String, dynamic>>[];
-
-      for (var v in vaccinations) {
-        final nextDueDate = v['next_due_date'] != null
-            ? DateTime.tryParse(v['next_due_date'])
-            : null;
-
-        if (nextDueDate != null) {
-          final daysUntilDue = nextDueDate.difference(now).inDays;
-          if (daysUntilDue < 0) {
-            overdueVaccinations++;
-          } else if (daysUntilDue <= 7) {
-            upcomingVaccinations++;
-          }
-        }
-      }
 
       // Sort recent vaccinations by date (most recent first)
       recentVaccinations.sort(
@@ -263,9 +267,8 @@ class _FarmerDashboardPageState extends State<FarmerDashboardPage> {
         _totalFlocks = totalFlocks;
         _totalBirds = totalBirds;
         _flockHealthPercentage = flockHealthPercentage;
-        _overdueFlocks = overdueFlocks;
-        _upcomingVaccinations = upcomingVaccinations;
-        _overdueVaccinations = overdueVaccinations;
+        _upcomingVaccinations = vaccinationSchedule.dueSoonCount;
+        _overdueVaccinations = vaccinationSchedule.overdueCount;
         _recentVaccinations = recentVaccinations;
         _isLoading = false;
       });
@@ -485,9 +488,9 @@ class _FarmerDashboardPageState extends State<FarmerDashboardPage> {
                   _buildMetricsGrid(),
                   const SizedBox(height: 16),
 
-                  // Vaccination Alerts Card
-                  if (_overdueVaccinations > 0 || _upcomingVaccinations > 0)
-                    _buildVaccinationAlertCard(),
+                  // // Vaccination Alerts Card
+                  // if (_overdueVaccinations > 0 || _upcomingVaccinations > 0)
+                  //   _buildVaccinationAlertCard(),
                   if (_overdueVaccinations > 0 || _upcomingVaccinations > 0)
                     const SizedBox(height: 16),
 
@@ -534,6 +537,9 @@ class _FarmerDashboardPageState extends State<FarmerDashboardPage> {
   Widget _buildMetricsGrid() {
     return Column(
       children: [
+        // Hero: full-width flock health ring card
+        _buildFlockHealthCard(),
+        const SizedBox(height: 12),
         // Row 1: Total Birds and Total Flocks
         Row(
           children: [
@@ -541,19 +547,29 @@ class _FarmerDashboardPageState extends State<FarmerDashboardPage> {
               child: _buildMetricCard(
                 title: _getText('total_birds'),
                 value: _totalBirds.toString(),
-                subtitle: _getText('total_flocks'),
-                subtitleValue: _totalFlocks.toString(),
+                subtitle: _getText('month_growth'),
+                subtitleValue: '',
                 icon: Icons.pets_outlined,
                 color: brandDarkGreen,
                 bgColor: const Color(0xFFE8F5E9),
               ),
             ),
             const SizedBox(width: 12),
-            Expanded(child: _buildFlockHealthCard()),
+            Expanded(
+              child: _buildMetricCard(
+                title: _getText('total_flocks'),
+                value: _totalFlocks.toString(),
+                subtitle: _getText('healthy_flocks'),
+                subtitleValue: '',
+                icon: Icons.warehouse_outlined,
+                color: statusGreen,
+                bgColor: statusGreenBg,
+              ),
+            ),
           ],
         ),
         const SizedBox(height: 12),
-        // Row 2: Vaccination Status
+        // Row 2: Vaccination Status and Overdue Flocks
         Row(
           children: [
             Expanded(
@@ -570,13 +586,13 @@ class _FarmerDashboardPageState extends State<FarmerDashboardPage> {
             const SizedBox(width: 12),
             Expanded(
               child: _buildMetricCard(
-                title: _getText('overdue_flocks'),
-                value: _overdueFlocks.toString(),
+                title: _getText('vaccination_status'),
+                value: _overdueVaccinations.toString(),
                 subtitle: _getText('overdue_vaccinations'),
                 subtitleValue: '$_overdueVaccinations',
                 icon: Icons.warning_amber_outlined,
-                color: _overdueFlocks > 0 ? statusRed : textGrey,
-                bgColor: _overdueFlocks > 0
+                color: _overdueVaccinations > 0 ? statusRed : textGrey,
+                bgColor: _overdueVaccinations > 0
                     ? statusRedBg
                     : const Color(0xFFF1F5F9),
               ),
@@ -603,17 +619,19 @@ class _FarmerDashboardPageState extends State<FarmerDashboardPage> {
         : _flockHealthPercentage >= 70
         ? 'Needs Attention'
         : 'Critical';
-    (_flockHealthPercentage / 100).clamp(0.0, 1.0);
+    final ringValue = (_flockHealthPercentage / 100).clamp(0.0, 1.0);
 
     return Container(
-      padding: const EdgeInsets.all(16),
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: cardBorder),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.02),
-            blurRadius: 10,
+            blurRadius: 12,
             offset: const Offset(0, 4),
           ),
         ],
@@ -621,43 +639,125 @@ class _FarmerDashboardPageState extends State<FarmerDashboardPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: healthBackground,
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Icon(
-              Icons.health_and_safety_outlined,
-              color: healthColor,
-              size: 20,
-            ),
+          // Title + semantic status chip
+          Row(
+            children: [
+              const Icon(
+                Icons.health_and_safety_outlined,
+                color: brandDarkGreen,
+                size: 22,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  _getText('flock_health'),
+                  style: const TextStyle(
+                    color: textPrimary,
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 5,
+                ),
+                decoration: BoxDecoration(
+                  color: healthBackground,
+                  borderRadius: BorderRadius.circular(100),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 7,
+                      height: 7,
+                      decoration: BoxDecoration(
+                        color: healthColor,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    const SizedBox(width: 5),
+                    Text(
+                      status,
+                      style: TextStyle(
+                        color: healthColor,
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 12),
-          Text(
-            _getText('flock_health'),
-            style: const TextStyle(
-              color: textGrey,
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            '$_flockHealthPercentage%',
-            style: TextStyle(
-              color: healthColor,
-              fontSize: 28,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          Text(
-            status,
-            style: TextStyle(
-              color: healthColor,
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-            ),
+          const SizedBox(height: 20),
+          // Circular progress ring + summary side by side
+          Row(
+            children: [
+              SizedBox(
+                width: 96,
+                height: 96,
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    CircularProgressIndicator(
+                      value: ringValue,
+                      strokeWidth: 10,
+                      strokeCap: StrokeCap.round,
+                      backgroundColor: healthBackground,
+                      valueColor: AlwaysStoppedAnimation<Color>(healthColor),
+                    ),
+                    Center(
+                      child: Text(
+                        '$_flockHealthPercentage%',
+                        style: TextStyle(
+                          color: healthColor,
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          height: 1.0,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 20),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      status,
+                      style: TextStyle(
+                        color: healthColor,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      _getText('total_birds'),
+                      style: const TextStyle(
+                        color: textSecondary,
+                        fontSize: 12,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      '$_totalBirds',
+                      style: const TextStyle(
+                        color: textPrimary,
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                        height: 1.0,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -673,15 +773,20 @@ class _FarmerDashboardPageState extends State<FarmerDashboardPage> {
     required Color color,
     required Color bgColor,
   }) {
+    final pillText = subtitleValue.isNotEmpty
+        ? '$subtitle · $subtitleValue'
+        : subtitle;
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: cardBorder),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.02),
-            blurRadius: 10,
+            blurRadius: 12,
             offset: const Offset(0, 4),
           ),
         ],
@@ -692,6 +797,16 @@ class _FarmerDashboardPageState extends State<FarmerDashboardPage> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
+              Expanded(
+                child: Text(
+                  title,
+                  style: const TextStyle(
+                    color: textSecondary,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
@@ -704,115 +819,111 @@ class _FarmerDashboardPageState extends State<FarmerDashboardPage> {
           ),
           const SizedBox(height: 12),
           Text(
-            title,
-            style: TextStyle(
-              color: textGrey,
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
             value,
             style: TextStyle(
               color: color,
               fontSize: 28,
               fontWeight: FontWeight.bold,
+              height: 1.1,
             ),
           ),
-          const SizedBox(height: 4),
-          Row(
-            children: [
-              Text(subtitle, style: TextStyle(color: textGrey, fontSize: 11)),
-              const SizedBox(width: 4),
-              Text(
-                subtitleValue,
-                style: TextStyle(
-                  color: color,
-                  fontSize: 11,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildVaccinationAlertCard() {
-    final hasOverdue = _overdueVaccinations > 0;
-
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: hasOverdue ? const Color(0xFFFEECEB) : const Color(0xFFFFF7E5),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: hasOverdue ? const Color(0xFFEF4444) : const Color(0xFFB78209),
-          width: 1.5,
-        ),
-      ),
-      child: Row(
-        children: [
+          const SizedBox(height: 10),
+          // Pill container for the secondary subtitle
           Container(
-            padding: const EdgeInsets.all(10),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
             decoration: BoxDecoration(
-              color: hasOverdue
-                  ? const Color(0xFFDC2626)
-                  : const Color(0xFFB78209),
-              shape: BoxShape.circle,
+              color: bgColor,
+              borderRadius: BorderRadius.circular(100),
             ),
-            child: Icon(
-              hasOverdue ? Icons.warning_rounded : Icons.schedule_rounded,
-              color: Colors.white,
-              size: 20,
+            child: Text(
+              pillText,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: color,
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+              ),
             ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  hasOverdue
-                      ? '${_getText('overdue_vaccinations')}: $_overdueVaccinations'
-                      : '${_getText('upcoming_vaccinations')}: $_upcomingVaccinations',
-                  style: TextStyle(
-                    color: hasOverdue
-                        ? const Color(0xFF7F1D1D)
-                        : const Color(0xFF78350F),
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  hasOverdue
-                      ? 'Action required: Some vaccinations are overdue'
-                      : 'Vaccinations due within the next 7 days',
-                  style: TextStyle(
-                    color: hasOverdue
-                        ? const Color(0xFFDC2626)
-                        : const Color(0xFFB78209),
-                    fontSize: 13,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Icon(
-            Icons.arrow_forward_ios,
-            color: hasOverdue
-                ? const Color(0xFFDC2626)
-                : const Color(0xFFB78209),
-            size: 16,
           ),
         ],
       ),
     );
   }
+
+  // Widget _buildVaccinationAlertCard() {
+  //   final hasOverdue = _overdueVaccinations > 0;
+
+  //   return Container(
+  //     width: double.infinity,
+  //     padding: const EdgeInsets.all(16),
+  //     decoration: BoxDecoration(
+  //       color: hasOverdue ? const Color(0xFFFEECEB) : const Color(0xFFFFF7E5),
+  //       borderRadius: BorderRadius.circular(16),
+  //       border: Border.all(
+  //         color: hasOverdue ? const Color(0xFFEF4444) : const Color(0xFFB78209),
+  //         width: 1.5,
+  //       ),
+  //     ),
+  //     // child: Row(
+  //     //   children: [
+  //     //     Container(
+  //     //       padding: const EdgeInsets.all(10),
+  //     //       decoration: BoxDecoration(
+  //     //         color: hasOverdue
+  //     //             ? const Color(0xFFDC2626)
+  //     //             : const Color(0xFFB78209),
+  //     //         shape: BoxShape.circle,
+  //     //       ),
+  //     //       child: Icon(
+  //     //         hasOverdue ? Icons.warning_rounded : Icons.schedule_rounded,
+  //     //         color: Colors.white,
+  //     //         size: 20,
+  //     //       ),
+  //     //     ),
+  //     //     const SizedBox(width: 16),
+  //     //     Expanded(
+  //     //       child: Column(
+  //     //         crossAxisAlignment: CrossAxisAlignment.start,
+  //     //         children: [
+  //     //           Text(
+  //     //             hasOverdue
+  //     //                 ? '${_getText('overdue_vaccinations')}: $_overdueVaccinations'
+  //     //                 : '${_getText('upcoming_vaccinations')}: $_upcomingVaccinations',
+  //     //             style: TextStyle(
+  //     //               color: hasOverdue
+  //     //                   ? const Color(0xFF7F1D1D)
+  //     //                   : const Color(0xFF78350F),
+  //     //               fontSize: 16,
+  //     //               fontWeight: FontWeight.bold,
+  //     //             ),
+  //     //           ),
+  //     //           const SizedBox(height: 4),
+  //     //           Text(
+  //     //             hasOverdue
+  //     //                 ? 'Action required: Some vaccinations are overdue'
+  //     //                 : 'Vaccinations due within the next 7 days',
+  //     //             style: TextStyle(
+  //     //               color: hasOverdue
+  //     //                   ? const Color(0xFFDC2626)
+  //     //                   : const Color(0xFFB78209),
+  //     //               fontSize: 13,
+  //     //             ),
+  //     //           ),
+  //     //         ],
+  //     //       ),
+  //     //     ),
+  //     //     Icon(
+  //     //       Icons.arrow_forward_ios,
+  //     //       color: hasOverdue
+  //     //           ? const Color(0xFFDC2626)
+  //     //           : const Color(0xFFB78209),
+  //     //       size: 16,
+  //     //     ),
+  //     //   ],
+  //     // ),
+  //   );
+  // }
 
   Widget _buildSectionHeader(String title, String actionText) {
     return Row(
@@ -987,20 +1098,21 @@ class _FarmerDashboardPageState extends State<FarmerDashboardPage> {
       child: Container(
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: cardBorder),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.015),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
+              color: Colors.black.withValues(alpha: 0.02),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
             ),
           ],
         ),
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(20),
           child: Container(
             decoration: BoxDecoration(
-              border: Border(left: BorderSide(color: accentColor, width: 5)),
+              border: Border(left: BorderSide(color: accentColor, width: 4)),
             ),
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             child: Row(
@@ -1008,12 +1120,12 @@ class _FarmerDashboardPageState extends State<FarmerDashboardPage> {
                 Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF1F5F9),
-                    borderRadius: BorderRadius.circular(8),
+                    color: statusBgColor,
+                    borderRadius: BorderRadius.circular(12),
                   ),
                   child: Icon(
                     Icons.store_mall_directory_outlined,
-                    color: brandDarkGreen,
+                    color: accentColor,
                     size: 24,
                   ),
                 ),
@@ -1032,7 +1144,7 @@ class _FarmerDashboardPageState extends State<FarmerDashboardPage> {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        '${flock.birdCount} ${_getText('birds')} • ${_getText('day')} ${flock.ageInDays}',
+                        '${flock.birdCount} ${_getText('birds')}',
                         style: const TextStyle(color: textGrey, fontSize: 12),
                       ),
                     ],

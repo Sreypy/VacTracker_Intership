@@ -3,7 +3,10 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 
 import { Reminder, ReminderSender, ReminderStatus } from './entities/reminder.entity';
-import { Vaccination } from 'src/vaccinations/entities/vaccination.entity';
+import {
+  Vaccination,
+  VaccinationStatus,
+} from 'src/vaccinations/entities/vaccination.entity';
 import { NotificationsService } from 'src/notifications/notifications.service';
 
 @Injectable()
@@ -57,7 +60,10 @@ export class RemindersService {
     });
 
     for (const vaccination of vaccinations) {
-      if (vaccination.next_due_date) {
+      if (
+        vaccination.status !== VaccinationStatus.COMPLETED &&
+        vaccination.next_due_date
+      ) {
         await this.createReminder(vaccination);
       }
     }
@@ -88,6 +94,10 @@ export class RemindersService {
   }
 
   async createReminder(vaccination: Vaccination): Promise<Reminder | null> {
+    if (vaccination.status === VaccinationStatus.COMPLETED) {
+      return null;
+    }
+
     const vaccinationWithRelations = await this.vaccinationRepository.findOne({
       where: {
         vaccination_id: vaccination.vaccination_id,

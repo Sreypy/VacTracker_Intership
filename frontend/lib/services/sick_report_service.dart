@@ -56,10 +56,13 @@ class SickReportService {
 
     final url = Uri.parse('${ApiConfig.baseUrl}/sick-reports/$reportId');
     final response = await http
-        .get(url, headers: {
-          'Authorization': 'Bearer $token',
-          'Accept': 'application/json',
-        })
+        .get(
+          url,
+          headers: {
+            'Authorization': 'Bearer $token',
+            'Accept': 'application/json',
+          },
+        )
         .timeout(const Duration(seconds: 8));
     if (response.statusCode != 200) {
       throw Exception('Failed to load sick report: ${response.statusCode}');
@@ -70,5 +73,38 @@ class SickReportService {
       throw Exception('Unexpected response format from server.');
     }
     return SickReport.fromJson(Map<String, dynamic>.from(decoded));
+  }
+
+  Future<SickReport> markResolved(int reportId) async {
+    final token = await StorageService.getToken();
+    if (token == null || token.isEmpty) {
+      throw Exception('Authentication token is missing. Are you logged in?');
+    }
+
+    final url = Uri.parse('${ApiConfig.baseUrl}/sick-reports/$reportId');
+    final response = await http
+        .patch(
+          url,
+          headers: {
+            'Authorization': 'Bearer $token',
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+          },
+          body: jsonEncode({'status': 'resolved'}),
+        )
+        .timeout(const Duration(seconds: 8));
+
+    if (response.statusCode != 200 && response.statusCode != 204) {
+      throw Exception(
+        'Failed to mark report as resolved: ${response.statusCode} ${response.body}',
+      );
+    }
+
+    final decoded = jsonDecode(response.body.isEmpty ? '{}' : response.body);
+    if (decoded is Map) {
+      return SickReport.fromJson(Map<String, dynamic>.from(decoded));
+    }
+
+    return fetchReport(reportId);
   }
 }

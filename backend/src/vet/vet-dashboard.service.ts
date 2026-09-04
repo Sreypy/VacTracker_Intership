@@ -5,7 +5,7 @@ import { Vaccination, VaccinationStatus } from '../vaccinations/entities/vaccina
 import { Flock } from '../flocks/entities/flock.entity';
 import { User, UserRole } from '../users/entities/user.entity';
 import { VetFarmerConnection, ConnectionStatus } from '../users/entities/vet-farmer-connection.entity';
-import { SickReport } from '../sick-reports/entities/sick-report.entity';
+import { ReportStatus, SickReport } from '../sick-reports/entities/sick-report.entity';
 
 @Injectable()
 export class VetDashboardService {
@@ -97,11 +97,9 @@ export class VetDashboardService {
     // Summary cards
     const connectedFarmers = connections.length;
     const totalFlocks = flocks.length;
-    const newSickReports = sickReports.filter(sr => {
-      const reportDate = new Date(sr.created_at);
-      reportDate.setHours(0, 0, 0, 0);
-      return reportDate.getTime() === today.getTime();
-    }).length;
+    const newSickReports = sickReports.filter(
+      sr => sr.status === ReportStatus.PENDING,
+    ).length;
 
     const overdueVaccinations = vaccinations.filter(v => {
       if (v.status === VaccinationStatus.COMPLETED) return false;

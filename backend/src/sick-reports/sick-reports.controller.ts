@@ -55,6 +55,23 @@ export class SickReportsController {
     return this.sickReportsService.update(+id, updateSickReportDto, req.user.user_id, req.user.role);
   }
 
+  @Patch(':id/resolve')
+  resolve(
+    @Param('id') id: string,
+    @Request() req,
+  ) {
+    return this.sickReportsService.resolveReport(+id, req.user.user_id, req.user.role);
+  }
+
+  @Patch(':id/follow-up')
+  followUp(
+    @Param('id') id: string,
+    @Body('message') message: string,
+    @Request() req,
+  ) {
+    return this.sickReportsService.sendFollowUp(+id, req.user.user_id, req.user.role, message);
+  }
+
   @Delete(':id')
   remove(@Param('id') id: string, @Request() req) {
     return this.sickReportsService.remove(+id, req.user.user_id, req.user.role);

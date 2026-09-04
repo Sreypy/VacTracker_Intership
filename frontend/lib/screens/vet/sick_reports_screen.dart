@@ -46,7 +46,7 @@ class _VetSickReportsScreenState extends State<VetSickReportsScreen> {
       'subtitle': 'Review health reports from your farmers',
       'filter_all': 'All',
       'filter_new': 'New',
-      'filter_reviewing': 'Reviewing',
+      'filter_reviewing': 'Vet Responded',
       'filter_resolved': 'Resolved',
       'loading': 'Loading reports...',
       'load_error': 'Could not load sick reports.',
@@ -54,7 +54,7 @@ class _VetSickReportsScreenState extends State<VetSickReportsScreen> {
       'no_reports': 'No sick reports found',
       'no_reports_subtitle': 'All your farmers\' flocks are healthy!',
       'new_badge': 'NEW',
-      'reviewing_badge': 'REVIEWING',
+      'reviewing_badge': 'VET RESPONDED',
       'resolved_badge': 'RESOLVED',
       'btn_review': 'Review Report',
       'btn_continue': 'Continue Review',
@@ -68,7 +68,7 @@ class _VetSickReportsScreenState extends State<VetSickReportsScreen> {
       'subtitle': 'ពិនិត្យរបាយការណ៍សុខភាពពីកសិកររបស់អ្នក',
       'filter_all': 'ទាំងអស់',
       'filter_new': 'ថ្មី',
-      'filter_reviewing': 'កំពុងពិនិត្យ',
+      'filter_reviewing': 'ពេទ្យសត្វបានឆ្លើយតប',
       'filter_resolved': 'បានដោះស្រាយ',
       'loading': 'កំពុងផ្ទុករបាយការណ៍...',
       'load_error': 'មិនអាចផ្ទុករបាយការណ៍សត្វឈឺបានទេ។',
@@ -76,7 +76,7 @@ class _VetSickReportsScreenState extends State<VetSickReportsScreen> {
       'no_reports': 'មិនមានរបាយការណ៍សត្វឈឺ',
       'no_reports_subtitle': 'ហ្វូងទាំងអស់របស់កសិករមានសុខភាពល្អ!',
       'new_badge': 'ថ្មី',
-      'reviewing_badge': 'កំពុងពិនិត្យ',
+      'reviewing_badge': 'ពេទ្យសត្វបានឆ្លើយតប',
       'resolved_badge': 'បានដោះស្រាយ',
       'btn_review': 'ពិនិត្យរបាយការណ៍',
       'btn_continue': 'បន្តការពិនិត្យ',
@@ -451,9 +451,7 @@ class _VetSickReportsScreenState extends State<VetSickReportsScreen> {
       ),
       child: InkWell(
         onTap: () {
-          context.push(
-            '/vet-reports/$reportId?lang=${widget.languageCode}',
-          );
+          context.push('/vet-reports/$reportId?lang=${widget.languageCode}');
         },
         borderRadius: BorderRadius.circular(16),
         child: Padding(

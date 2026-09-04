@@ -4,7 +4,9 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
+import 'package:go_router/go_router.dart';
 import 'package:frontend/widgets/farmer_bottom_navigation.dart';
+import 'package:frontend/widgets/notification_header_button.dart';
 import 'package:frontend/config/api_config.dart';
 import 'package:frontend/models/flock.dart';
 import 'package:frontend/services/flock_service.dart';
@@ -20,6 +22,9 @@ class SickReportScreen extends StatefulWidget {
 }
 
 class _SickReportScreenState extends State<SickReportScreen> {
+  String _profileName = '';
+  String _profileImageUrl = '';
+
   // Theme Colors
   static const Color primaryGreen = Color(0xFF034418);
   static const Color backgroundLight = Color(0xFFF8FAFC);
@@ -118,9 +123,93 @@ class _SickReportScreenState extends State<SickReportScreen> {
         _localizedValues['en']![key]!;
   }
 
+  Future<void> _loadProfile() async {
+    final storedName = await StorageService.getName();
+    final storedImageUrl = await StorageService.getProfileImageUrl();
+    if (!mounted) return;
+    setState(() {
+      if (storedName?.trim().isNotEmpty == true) {
+        _profileName = storedName!.trim();
+      }
+      if (storedImageUrl?.trim().isNotEmpty == true) {
+        _profileImageUrl = storedImageUrl!.trim();
+      }
+    });
+
+    try {
+      final token = await StorageService.getToken();
+      if (token == null || token.isEmpty) return;
+      final response = await http.get(
+        Uri.parse('${ApiConfig.baseUrl}/users/profile'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+      if (response.statusCode != 200 || !mounted) return;
+      final profile = jsonDecode(response.body) as Map<String, dynamic>;
+      final name = (profile['name'] ?? '').toString().trim();
+      final imageUrl =
+          (profile['profile_image_url'] ??
+                  profile['avatar_url'] ??
+                  profile['profile_image'] ??
+                  profile['image_url'] ??
+                  profile['photo_url'] ??
+                  '')
+              .toString()
+              .trim();
+      setState(() {
+        if (name.isNotEmpty) _profileName = name;
+        if (imageUrl.isNotEmpty) _profileImageUrl = imageUrl;
+      });
+      await StorageService.saveUser(profile);
+    } catch (_) {
+      // Stored profile data or initials remain available as a fallback.
+    }
+  }
+
+  Widget _buildProfileAvatar() {
+    final initial = _profileName.trim().isNotEmpty
+        ? _profileName.trim()[0].toUpperCase()
+        : 'U';
+    final bool hasImage = _profileImageUrl.isNotEmpty;
+    return Container(
+      width: 34,
+      height: 34,
+      decoration: BoxDecoration(
+        color: primaryGreen.withValues(alpha: 0.1),
+        shape: BoxShape.circle,
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: hasImage
+          ? Image.network(
+              _profileImageUrl,
+              fit: BoxFit.cover,
+              errorBuilder: (_, _, _) => Center(
+                child: Text(
+                  initial,
+                  style: const TextStyle(
+                    color: primaryGreen,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                  ),
+                ),
+              ),
+            )
+          : Center(
+              child: Text(
+                initial,
+                style: const TextStyle(
+                  color: primaryGreen,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                ),
+              ),
+            ),
+    );
+  }
+
   @override
   void initState() {
     super.initState();
+    _loadProfile();
     _languageCode = widget.languageCode;
     _loadFlocks();
   }
@@ -431,14 +520,28 @@ class _SickReportScreenState extends State<SickReportScreen> {
           icon: const Icon(Icons.arrow_back, color: primaryGreen),
           onPressed: () => Navigator.maybePop(context),
         ),
-        title: Text(
-          _getText('page_title'),
-          style: const TextStyle(
+        titleSpacing: 16,
+        title: const Text(
+          'VacTracker',
+          style: TextStyle(
             color: primaryGreen,
-            fontSize: 20,
+            fontSize: 18,
             fontWeight: FontWeight.bold,
           ),
         ),
+        actions: [
+          NotificationHeaderButton(
+            languageCode: widget.languageCode,
+            color: primaryGreen,
+          ),
+          IconButton(
+            tooltip: 'Profile',
+            onPressed: () =>
+                context.push('/farmer-profile/${widget.languageCode}'),
+            icon: _buildProfileAvatar(),
+          ),
+          const SizedBox(width: 8),
+        ],
       ),
       body: _isLoading
           ? Center(child: Text(_getText('loading')))

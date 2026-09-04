@@ -77,7 +77,8 @@ class _VetSickReportDetailScreenState extends State<VetSickReportDetailScreen> {
       'retry': 'Retry',
 
       'needs_review': 'Needs Review',
-      'reviewed': 'Reviewed',
+      'vet_responded': 'Vet Responded',
+      'resolved': 'Resolved',
 
       'section_info': 'Report Overview',
       'label_flock': 'Flock',
@@ -94,9 +95,11 @@ class _VetSickReportDetailScreenState extends State<VetSickReportDetailScreen> {
       'view_photo': 'View Photo',
 
       'section_response': 'Veterinarian Response',
+      'resolved_message': 'The farmer confirmed that this issue is resolved.',
       'label_diagnosis': 'Diagnosis',
       'label_advice': 'Advice',
       'label_action': 'Recommended Action',
+      'label_response_date': 'Response date',
 
       'hint_diagnosis': 'Enter diagnosis...',
       'hint_advice': 'Enter advice for farmer...',
@@ -132,7 +135,8 @@ class _VetSickReportDetailScreenState extends State<VetSickReportDetailScreen> {
       'retry': 'ព្យាយាមម្តងទៀត',
 
       'needs_review': 'ត្រូវការពិនិត្យ',
-      'reviewed': 'បានពិនិត្យ',
+      'vet_responded': 'ពេទ្យសត្វបានឆ្លើយតប',
+      'resolved': 'បានដោះស្រាយ',
 
       'section_info': 'ព័ត៌មានរបាយការណ៍',
       'label_flock': 'ហ្វូង',
@@ -149,9 +153,11 @@ class _VetSickReportDetailScreenState extends State<VetSickReportDetailScreen> {
       'view_photo': 'មើលរូបភាព',
 
       'section_response': 'ការឆ្លើយតបរបស់ពេទ្យសត្វ',
+      'resolved_message': 'កសិករបានបញ្ជាក់ថាបញ្ហានេះត្រូវបានដោះស្រាយ។',
       'label_diagnosis': 'រោគវិនិច្ឆ័យ',
       'label_advice': 'ការណែនាំ',
       'label_action': 'សកម្មភាពដែលបានណែនាំ',
+      'label_response_date': 'កាលបរិច្ឆេទឆ្លើយតប',
 
       'hint_diagnosis': 'បញ្ចូលរោគវិនិច្ឆ័យ...',
       'hint_advice': 'បញ្ចូលការណែនាំសម្រាប់កសិករ...',
@@ -404,6 +410,7 @@ class _VetSickReportDetailScreenState extends State<VetSickReportDetailScreen> {
     final status = _report?['status']?.toString().toLowerCase();
 
     final isReviewed = status == 'reviewed';
+    final isResolved = status == 'resolved';
 
     return AppBar(
       backgroundColor: const Color.fromARGB(255, 255, 255, 255),
@@ -435,23 +442,29 @@ class _VetSickReportDetailScreenState extends State<VetSickReportDetailScreen> {
           margin: const EdgeInsets.only(right: 16),
           padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
           decoration: BoxDecoration(
-            color: isReviewed ? greenLight : warningBg,
+            color: isReviewed || isResolved ? greenLight : warningBg,
             borderRadius: BorderRadius.circular(20),
           ),
           child: Row(
             children: [
               Icon(
-                isReviewed
+                isResolved
+                    ? Icons.check_circle_rounded
+                    : isReviewed
                     ? Icons.check_circle_outline_rounded
                     : Icons.access_time_rounded,
                 size: 15,
-                color: isReviewed ? primaryGreen : warningText,
+                color: isReviewed || isResolved ? primaryGreen : warningText,
               ),
               const SizedBox(width: 5),
               Text(
-                isReviewed ? _getText('reviewed') : _getText('needs_review'),
+                isResolved
+                    ? _getText('resolved')
+                    : isReviewed
+                    ? _getText('vet_responded')
+                    : _getText('needs_review'),
                 style: TextStyle(
-                  color: isReviewed ? primaryGreen : warningText,
+                  color: isReviewed || isResolved ? primaryGreen : warningText,
                   fontSize: 12,
                   fontWeight: FontWeight.w700,
                 ),
@@ -468,6 +481,9 @@ class _VetSickReportDetailScreenState extends State<VetSickReportDetailScreen> {
   // ============================================================
 
   Widget _buildContent() {
+    final status = _report?['status']?.toString().toLowerCase();
+    final isResolved = status == 'resolved';
+
     return SingleChildScrollView(
       physics: const BouncingScrollPhysics(),
 
@@ -528,15 +544,15 @@ class _VetSickReportDetailScreenState extends State<VetSickReportDetailScreen> {
 
           const SizedBox(height: 28),
 
-          _buildResponseHeader(),
+          _buildResponseHeader(isResolved: isResolved),
 
           const SizedBox(height: 12),
 
-          _buildResponseForm(),
+          isResolved ? _buildResolvedResponse() : _buildResponseForm(),
 
           const SizedBox(height: 24),
 
-          _buildActionButtons(),
+          if (!isResolved) _buildActionButtons(),
 
           const SizedBox(height: 10),
         ],
@@ -1098,7 +1114,7 @@ class _VetSickReportDetailScreenState extends State<VetSickReportDetailScreen> {
   // RESPONSE HEADER
   // ============================================================
 
-  Widget _buildResponseHeader() {
+  Widget _buildResponseHeader({bool isResolved = false}) {
     return Container(
       width: double.infinity,
 
@@ -1147,7 +1163,9 @@ class _VetSickReportDetailScreenState extends State<VetSickReportDetailScreen> {
                 const SizedBox(height: 3),
 
                 Text(
-                  _isKhmer
+                  isResolved
+                      ? _getText('resolved_message')
+                      : _isKhmer
                       ? 'ផ្តល់ការវាយតម្លៃ និងការណែនាំដល់កសិករ'
                       : 'Provide your assessment and guidance to the farmer.',
                   style: TextStyle(
@@ -1166,6 +1184,67 @@ class _VetSickReportDetailScreenState extends State<VetSickReportDetailScreen> {
   // ============================================================
   // RESPONSE FORM
   // ============================================================
+
+  Widget _buildResolvedResponse() {
+    final diagnosis =
+        _report?['vetDiagnosis']?.toString() ??
+        _report?['vetNotes']?.toString() ??
+        '';
+    final advice = _report?['vetAdvice']?.toString() ?? '';
+    final respondedAt = _report?['respondedAt']?.toString() ?? '';
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: _cardDecoration(),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(
+                Icons.check_circle_outline_rounded,
+                color: primaryGreen,
+                size: 21,
+              ),
+              const SizedBox(width: 9),
+              Text(
+                _getText('resolved'),
+                style: const TextStyle(
+                  color: primaryGreen,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+          if (respondedAt.isNotEmpty) ...[
+            const SizedBox(height: 6),
+            Text(
+              '${_getText('label_response_date')}: ${respondedAt.split('T').first}',
+              style: const TextStyle(color: textMuted, fontSize: 12),
+            ),
+          ],
+          if (diagnosis.isNotEmpty) ...[
+            const SizedBox(height: 18),
+            _buildInfoItem(
+              Icons.medical_information_outlined,
+              _getText('label_diagnosis'),
+              diagnosis,
+            ),
+          ],
+          if (advice.isNotEmpty) ...[
+            const SizedBox(height: 14),
+            _buildInfoItem(
+              Icons.lightbulb_outline_rounded,
+              _getText('label_advice'),
+              advice,
+            ),
+          ],
+        ],
+      ),
+    );
+  }
 
   Widget _buildResponseForm() {
     return Container(
@@ -1759,23 +1838,23 @@ class _VetSickReportDetailScreenState extends State<VetSickReportDetailScreen> {
         elevation: 0,
 
         items: const [
-        BottomNavigationBarItem(
-          icon: Icon(Icons.home_outlined, size: 24),
-          label: 'Home',
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.assignment_outlined, size: 24),
-          label: 'Reports',
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.people_outline_rounded, size: 24),
-          label: 'Farmers',
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.person_outline_rounded, size: 24),
-          label: 'Profile',
-        ),
-      ],
+          BottomNavigationBarItem(
+            icon: Icon(Icons.home_outlined, size: 24),
+            label: 'Home',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.assignment_outlined, size: 24),
+            label: 'Reports',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.people_outline_rounded, size: 24),
+            label: 'Farmers',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.person_outline_rounded, size: 24),
+            label: 'Profile',
+          ),
+        ],
       ),
     );
   }
