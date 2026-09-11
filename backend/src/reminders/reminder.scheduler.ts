@@ -33,7 +33,9 @@ export class ReminderScheduler {
       .leftJoinAndSelect('vaccination.flock', 'flock')
       .leftJoinAndSelect('flock.farmer', 'farmer')
       .leftJoinAndSelect('vaccination.vaccine', 'vaccine')
+      .leftJoinAndSelect('vaccination.next_vaccine', 'next_vaccine')
       .where('vaccination.next_due_date = :date', { date })
+      .andWhere('vaccination.reminder_enabled = :enabled', { enabled: true })
       .getMany();
 
     this.logger.log(`Found ${vaccinations.length} vaccinations due tomorrow.`);
@@ -60,7 +62,9 @@ export class ReminderScheduler {
       .leftJoinAndSelect('vaccination.flock', 'flock')
       .leftJoinAndSelect('flock.farmer', 'farmer')
       .leftJoinAndSelect('vaccination.vaccine', 'vaccine')
+      .leftJoinAndSelect('vaccination.next_vaccine', 'next_vaccine')
       .where('vaccination.next_due_date < :today', { today: todayStr })
+      .andWhere('vaccination.reminder_enabled = :enabled', { enabled: true })
       .andWhere('vaccination.status != :completed', {
         completed: VaccinationStatus.COMPLETED,
       })
@@ -78,7 +82,11 @@ export class ReminderScheduler {
   }
 
   private async createReminderIfNotExists(vaccination: Vaccination): Promise<void> {
-    if (!vaccination.next_due_date || !vaccination.flock?.farmer?.user_id) {
+    if (
+      !vaccination.reminder_enabled ||
+      !vaccination.next_due_date ||
+      !vaccination.flock?.farmer?.user_id
+    ) {
       return;
     }
 
@@ -103,7 +111,7 @@ export class ReminderScheduler {
       vaccination_id: vaccination.vaccination_id,
       farmer_id: vaccination.flock.farmer.user_id,
       title: 'Vaccination Reminder',
-      message: `${vaccination.vaccine.name_en} is due tomorrow for ${vaccination.flock.batch_name}.`,
+      message: `${vaccination.next_vaccine?.name_en ?? vaccination.vaccine.name_en} is due tomorrow for ${vaccination.flock.batch_name}.`,
       scheduled_date: vaccination.next_due_date,
       status: ReminderStatus.PENDING,
       sent_by: ReminderSender.SYSTEM,

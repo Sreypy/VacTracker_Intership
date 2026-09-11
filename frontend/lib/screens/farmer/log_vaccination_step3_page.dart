@@ -82,6 +82,8 @@ class _LogVaccinationStep3PageState extends State<LogVaccinationStep3Page> {
       'lbl_date_given': 'ថ្ងៃចាក់ (Date Given)',
       'lbl_next_vac': 'ចាក់លើកក្រោយ (Next Vaccination)',
       'lbl_next_vaccine': 'វ៉ាក់សាំងបន្ទាប់',
+      'no_next_selected': 'មិនបានជ្រើសរើសវ៉ាក់សាំងបន្ទាប់',
+      'not_scheduled': 'មិនទាន់កំណត់កាលបរិច្ឆេទ',
       'lbl_reminder': 'ការរំលឹក',
       'reminder_on': 'បានបើក',
       'reminder_off': 'មិនបានបើក',
@@ -105,6 +107,8 @@ class _LogVaccinationStep3PageState extends State<LogVaccinationStep3Page> {
       'lbl_date_given': 'Date Given',
       'lbl_next_vac': 'Next Vaccination',
       'lbl_next_vaccine': 'Next Vaccine',
+      'no_next_selected': 'No next vaccine selected',
+      'not_scheduled': 'Not scheduled',
       'lbl_reminder': 'Reminder',
       'reminder_on': 'Enabled',
       'reminder_off': 'Disabled',
@@ -240,13 +244,6 @@ class _LogVaccinationStep3PageState extends State<LogVaccinationStep3Page> {
           '${now.month.toString().padLeft(2, '0')}/'
           '${now.year}';
 
-      DateTime nextDate = now.add(Duration(days: vaccine.intervalDays));
-
-      final formattedNextDate =
-          '${nextDate.day.toString().padLeft(2, '0')}/'
-          '${nextDate.month.toString().padLeft(2, '0')}/'
-          '${nextDate.year}';
-
       setState(() {
         _vaccineName = widget.languageCode == 'km'
             ? vaccine.nameKm
@@ -255,10 +252,8 @@ class _LogVaccinationStep3PageState extends State<LogVaccinationStep3Page> {
         _flockName = flock.batchName;
 
         _dateGiven = formattedDate;
-        _nextVaccineName = widget.languageCode == 'km'
-            ? vaccine.nameKm
-            : vaccine.nameEn;
-        _nextVaccinationDate = formattedNextDate;
+        _nextVaccineName = _getText('no_next_selected');
+        _nextVaccinationDate = _getText('not_scheduled');
 
         _statusBadge = _getText('lbl_status_on_time');
 
@@ -278,17 +273,24 @@ class _LogVaccinationStep3PageState extends State<LogVaccinationStep3Page> {
               DateTime.now();
     final nextDate = data['nextDate'] is DateTime
         ? data['nextDate'] as DateTime
-        : DateTime.tryParse(data['nextDate']?.toString() ?? '') ??
-              adminDate.add(const Duration(days: 7));
+        : DateTime.tryParse(data['nextDate']?.toString() ?? '');
+    final nextVaccineName = data['nextVaccineName']?.toString();
 
     if (mounted) {
       setState(() {
         _vaccineName = data['todayVaccineName']?.toString() ?? '...';
         _flockName = data['flockName']?.toString() ?? widget.flockName;
         _dateGiven = _formatDate(adminDate);
-        _nextVaccineName = data['nextVaccineName']?.toString() ?? '...';
-        _nextVaccinationDate = _formatDate(nextDate);
-        _createReminder = data['createReminder'] == true;
+        _nextVaccineName = nextVaccineName?.trim().isNotEmpty == true
+            ? nextVaccineName!
+            : _getText('no_next_selected');
+        _nextVaccinationDate = nextDate == null
+            ? _getText('not_scheduled')
+            : _formatDate(nextDate);
+        _createReminder =
+            data['createReminder'] == true &&
+            nextVaccineName?.trim().isNotEmpty == true &&
+            nextDate != null;
         _photoPath = data['photoPath']?.toString();
         _photoBytes = data['photoBytes'] as Uint8List?;
         _statusBadge = _getText('lbl_status_on_time');
@@ -310,8 +312,8 @@ class _LogVaccinationStep3PageState extends State<LogVaccinationStep3Page> {
         _vaccineName = 'វ៉ាក់សាំងញូកាស';
         _flockName = 'Chicken Batch A (មាន់ ៥០០ ក្បាល)';
         _dateGiven = '២២/០២/២០២៦';
-        _nextVaccineName = 'វ៉ាក់សាំងញូកាស';
-        _nextVaccinationDate = '១២/០៣/២០២៦';
+        _nextVaccineName = _getText('no_next_selected');
+        _nextVaccinationDate = _getText('not_scheduled');
         _statusBadge = _getText('lbl_status_on_time');
         _isLoading = false;
       });
@@ -327,16 +329,32 @@ class _LogVaccinationStep3PageState extends State<LogVaccinationStep3Page> {
       final vaccineId =
           summaryData?['vaccineId']?.toString() ?? widget.vaccineId;
       final flockId = summaryData?['flockId']?.toString() ?? widget.flockId;
+      final scheduledVaccinationId = summaryData?['vaccinationId']?.toString();
       final administrationDate = summaryData?['administrationDate'] is DateTime
           ? summaryData!['administrationDate'] as DateTime
           : DateTime.now();
+      final nextVaccineId = summaryData?['nextVaccineId']?.toString();
+      final nextDate = summaryData?['nextDate'] is DateTime
+          ? summaryData!['nextDate'] as DateTime
+          : null;
+
+      final vaccinationData = <String, dynamic>{
+        'flock_id': int.parse(flockId),
+        'vaccine_id': int.parse(vaccineId),
+        'date_given': administrationDate.toIso8601String(),
+        'create_reminder': _createReminder,
+      };
+      if (scheduledVaccinationId != null &&
+          scheduledVaccinationId.trim().isNotEmpty) {
+        vaccinationData['vaccination_id'] = int.parse(scheduledVaccinationId);
+      }
+      if (nextVaccineId != null && nextDate != null) {
+        vaccinationData['next_vaccine_id'] = int.parse(nextVaccineId);
+        vaccinationData['next_due_date'] = nextDate.toIso8601String();
+      }
 
       await _vaccinationService.createVaccination(
-        {
-          'flock_id': int.parse(flockId),
-          'vaccine_id': int.parse(vaccineId),
-          'date_given': administrationDate.toIso8601String(),
-        },
+        vaccinationData,
         photoBytes: _photoBytes,
         photoPath: _photoPath,
       );
@@ -913,17 +931,13 @@ class _LogVaccinationStep3PageState extends State<LogVaccinationStep3Page> {
                   );
                 },
               )
-            : Image.network(
-                'https://images.unsplash.com/photo-1589923188900-85dae523342b?auto=format&fit=crop&q=80&w=800',
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) => Container(
-                  color: const Color(0xFFE2E8F0),
-                  child: const Center(
-                    child: Icon(
-                      Icons.tablet_mac_rounded,
-                      size: 48,
-                      color: textGrey,
-                    ),
+            : Container(
+                color: const Color(0xFFE2E8F0),
+                child: const Center(
+                  child: Icon(
+                    Icons.tablet_mac_rounded,
+                    size: 48,
+                    color: textGrey,
                   ),
                 ),
               ),

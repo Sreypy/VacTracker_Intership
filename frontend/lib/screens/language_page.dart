@@ -43,7 +43,7 @@ class _LanguagePageState extends State<LanguagePage> {
                       }
                     },
                   ),
-                  const Icon(Icons.vaccines, color: brandGreen, size: 28),
+                  // const Icon(Icons.vaccines, color: brandGreen, size: 28),
                   const SizedBox(width: 8),
                   const Text(
                     'VacTracker',

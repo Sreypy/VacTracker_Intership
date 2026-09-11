@@ -36,8 +36,6 @@ class _AddFlockPageState extends State<AddFlockPage> {
   final TextEditingController _birdCountController = TextEditingController(
     text: '0',
   );
-  final TextEditingController _ageController = TextEditingController(text: '0');
-  String _selectedAgeUnit = 'days';
   final TextEditingController _dateController = TextEditingController();
   DateTime _selectedDate = DateTime.now();
 
@@ -55,7 +53,6 @@ class _AddFlockPageState extends State<AddFlockPage> {
   // Localization Dictionary
   final Map<String, Map<String, String>> _localizedValues = const {
     'en': {
-      'app_bar_title': 'Add Flock',
       'banner_title': 'New Batch Registration',
       'banner_desc': 'Log your flock details for precise vaccination tracking.',
       'lbl_batch_name': 'Batch Name',
@@ -73,24 +70,15 @@ class _AddFlockPageState extends State<AddFlockPage> {
       'btn_save_edit': 'Update Flock',
       'btn_saving': 'Saving...',
       'btn_cancel': 'Cancel',
-      'app_bar_title_edit': 'Edit Flock',
       'banner_title_edit': 'Update Flock Details',
-      'lbl_age': 'Flock Age',
-      'hint_age': 'e.g., 5',
-      'lbl_age_unit': 'Age Unit',
-      'age_unit_days': 'Days',
-      'age_unit_weeks': 'Weeks',
-      'age_unit_months': 'Months',
       'err_empty_name': 'Please enter a batch name',
       'err_invalid_count': 'Please enter a valid bird count',
-      'err_invalid_age': 'Please enter a valid age',
       'err_invalid_date': 'Please enter a valid acquisition date',
       'err_failed': 'Failed to save flock. Please try again.',
       'success_msg': 'Flock saved successfully!',
       'update_success_msg': 'Flock updated successfully!',
     },
     'km': {
-      'app_bar_title': 'បន្ថែមហ្វូងបក្សី',
       'banner_title': 'ចុះឈ្មោះបក្សីថ្មី',
       'banner_desc':
           'កត់ត្រាលម្អិតពីហ្វូងបក្សីរបស់អ្នក ដើម្បីតាមដានការចាក់វ៉ាក់សាំងឱ្យបានត្រឹមត្រូវ។',
@@ -109,17 +97,9 @@ class _AddFlockPageState extends State<AddFlockPage> {
       'btn_save_edit': 'ធ្វើបច្ចុប្បន្នភាពហ្វូង',
       'btn_saving': 'កំពុងរក្សាទុក...',
       'btn_cancel': 'បោះបង់',
-      'app_bar_title_edit': 'កែសម្រួលហ្វូងបក្សី',
       'banner_title_edit': 'បន្ទាន់សម័យព័ត៌មានហ្វូង',
-      'lbl_age': 'អាយុហ្វូង',
-      'hint_age': 'ឧទាហរណ៍ 5',
-      'lbl_age_unit': 'ឯកតាអាយុ',
-      'age_unit_days': 'ថ្ងៃ',
-      'age_unit_weeks': 'សប្តាហ៍',
-      'age_unit_months': 'ខែ',
       'err_empty_name': 'សូមបញ្ចូលឈ្មោះហ្វូងបក្សី',
       'err_invalid_count': 'សូមបញ្ចូលចំនួនបក្សីឲ្យបានត្រឹមត្រូវ',
-      'err_invalid_age': 'សូមបញ្ចូលអាយុឲ្យបានត្រឹមត្រូវ',
       'err_invalid_date': 'សូមបញ្ចូលកាលបរិច្ឆេទទទួលបានឲ្យត្រឹមត្រូវ',
       'err_failed': 'ការរក្សាទុកបរាជ័យ។ សូមព្យាយាមម្តងទៀត។',
       'success_msg': 'រក្សាទុកហ្វូងបក្សីបានជោគជ័យ!',
@@ -223,8 +203,6 @@ class _AddFlockPageState extends State<AddFlockPage> {
     if (widget.editingFlock != null) {
       _batchNameController.text = widget.editingFlock!.batchName;
       _birdCountController.text = widget.editingFlock!.birdCount.toString();
-      _ageController.text = widget.editingFlock!.age.toString();
-      _selectedAgeUnit = widget.editingFlock!.ageUnit;
       _selectedBreed = widget.editingFlock!.breed ?? 'Broiler';
       final parsedDate = DateTime.tryParse(widget.editingFlock!.dateAcquired);
       if (parsedDate != null) {
@@ -324,17 +302,6 @@ class _AddFlockPageState extends State<AddFlockPage> {
       return;
     }
 
-    final age = int.tryParse(_ageController.text.trim());
-    if (age == null || age < 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(_getText('err_invalid_age')),
-          backgroundColor: Colors.red,
-        ),
-      );
-      return;
-    }
-
     final backendDate = _formatDateForBackend(dateAcquired);
     if (backendDate == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -384,8 +351,6 @@ class _AddFlockPageState extends State<AddFlockPage> {
               body: jsonEncode({
                 'batch_name': batchName,
                 'bird_count': birdCount,
-                'age': age,
-                'age_unit': _selectedAgeUnit,
                 'date_acquired': backendDate,
                 'breed': _selectedBreed,
               }),
@@ -400,8 +365,6 @@ class _AddFlockPageState extends State<AddFlockPage> {
               body: jsonEncode({
                 'batch_name': batchName,
                 'bird_count': birdCount,
-                'age': age,
-                'age_unit': _selectedAgeUnit,
                 'date_acquired': backendDate,
                 'breed': _selectedBreed,
               }),
@@ -451,7 +414,6 @@ class _AddFlockPageState extends State<AddFlockPage> {
   void dispose() {
     _batchNameController.dispose();
     _birdCountController.dispose();
-    _ageController.dispose();
     _dateController.dispose();
     super.dispose();
   }
@@ -721,142 +683,6 @@ class _AddFlockPageState extends State<AddFlockPage> {
                                 color: brandDarkGreen,
                                 width: 1.5,
                               ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 18),
-
-              // Flock Age & Unit
-              Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            const Icon(Icons.timer, size: 16, color: textGrey),
-                            const SizedBox(width: 6),
-                            Flexible(
-                              child: Text(
-                                _getText('lbl_age'),
-                                style: const TextStyle(
-                                  color: textDarkBlue,
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        TextField(
-                          controller: _ageController,
-                          keyboardType: TextInputType.number,
-                          enabled: !_isSaving,
-                          style: const TextStyle(
-                            color: textDarkBlue,
-                            fontSize: 15,
-                          ),
-                          decoration: InputDecoration(
-                            hintText: _getText('hint_age'),
-                            contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 14,
-                            ),
-                            filled: true,
-                            fillColor: Colors.white,
-                            enabledBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(8),
-                              borderSide: const BorderSide(
-                                color: textGreyLight,
-                                width: 1.5,
-                              ),
-                            ),
-                            focusedBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(8),
-                              borderSide: const BorderSide(
-                                color: brandDarkGreen,
-                                width: 1.5,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            const Icon(
-                              Icons.straighten,
-                              size: 16,
-                              color: textGrey,
-                            ),
-                            const SizedBox(width: 6),
-                            Flexible(
-                              child: Text(
-                                _getText('lbl_age_unit'),
-                                style: const TextStyle(
-                                  color: textDarkBlue,
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(
-                              color: textGreyLight,
-                              width: 1.5,
-                            ),
-                          ),
-                          child: DropdownButtonHideUnderline(
-                            child: DropdownButton<String>(
-                              value: _selectedAgeUnit,
-                              isExpanded: true,
-                              icon: const Icon(Icons.arrow_drop_down),
-                              items: [
-                                DropdownMenuItem(
-                                  value: 'days',
-                                  child: Text(_getText('age_unit_days')),
-                                ),
-                                DropdownMenuItem(
-                                  value: 'weeks',
-                                  child: Text(_getText('age_unit_weeks')),
-                                ),
-                                DropdownMenuItem(
-                                  value: 'months',
-                                  child: Text(_getText('age_unit_months')),
-                                ),
-                              ],
-                              onChanged: _isSaving
-                                  ? null
-                                  : (value) {
-                                      if (value != null) {
-                                        setState(() {
-                                          _selectedAgeUnit = value;
-                                        });
-                                      }
-                                    },
                             ),
                           ),
                         ),

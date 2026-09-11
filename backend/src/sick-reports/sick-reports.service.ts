@@ -209,11 +209,22 @@ export class SickReportsService {
 
       if (requestedStatus != null) {
         if (requestedStatus === ReportStatus.RESOLVED) {
-          if (sickReport.status !== ReportStatus.REVIEWED || !sickReport.respondedAt) {
+          const hasPersistedVetResponse =
+            sickReport.respondedAt != null ||
+            sickReport.vetDiagnosis?.trim() ||
+            sickReport.vetAdvice?.trim() ||
+            sickReport.vetNotes?.trim() ||
+            sickReport.recommendedAction != null;
+          const vetHasResponded =
+            sickReport.status === ReportStatus.REVIEWED &&
+            Boolean(hasPersistedVetResponse);
+
+          if (!vetHasResponded) {
             throw new BadRequestException(
-              'A veterinarian response is required before resolving the report',
+              'The report must be VET_RESPONDED before it can be resolved',
             );
           }
+          sickReport.respondedAt ??= new Date();
           sickReport.status = ReportStatus.RESOLVED;
           sickReport.farmerFollowUpMessage = null;
           sickReport.farmerFollowUpAt = null;

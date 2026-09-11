@@ -79,6 +79,7 @@ class LogVaccinationStep2Page extends StatefulWidget {
   final String flockId;
   final String languageCode; // 'km' or 'en'
   final String? selectedVaccineId;
+  final String? scheduledVaccinationId;
 
   const LogVaccinationStep2Page({
     super.key,
@@ -86,6 +87,7 @@ class LogVaccinationStep2Page extends StatefulWidget {
     required this.flockId,
     this.languageCode = 'km',
     this.selectedVaccineId,
+    this.scheduledVaccinationId,
   });
 
   @override
@@ -109,6 +111,7 @@ class _LogVaccinationStep2PageState extends State<LogVaccinationStep2Page> {
   // Date State
   DateTime _administrationDate = DateTime.now();
   DateTime _nextDate = DateTime.now();
+  bool _hasSelectedNextDate = false;
   final VaccineService _vaccineService = VaccineService();
 
   // Attachment Image
@@ -143,10 +146,17 @@ class _LogVaccinationStep2PageState extends State<LogVaccinationStep2Page> {
       'field_flock': 'ហ្វូង',
       'field_today_vaccine': 'វ៉ាក់សាំងដែលចាក់ថ្ងៃនេះ',
       'field_next_vaccine': 'វ៉ាក់សាំងបន្ទាប់',
+      'next_optional': '(ជាជម្រើស)',
+      'next_plan_hint': 'រៀបចំផែនការចាក់វ៉ាក់សាំងបន្ទាប់',
+      'next_skip': 'រំលងការជ្រើសរើសវ៉ាក់សាំងបន្ទាប់',
+      'no_next_scheduled': 'មិនទាន់មានវ៉ាក់សាំងបន្ទាប់ដែលបានកំណត់ទេ',
       'field_next_date': 'កាលបរិច្ឆេទបន្ទាប់',
       'field_reminder': 'បង្កើតការរំលឹក',
       'upload_photo': 'បញ្ចូល',
       'err_select_vac': 'សូមជ្រើសរើសវ៉ាក់សាំងមួយជាមុនសិន',
+      'err_select_next_vac': 'សូមជ្រើសរើសវ៉ាក់សាំងបន្ទាប់',
+      'err_next_date': 'កាលបរិច្ឆេទបន្ទាប់ត្រូវតែបន្ទាប់ពីថ្ងៃចាក់',
+      'err_next_date_required': 'សូមជ្រើសរើសកាលបរិច្ឆេទបន្ទាប់',
       'custom_title': 'បន្ថែមវ៉ាក់សាំងផ្ទាល់ខ្លួន',
       'custom_subtitle': 'បង្កើតវ៉ាក់សាំងថ្មីសម្រាប់កន្លែងចិញ្ចឹមរបស់អ្នក',
       'custom_name_en': 'ឈ្មោះវ៉ាក់សាំង (EN)',
@@ -185,10 +195,18 @@ class _LogVaccinationStep2PageState extends State<LogVaccinationStep2Page> {
       'field_flock': 'Flock',
       'field_today_vaccine': 'Vaccine Given Today',
       'field_next_vaccine': 'Next Vaccine',
+      'next_optional': '(Optional)',
+      'next_plan_hint': 'Plan your next vaccination',
+      'next_skip': 'Skip next vaccine',
+      'no_next_scheduled': 'No next vaccine scheduled yet.',
       'field_next_date': 'Next Date',
       'field_reminder': 'Create Reminder',
       'upload_photo': 'Upload',
       'err_select_vac': 'Please select a vaccine first',
+      'err_select_next_vac': 'Please select the next vaccine',
+      'err_next_date':
+          'The next date must be on or after the administration date',
+      'err_next_date_required': 'Please select the next vaccination date',
       'custom_title': 'Add Custom Vaccine',
       'custom_subtitle': 'Create a new vaccine for your flock',
       'custom_name_en': 'Vaccine name (EN)',
@@ -328,14 +346,6 @@ class _LogVaccinationStep2PageState extends State<LogVaccinationStep2Page> {
               : fetched.first;
 
           _selectedTodayVaccineId = preferredVaccine.id;
-          _selectedNextVaccineId = preferredVaccine.id;
-          _nextDate = DateTime.now().add(
-            Duration(
-              days: preferredVaccine.intervalDays > 0
-                  ? preferredVaccine.intervalDays
-                  : 7,
-            ),
-          );
         }
       });
     } catch (e) {
@@ -350,7 +360,7 @@ class _LogVaccinationStep2PageState extends State<LogVaccinationStep2Page> {
     if (mounted) {
       setState(() {
         _administrationDate = DateTime.now();
-        _nextDate = _administrationDate.add(const Duration(days: 7));
+        _nextDate = _administrationDate;
       });
     }
   }
@@ -590,12 +600,6 @@ class _LogVaccinationStep2PageState extends State<LogVaccinationStep2Page> {
         _allVaccines = [..._allVaccines, customModel];
         _filteredVaccines = [..._filteredVaccines, customModel];
         _selectedTodayVaccineId = customModel.id;
-        _selectedNextVaccineId = customModel.id;
-        _nextDate = DateTime.now().add(
-          Duration(
-            days: customModel.intervalDays > 0 ? customModel.intervalDays : 7,
-          ),
-        );
       });
 
       if (!mounted) return;
@@ -674,6 +678,22 @@ class _LogVaccinationStep2PageState extends State<LogVaccinationStep2Page> {
       ).showSnackBar(SnackBar(content: Text(_getText('err_select_vac'))));
       return;
     }
+    if (_selectedNextVaccineId != null && !_hasSelectedNextDate) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(_getText('err_next_date_required'))),
+      );
+      return;
+    }
+    if (_selectedNextVaccineId != null &&
+        _hasSelectedNextDate &&
+        DateUtils.dateOnly(
+          _nextDate,
+        ).isBefore(DateUtils.dateOnly(_administrationDate))) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(_getText('err_next_date'))));
+      return;
+    }
 
     setState(() => _isSaving = true);
 
@@ -681,23 +701,28 @@ class _LogVaccinationStep2PageState extends State<LogVaccinationStep2Page> {
       final todayVaccine = _allVaccines.firstWhere(
         (vaccine) => vaccine.id == _selectedTodayVaccineId,
       );
-      final nextVaccine = _allVaccines.firstWhere(
-        (vaccine) =>
-            vaccine.id == (_selectedNextVaccineId ?? _selectedTodayVaccineId),
-      );
+      final nextVaccine = _selectedNextVaccineId == null
+          ? null
+          : _allVaccines.firstWhere(
+              (vaccine) => vaccine.id == _selectedNextVaccineId,
+            );
 
       final summaryData = {
         'flockId': widget.flockId,
         'flockName': widget.selectedFlockName,
         'vaccineId': todayVaccine.id,
+        'vaccinationId': widget.scheduledVaccinationId,
+        'nextVaccineId': nextVaccine?.id,
         'todayVaccineName': _currentLang == 'km'
             ? todayVaccine.nameKm
             : todayVaccine.nameEn,
-        'nextVaccineName': _currentLang == 'km'
-            ? nextVaccine.nameKm
-            : nextVaccine.nameEn,
+        'nextVaccineName': nextVaccine == null
+            ? null
+            : (_currentLang == 'km' ? nextVaccine.nameKm : nextVaccine.nameEn),
         'administrationDate': _administrationDate,
-        'nextDate': _nextDate,
+        'nextDate': _selectedNextVaccineId == null || !_hasSelectedNextDate
+            ? null
+            : _nextDate,
         'createReminder': _createReminder,
         'photoPath': _selectedImage?.path,
         'photoBytes': _selectedImageBytes,
@@ -876,8 +901,6 @@ class _LogVaccinationStep2PageState extends State<LogVaccinationStep2Page> {
                         onChanged: (value) {
                           setState(() {
                             _selectedTodayVaccineId = value;
-                            _selectedNextVaccineId =
-                                value ?? _selectedNextVaccineId;
                           });
                         },
                       ),
@@ -984,7 +1007,7 @@ class _LogVaccinationStep2PageState extends State<LogVaccinationStep2Page> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        _getText('field_next_vaccine'),
+                        '${_getText('field_next_vaccine')} ${_getText('next_optional')}',
                         style: const TextStyle(
                           color: textGrey,
                           fontSize: 12,
@@ -992,8 +1015,13 @@ class _LogVaccinationStep2PageState extends State<LogVaccinationStep2Page> {
                         ),
                       ),
                       const SizedBox(height: 8),
+                      Text(
+                        _getText('next_plan_hint'),
+                        style: const TextStyle(color: textGrey, fontSize: 12),
+                      ),
+                      const SizedBox(height: 8),
                       DropdownButtonFormField<String>(
-                        initialValue: _selectedNextVaccineId,
+                        initialValue: _selectedNextVaccineId ?? '',
                         decoration: InputDecoration(
                           filled: true,
                           fillColor: const Color(0xFFF8FAFC),
@@ -1007,6 +1035,10 @@ class _LogVaccinationStep2PageState extends State<LogVaccinationStep2Page> {
                           ),
                         ),
                         items: [
+                          DropdownMenuItem(
+                            value: '',
+                            child: Text(_getText('next_skip')),
+                          ),
                           if (_allVaccines.isNotEmpty)
                             ..._allVaccines.map((vaccine) {
                               final title = _currentLang == 'km'
@@ -1020,55 +1052,85 @@ class _LogVaccinationStep2PageState extends State<LogVaccinationStep2Page> {
                         ],
                         onChanged: (value) {
                           setState(() {
-                            _selectedNextVaccineId = value;
-                            final selectedVaccine = _allVaccines.firstWhere(
-                              (item) => item.id == value,
-                              orElse: () => _allVaccines.isNotEmpty
-                                  ? _allVaccines.first
-                                  : VaccineModel(
-                                      id: '',
-                                      nameEn: '',
-                                      nameKm: '',
-                                      diseaseEn: '',
-                                      diseaseKm: '',
-                                      intervalDays: 7,
-                                    ),
-                            );
-                            _nextDate = _administrationDate.add(
-                              Duration(
-                                days: selectedVaccine.intervalDays > 0
-                                    ? selectedVaccine.intervalDays
-                                    : 7,
-                              ),
-                            );
+                            _selectedNextVaccineId =
+                                value == null || value.isEmpty ? null : value;
+                            if (_selectedNextVaccineId == null) {
+                              _hasSelectedNextDate = false;
+                            }
                           });
                         },
                       ),
-                      const SizedBox(height: 12),
-                      Text(
-                        _getText('field_next_date'),
-                        style: const TextStyle(
-                          color: textGrey,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
+                      if (_allVaccines.isEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 8),
+                          child: Text(
+                            _getText('no_next_scheduled'),
+                            style: const TextStyle(
+                              color: textGrey,
+                              fontSize: 12,
+                            ),
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 8),
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 14,
-                          vertical: 14,
+                      if (_selectedNextVaccineId != null) ...[
+                        const SizedBox(height: 12),
+                        Text(
+                          _getText('field_next_date'),
+                          style: const TextStyle(
+                            color: textGrey,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFF8FAFC),
-                          borderRadius: BorderRadius.circular(12),
+                        const SizedBox(height: 8),
+                        InkWell(
+                          onTap: () async {
+                            final picked = await showDatePicker(
+                              context: context,
+                              initialDate:
+                                  _nextDate.isBefore(_administrationDate)
+                                  ? _administrationDate
+                                  : _nextDate,
+                              firstDate: DateUtils.dateOnly(
+                                _administrationDate,
+                              ),
+                              lastDate: DateTime(2035),
+                            );
+                            if (picked != null) {
+                              setState(() {
+                                _nextDate = picked;
+                                _hasSelectedNextDate = true;
+                              });
+                            }
+                          },
+                          child: Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 14,
+                              vertical: 14,
+                            ),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF8FAFC),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(
+                                  Icons.calendar_today_outlined,
+                                  color: textGrey,
+                                  size: 18,
+                                ),
+                                const SizedBox(width: 10),
+                                Text(
+                                  _formatDate(_nextDate),
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                         ),
-                        child: Text(
-                          _formatDate(_nextDate),
-                          style: const TextStyle(fontWeight: FontWeight.w600),
-                        ),
-                      ),
+                      ],
                       const SizedBox(height: 12),
                       Row(
                         children: [

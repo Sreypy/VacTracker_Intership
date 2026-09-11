@@ -52,7 +52,19 @@ export class SickReportsController {
     @Body() updateSickReportDto: UpdateSickReportDto,
     @Request() req,
   ) {
-    return this.sickReportsService.update(+id, updateSickReportDto, req.user.user_id, req.user.role);
+    console.debug('PATCH /sick-reports/:id', {
+      id: +id,
+      body: updateSickReportDto,
+      userId: req.user.user_id,
+      role: req.user.role,
+    });
+
+    return this.sickReportsService.update(
+      +id,
+      updateSickReportDto,
+      req.user.user_id,
+      req.user.role,
+    );
   }
 
   @Patch(':id/resolve')

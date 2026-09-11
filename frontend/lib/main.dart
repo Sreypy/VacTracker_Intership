@@ -178,12 +178,14 @@ final GoRouter _router = GoRouter(
             state.uri.queryParameters['batchTitle'] ?? 'Flock B-42';
         final flockId = state.uri.queryParameters['flockId'] ?? '';
         final vaccineId = state.uri.queryParameters['vaccineId'] ?? '';
+        final vaccinationId = state.uri.queryParameters['vaccinationId'];
 
         return LogVaccinationStep2Page(
           selectedFlockName: flockName,
           flockId: flockId,
           languageCode: language,
           selectedVaccineId: vaccineId,
+          scheduledVaccinationId: vaccinationId,
         );
       },
     ),

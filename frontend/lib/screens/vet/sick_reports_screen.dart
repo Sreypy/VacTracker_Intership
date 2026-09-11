@@ -237,7 +237,13 @@ class _VetSickReportsScreenState extends State<VetSickReportsScreen> {
         scrolledUnderElevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: primaryGreen),
-          onPressed: () => context.pop(),
+          onPressed: () {
+            if (context.canPop()) {
+              context.pop();
+            } else {
+              context.go('/vet-dashboard?lang=${widget.languageCode}');
+            }
+          },
         ),
         title: Text(
           _getText('title'),

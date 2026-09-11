@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -56,6 +57,14 @@ export class VaccinationsService {
       throw new NotFoundException('User not found');
     }
 
+    if (createVaccinationDto.vaccination_id != null) {
+      return this.completeScheduledVaccination(
+        createVaccinationDto,
+        user,
+        photo,
+      );
+    }
+
     // Find flock with farmer relation loaded
     const flock = await this.flockRepository.findOne({
       where: {
@@ -84,6 +93,16 @@ export class VaccinationsService {
 
     if (!vaccine) {
       throw new NotFoundException('Vaccine not found');
+    }
+
+    let nextVaccine: Vaccine | null = null;
+    if (createVaccinationDto.next_vaccine_id != null) {
+      nextVaccine = await this.vaccineRepository.findOne({
+        where: { vaccine_id: createVaccinationDto.next_vaccine_id },
+      });
+      if (!nextVaccine) {
+        throw new NotFoundException('Next vaccine not found');
+      }
     }
 
     // Guard against duplicate submissions
@@ -128,9 +147,12 @@ export class VaccinationsService {
 
     if (createVaccinationDto.next_due_date) {
       nextDueDate = new Date(createVaccinationDto.next_due_date);
-    } else if (vaccine.interval_days && vaccine.interval_days > 0) {
-      nextDueDate = new Date(createVaccinationDto.date_given);
-      nextDueDate.setDate(nextDueDate.getDate() + vaccine.interval_days);
+    }
+
+    if (nextDueDate && nextDueDate < administrationDate) {
+      throw new BadRequestException(
+        'Next vaccination date cannot be before the administration date',
+      );
     }
 
     const status = this.calculateVaccinationStatus(nextDueDate);
@@ -149,9 +171,11 @@ export class VaccinationsService {
     const vaccination = this.vaccinationRepository.create({
       flock,
       vaccine,
+      next_vaccine: nextVaccine,
       administered_by: user,
       date_given: administrationDate,
       next_due_date: nextDueDate,
+      reminder_enabled: createVaccinationDto.create_reminder !== false,
       status,
       photo_url: photoUrl,
     });
@@ -168,9 +192,76 @@ export class VaccinationsService {
       createVaccinationDto.flock_id,
     );
 
-    if (savedVaccination.next_due_date) {
+    if (
+      savedVaccination.next_due_date &&
+      createVaccinationDto.create_reminder !== false
+    ) {
       await this.remindersService.createReminder(savedVaccination);
     }
+
+    return savedVaccination;
+  }
+
+  private async completeScheduledVaccination(
+    dto: CreateVaccinationDto,
+    user: User,
+    photo?: Express.Multer.File,
+  ) {
+    const vaccination = await this.vaccinationRepository.findOne({
+      where: { vaccination_id: dto.vaccination_id },
+      relations: {
+        flock: { farmer: true },
+        vaccine: true,
+        next_vaccine: true,
+      },
+    });
+
+    if (!vaccination || vaccination.flock?.farmer?.user_id !== user.user_id) {
+      throw new NotFoundException('Vaccination not found');
+    }
+
+    if (vaccination.flock.flock_id !== dto.flock_id) {
+      throw new BadRequestException(
+        'The scheduled vaccination does not belong to this flock',
+      );
+    }
+
+    if (vaccination.vaccine.vaccine_id !== dto.vaccine_id) {
+      throw new BadRequestException(
+        'The scheduled vaccination does not match the selected vaccine',
+      );
+    }
+
+    if (vaccination.status === VaccinationStatus.COMPLETED) {
+      await this.remindersService.markReminderCompleted(
+        user.user_id,
+        vaccination.vaccination_id,
+      );
+      return vaccination;
+    }
+
+    vaccination.date_given = new Date(dto.date_given);
+    vaccination.status = VaccinationStatus.COMPLETED;
+
+    if (photo) {
+      const result = await this.cloudinaryService.uploadImage(
+        photo,
+        'vactracker/vaccinations',
+      );
+      vaccination.photo_url = result.secure_url;
+    }
+
+    const savedVaccination = await this.vaccinationRepository.save(vaccination);
+
+    await this.remindersService.markReminderCompleted(
+      user.user_id,
+      vaccination.vaccination_id,
+    );
+    await this.notificationsService.markOverdueNotificationsRead(
+      user.user_id,
+      dto.flock_id,
+    );
+    await this.remindersService.syncRemindersForFarmer(user.user_id);
 
     return savedVaccination;
   }
@@ -224,6 +315,7 @@ export class VaccinationsService {
       relations: {
         flock: true,
         vaccine: true,
+        next_vaccine: true,
         administered_by: true,
       },
       order: {
@@ -254,6 +346,7 @@ export class VaccinationsService {
             farmer: true,
           },
           vaccine: true,
+          next_vaccine: true,
           administered_by: true,
         },
       });
@@ -310,6 +403,7 @@ export class VaccinationsService {
       relations: {
         flock: true,
         vaccine: true,
+        next_vaccine: true,
         administered_by: true,
       },
       order: {

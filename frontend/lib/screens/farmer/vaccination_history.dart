@@ -57,6 +57,7 @@ class _VaccinationHistoryScreenState extends State<VaccinationHistoryScreen> {
   List<Map<String, dynamic>> _records = [];
   int _completedCount = 0;
   String _nextDueLabel = '';
+  String _nextVaccineLabel = '';
 
   // Localization Dictionary
   static const Map<String, Map<String, String>> _localizedValues = {
@@ -216,6 +217,7 @@ class _VaccinationHistoryScreenState extends State<VaccinationHistoryScreen> {
 
       for (final vaccination in vaccinations) {
         final vaccine = vaccination['vaccine'] ?? {};
+        final nextVaccine = vaccination['next_vaccine'] ?? {};
         final dateGiven = vaccination['date_given'];
         final parsedDate = DateTime.tryParse(dateGiven?.toString() ?? '');
         final admin = vaccination['administered_by'] ?? {};
@@ -235,6 +237,15 @@ class _VaccinationHistoryScreenState extends State<VaccinationHistoryScreen> {
           'isMissed': status == 'overdue',
           'note': status == 'overdue' ? _getText('missed') : null,
           'next_due': vaccination['next_due_date'],
+          'next_vaccine_name': widget.languageCode == 'km'
+              ? (nextVaccine['name_km'] ??
+                    nextVaccine['name_en'] ??
+                    vaccine['name_km'] ??
+                    vaccine['name_en'])
+              : (nextVaccine['name_en'] ??
+                    nextVaccine['name_km'] ??
+                    vaccine['name_en'] ??
+                    vaccine['name_km']),
           'photo_url': vaccination['photo_url']?.toString(),
           'raw_status': status,
           'date_value': parsedDate,
@@ -251,12 +262,15 @@ class _VaccinationHistoryScreenState extends State<VaccinationHistoryScreen> {
       });
 
       DateTime? nextDueDate;
+      String? nextVaccineName;
       for (final record in records) {
+        if (record['raw_status'] == 'completed') continue;
         final rawDate = record['next_due']?.toString();
         final candidateDate = DateTime.tryParse(rawDate ?? '');
         if (candidateDate != null) {
           if (nextDueDate == null || candidateDate.isBefore(nextDueDate)) {
             nextDueDate = candidateDate;
+            nextVaccineName = record['next_vaccine_name']?.toString();
           }
         }
       }
@@ -265,10 +279,13 @@ class _VaccinationHistoryScreenState extends State<VaccinationHistoryScreen> {
       setState(() {
         _flock = flock;
         _records = records;
-        _completedCount = records.length;
+        _completedCount = records
+            .where((record) => record['raw_status'] == 'completed')
+            .length;
         _nextDueLabel = nextDueDate == null
             ? _getText('no_data')
             : _formatDisplayDate(nextDueDate);
+        _nextVaccineLabel = nextVaccineName ?? '';
         _isLoading = false;
       });
     } catch (e) {
@@ -296,7 +313,7 @@ class _VaccinationHistoryScreenState extends State<VaccinationHistoryScreen> {
         'វិច្ឆិកា',
         'ធ្នូ',
       ];
-      return '${date.day} ${months[date.month - 1]} ${date.year}';
+      return '${date.day} ${months[date.month - 1]}';
     }
 
     final months = [
@@ -313,7 +330,7 @@ class _VaccinationHistoryScreenState extends State<VaccinationHistoryScreen> {
       'Nov',
       'Dec',
     ];
-    return '${months[date.month - 1]} ${date.day}, ${date.year}';
+    return '${months[date.month - 1]} ${date.day}';
   }
 
   String _getStatusText(String status) {
@@ -421,8 +438,8 @@ class _VaccinationHistoryScreenState extends State<VaccinationHistoryScreen> {
                       iconBg: const Color(0xFFE8F5E9),
                       iconColor: primaryGreen,
                       label: _getText('next_due'),
-                      value: _nextDueLabel.isEmpty
-                          ? _getText('no_data')
+                      value: _nextVaccineLabel.isEmpty
+                          ? _nextDueLabel
                           : _nextDueLabel,
                     ),
                   ),

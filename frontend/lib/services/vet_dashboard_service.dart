@@ -8,15 +8,19 @@ class VetDashboardStats {
   final int connectedFarmers;
   final int totalFlocks;
   final int newSickReports;
-  final int overdueVaccinations;
+  final int totalBirds;
+  final int activeCases;
+  final int resolvedReports;
   final List<FarmerData> farmers;
 
   VetDashboardStats({
     required this.connectedFarmers,
     required this.totalFlocks,
     required this.newSickReports,
-    required this.overdueVaccinations,
     required this.farmers,
+    required this.totalBirds,
+    this.activeCases = 0,
+    this.resolvedReports = 0,
   });
 
   factory VetDashboardStats.fromJson(Map<String, dynamic> json) {
@@ -28,8 +32,10 @@ class VetDashboardStats {
       connectedFarmers: json['connectedFarmers'] ?? 0,
       totalFlocks: json['totalFlocks'] ?? 0,
       newSickReports: json['newSickReports'] ?? 0,
-      overdueVaccinations: json['overdueVaccinations'] ?? 0,
+      totalBirds: json['totalBirds'] ?? 0,
       farmers: farmersList,
+      activeCases: json['activeCases'] ?? 0,
+      resolvedReports: json['resolvedReports'] ?? 0,
     );
   }
 }
@@ -43,7 +49,8 @@ class FarmerData {
   final String statusText;
   final int flockCount;
   final int totalBirds;
-  final LastVaccination? lastVaccination;
+  final int activeCases;
+  final int resolvedReports;
 
   FarmerData({
     required this.farmerId,
@@ -54,7 +61,8 @@ class FarmerData {
     required this.statusText,
     required this.flockCount,
     required this.totalBirds,
-    this.lastVaccination,
+    this.activeCases = 0,
+    this.resolvedReports = 0,
   });
 
   factory FarmerData.fromJson(Map<String, dynamic> json) {
@@ -67,9 +75,8 @@ class FarmerData {
       statusText: json['statusText'] ?? 'HEALTHY',
       flockCount: json['flockCount'] ?? 0,
       totalBirds: json['totalBirds'] ?? 0,
-      lastVaccination: json['lastVaccination'] != null
-          ? LastVaccination.fromJson(json['lastVaccination'])
-          : null,
+      activeCases: json['activeCases'] ?? 0,
+      resolvedReports: json['resolvedReports'] ?? 0,
     );
   }
 }

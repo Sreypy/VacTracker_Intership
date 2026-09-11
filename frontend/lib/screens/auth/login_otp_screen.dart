@@ -22,7 +22,7 @@ class LoginOtpScreen extends StatefulWidget {
     required String languageCode,
     String? otpCode,
     required Future<void> Function(String otp) onVerify,
-    required Future<void> Function() onResend,
+    required Future<String?> Function() onResend,
   }) async {
     await showDialog(
       context: context,
@@ -58,6 +58,7 @@ class _LoginOtpScreenState extends State<LoginOtpScreen> {
     'en': {
       'title': 'Verify OTP',
       'message': 'Enter the 6-digit code sent to your phone',
+      'sent_to': 'OTP sent to',
       'label': 'OTP Code',
       'verify': 'Verify',
       'resend': 'Resend OTP',
@@ -70,6 +71,7 @@ class _LoginOtpScreenState extends State<LoginOtpScreen> {
     'km': {
       'title': 'បញ្ជាក់លេខកូដ OTP',
       'message': 'បញ្ចូលលេខកូដ 6 ខ្ទង់ដែលបានផ្ញើទៅទូរស័ព្ទរបស់អ្នក',
+      'sent_to': 'OTP ត្រូវបានផ្ញើទៅ',
       'label': 'លេខកូដ OTP',
       'verify': 'បញ្ជាក់',
       'resend': 'ផ្ញើ OTP ម្តងទៀត',
@@ -207,6 +209,28 @@ class _LoginOtpScreenState extends State<LoginOtpScreen> {
                     height: 1.4,
                   ),
                 ),
+                if ((widget.otpCode ?? '').trim().isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 10,
+                    ),
+                    decoration: BoxDecoration(
+                      color: brandDarkGreen.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Text(
+                      'Development OTP: ${widget.otpCode!.trim()}',
+                      style: const TextStyle(
+                        color: brandDarkGreen,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 24),
                 const Padding(
                   padding: EdgeInsets.only(left: 4.0, bottom: 8.0),
@@ -334,7 +358,7 @@ class OtpVerificationDialog extends StatefulWidget {
   final String languageCode;
   final String? otpCode;
   final Future<void> Function(String otp) onVerify;
-  final Future<void> Function() onResend;
+  final Future<String?> Function() onResend;
 
   const OtpVerificationDialog({
     super.key,
@@ -363,11 +387,19 @@ class _OtpVerificationDialogState extends State<OtpVerificationDialog> {
   final List<FocusNode> _focusNodes = List.generate(6, (_) => FocusNode());
   bool _loading = false;
   String? _errorText;
+  String? _developmentOtp;
+
+  @override
+  void initState() {
+    super.initState();
+    _developmentOtp = widget.otpCode;
+  }
 
   final Map<String, Map<String, String>> _localizedValues = {
     'en': {
       'title': 'Verify OTP',
       'message': 'Enter the 6-digit code sent to your phone',
+      'sent_to': 'OTP sent to',
       'verify': 'Verify',
       'resend': 'Resend OTP',
       'close': 'Close',
@@ -379,6 +411,7 @@ class _OtpVerificationDialogState extends State<OtpVerificationDialog> {
     'km': {
       'title': 'បញ្ជាក់លេខកូដ OTP',
       'message': 'បញ្ចូលលេខកូដ 6 ខ្ទង់ដែលបានផ្ញើទៅទូរស័ព្ទរបស់អ្នក',
+      'sent_to': 'OTP ត្រូវបានផ្ញើទៅ',
       'verify': 'បញ្ជាក់',
       'resend': 'ផ្ញើ OTP ម្តងទៀត',
       'close': 'បិទ',
@@ -474,8 +507,11 @@ class _OtpVerificationDialogState extends State<OtpVerificationDialog> {
         _loading = true;
         _errorText = null;
       });
-      await widget.onResend();
+      final developmentOtp = await widget.onResend();
       if (mounted) {
+        setState(() {
+          _developmentOtp = developmentOtp;
+        });
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(_getText('resend')),
@@ -549,7 +585,16 @@ class _OtpVerificationDialogState extends State<OtpVerificationDialog> {
                 height: 1.5,
               ),
             ),
-            if ((widget.otpCode ?? '').trim().isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Text(
+              '${_getText('sent_to')} ${widget.phone}',
+              style: const TextStyle(
+                color: textGrey,
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            if ((_developmentOtp ?? '').trim().isNotEmpty) ...[
               const SizedBox(height: 12),
               Container(
                 width: double.infinity,
@@ -562,7 +607,7 @@ class _OtpVerificationDialogState extends State<OtpVerificationDialog> {
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Text(
-                  'Development OTP: ${widget.otpCode!.trim()}',
+                  'Development OTP: ${_developmentOtp!.trim()}',
                   style: const TextStyle(
                     color: brandDarkGreen,
                     fontSize: 12,

@@ -436,9 +436,12 @@ class _MySickReportsScreenState extends State<MySickReportsScreen> {
               width: double.infinity,
               height: 42,
               child: ElevatedButton(
-                onPressed: () => context.push(
-                  '/my-sick-reports/${report.reportId}?lang=${widget.languageCode}',
-                ),
+                onPressed: () async {
+                  await context.push(
+                    '/my-sick-reports/${report.reportId}?lang=${widget.languageCode}',
+                  );
+                  if (mounted) await _load();
+                },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF034418),
                   foregroundColor: Colors.white,

@@ -38,6 +38,10 @@ export class Vaccination {
   @JoinColumn({ name: 'vaccine_id' })
   vaccine!: Vaccine;
 
+  @ManyToOne(() => Vaccine, { nullable: true })
+  @JoinColumn({ name: 'next_vaccine_id' })
+  next_vaccine!: Vaccine | null;
+
   @ManyToOne(() => User)
   @JoinColumn({ name: 'administered_by' })
   administered_by!: User;
@@ -52,6 +56,9 @@ export class Vaccination {
     transformer: dateTransformer,
   })
   next_due_date!: Date | null;
+
+  @Column({ default: true })
+  reminder_enabled!: boolean;
 
   @Column({
     type: 'enum',

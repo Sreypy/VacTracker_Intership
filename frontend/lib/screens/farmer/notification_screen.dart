@@ -32,10 +32,12 @@ class _NotificationScreenState extends State<NotificationScreen>
 
   // Status colors
   static const Color colorOverdue = Color(0xFFDC2626); // Alert Red
+  static const Color colorDueToday = Color(0xFFF97316); // Orange
   static const Color colorDueSoon = Color(0xFFF59E0B); // Amber Yellow
   static const Color colorScheduled = Color(0xFF10B981); // Green
 
   static const Color colorLightRed = Color(0xFFFEE2E2);
+  static const Color colorLightOrange = Color(0xFFFFEDD5);
   static const Color colorLightAmber = Color(0xFFFEF3C7);
   static const Color colorLightGreen = Color(0xFFD1FAE5);
 
@@ -43,6 +45,7 @@ class _NotificationScreenState extends State<NotificationScreen>
   String? _errorMessage;
   List<_NotificationItem> _notifications = [];
   int _overdueCount = 0;
+  int _dueTodayCount = 0;
   int _dueSoonCount = 0;
   String _profileName = 'User';
   String _profileImageUrl = '';
@@ -57,7 +60,6 @@ class _NotificationScreenState extends State<NotificationScreen>
       'overdue': 'Overdue',
       'action_needed_label': 'ACTION NEEDED',
       'upcoming_label': 'UPCOMING',
-      'scheduled_label': 'SCHEDULED',
       'days_remaining': 'days remaining',
       'day_remaining': 'day remaining',
       'days_overdue': 'days overdue',
@@ -71,8 +73,8 @@ class _NotificationScreenState extends State<NotificationScreen>
       'unknown_flock': 'Unknown flock',
       'unknown_vaccine': 'Unknown vaccine',
       'overdue_title': 'Vaccination overdue',
+      'due_today_title': 'Vaccination due today',
       'due_soon_title': 'Vaccination due soon',
-      'scheduled_title': 'Vaccination scheduled',
       'action_required_header': 'Action Required',
       'view_details_btn': 'View Details',
       'vet_response_label': 'VET RESPONSE',
@@ -88,7 +90,6 @@ class _NotificationScreenState extends State<NotificationScreen>
       'overdue': 'ហួសកំណត់',
       'action_needed_label': 'ត្រូវការសកម្មភាព',
       'upcoming_label': 'ខាងមុខ',
-      'scheduled_label': 'បានកំណត់',
       'days_remaining': 'ថ្ងៃនៅសល់',
       'day_remaining': 'ថ្ងៃនៅសល់',
       'days_overdue': 'ថ្ងៃហួសកំណត់',
@@ -102,8 +103,8 @@ class _NotificationScreenState extends State<NotificationScreen>
       'unknown_flock': 'មិនស្គាល់ហ្វូង',
       'unknown_vaccine': 'មិនស្គាល់វ៉ាក់សាំង',
       'overdue_title': 'ការចាក់វ៉ាក់សាំងហួសកំណត់',
+      'due_today_title': 'ការចាក់វ៉ាក់សាំងដល់កំណត់ថ្ងៃនេះ',
       'due_soon_title': 'ការចាក់វ៉ាក់សាំងជិតដល់កំណត់',
-      'scheduled_title': 'ការចាក់វ៉ាក់សាំងត្រូវបានកំណត់ពេល',
       'action_required_header': 'ត្រូវការសកម្មភាព',
       'view_details_btn': 'មើលព័ត៌មានលម្អិត',
       'vet_response_label': 'ការឆ្លើយតបពីពេទ្យសត្វ',
@@ -234,7 +235,9 @@ class _NotificationScreenState extends State<NotificationScreen>
       final notifications = results[1];
 
       final items = <_NotificationItem>[];
-      final schedule = VaccinationScheduleSummary.fromRecords(vaccinations);
+      int overdueCount = 0;
+      int dueTodayCount = 0;
+      int dueSoonCount = 0;
 
       // Build vaccination notifications from the canonical vaccination data.
       for (final vaccination in vaccinations) {
@@ -242,11 +245,26 @@ class _NotificationScreenState extends State<NotificationScreen>
             VaccinationScheduleService.isCompleted(vaccination)) {
           continue;
         }
+
         final item = _NotificationItem.fromVaccination(
           vaccination,
           widget.languageCode,
         );
-        if (item != null) items.add(item);
+
+        if (item == null) continue;
+
+        // Only show reminders that need attention: Overdue, Due Today, or Due
+        // Soon (within the next 7 days). Anything further away is excluded.
+        if (item.isOverdue) {
+          items.add(item);
+          overdueCount++;
+        } else if (item.isDueToday) {
+          items.add(item);
+          dueTodayCount++;
+        } else if (item.isDueSoon) {
+          items.add(item);
+          dueSoonCount++;
+        }
       }
 
       // Add server notifications such as veterinarian responses.
@@ -279,8 +297,9 @@ class _NotificationScreenState extends State<NotificationScreen>
       if (!mounted) return;
       setState(() {
         _notifications = items;
-        _overdueCount = schedule.overdueCount;
-        _dueSoonCount = schedule.dueSoonCount;
+        _overdueCount = overdueCount;
+        _dueTodayCount = dueTodayCount;
+        _dueSoonCount = dueSoonCount;
         _isLoading = false;
       });
     } catch (_) {
@@ -323,7 +342,7 @@ class _NotificationScreenState extends State<NotificationScreen>
       final result = await context.push<bool>(
         '/log-vaccination-step2/${widget.languageCode}'
         '?flockId=${item.flockId}&batchTitle=${Uri.encodeComponent(item.flockName)}'
-        '&vaccineId=${item.vaccineId}',
+        '&vaccineId=${item.vaccineId}&vaccinationId=${item.vaccinationId}',
       );
       if (result == true && mounted) {
         await _loadNotifications();
@@ -546,10 +565,14 @@ class _NotificationScreenState extends State<NotificationScreen>
           ),
           const SizedBox(height: 20),
           _summaryRow(colorOverdue, _getText('overdue'), _overdueCount),
+
           const SizedBox(height: 14),
+
+          _summaryRow(colorDueToday, _getText('due_today'), _dueTodayCount),
+
+          const SizedBox(height: 14),
+
           _summaryRow(colorDueSoon, _getText('due_soon'), _dueSoonCount),
-          const SizedBox(height: 24),
-          SizedBox(width: double.infinity),
         ],
       ),
     );
@@ -754,6 +777,7 @@ class _NotificationItem {
   final DateTime dueDate;
   final int? flockId;
   final int? vaccineId;
+  final int? vaccinationId;
   final int days;
   final bool isVetResponse;
   final String? vetMessage;
@@ -766,6 +790,7 @@ class _NotificationItem {
     required this.dueDate,
     required this.flockId,
     required this.vaccineId,
+    required this.vaccinationId,
     required this.days,
     this.isVetResponse = false,
     this.vetMessage,
@@ -777,24 +802,21 @@ class _NotificationItem {
   bool get isDueToday => days == 0;
   // Define "due soon" as within 7 days, excluding today.
   bool get isDueSoon => days > 0 && days <= 7;
-  bool get isScheduled => days > 7;
 
   // Visual Styling Properties
 
   Color get mainColor {
     if (isVetResponse) return _NotificationScreenState.colorApp;
     if (isOverdue) return _NotificationScreenState.colorOverdue;
-    if (isDueToday || isDueSoon) return _NotificationScreenState.colorDueSoon;
-    return _NotificationScreenState.colorScheduled;
+    if (isDueToday) return _NotificationScreenState.colorDueToday;
+    return _NotificationScreenState.colorDueSoon;
   }
 
   Color get lightColor {
     if (isVetResponse) return _NotificationScreenState.colorLightGreen;
     if (isOverdue) return _NotificationScreenState.colorLightRed;
-    if (isDueToday || isDueSoon)
-      // ignore: curly_braces_in_flow_control_structures
-      return _NotificationScreenState.colorLightAmber;
-    return _NotificationScreenState.colorLightGreen;
+    if (isDueToday) return _NotificationScreenState.colorLightOrange;
+    return _NotificationScreenState.colorLightAmber;
   }
 
   IconData get cardIconData {
@@ -806,9 +828,8 @@ class _NotificationItem {
   // Label specific to design requirements
   String labelPrefix(String Function(String) text) {
     if (isVetResponse) return text('vet_response_label');
-    if (isOverdue) return text('action_needed_label');
-    if (isDueToday || isDueSoon) return text('upcoming_label');
-    return text('scheduled_label');
+    if (isOverdue || isDueToday) return text('action_needed_label');
+    return text('upcoming_label');
   }
 
   // Card text relative to design
@@ -819,7 +840,7 @@ class _NotificationItem {
       return '$absDays ${absDays == 1 ? text('day_overdue') : text('days_overdue')}';
     }
     if (isDueToday) return text('due_today');
-    // For both due soon and later scheduled
+    // Due soon (within the next 7 days).
     return '$days ${days == 1 ? text('day_remaining') : text('days_remaining')}';
   }
 
@@ -827,8 +848,8 @@ class _NotificationItem {
   String cardTitle(String Function(String) text) {
     if (isVetResponse) return text('vet_response_title');
     if (isOverdue) return text('overdue_title');
-    if (isDueToday || isDueSoon) return text('due_soon_title');
-    return text('scheduled_title');
+    if (isDueToday) return text('due_today_title');
+    return text('due_soon_title');
   }
 
   // Action Button Configuration
@@ -877,6 +898,7 @@ class _NotificationItem {
       dueDate: createdDay,
       flockId: null,
       vaccineId: null,
+      vaccinationId: null,
       days: createdDay.difference(todayDay).inDays,
       isVetResponse: true,
       vetMessage: notification['message']?.toString() ?? '',
@@ -894,6 +916,8 @@ class _NotificationItem {
 
     final flock = vaccinationMap(vaccination['flock']);
     final vaccine = vaccinationMap(vaccination['vaccine']);
+    final nextVaccine = vaccinationMap(vaccination['next_vaccine']);
+    final reminderVaccine = nextVaccine.isNotEmpty ? nextVaccine : vaccine;
     final today = VaccinationScheduleService.calendarDate(DateTime.now());
     final dueDay = VaccinationScheduleService.calendarDate(dueDate);
 
@@ -901,16 +925,17 @@ class _NotificationItem {
       flockName: (flock['batch_name'] ?? 'Unknown flock').toString(),
       vaccineName:
           (languageCode == 'km'
-                  ? vaccine['name_km'] ??
-                        vaccine['name_en'] ??
+                  ? reminderVaccine['name_km'] ??
+                        reminderVaccine['name_en'] ??
                         'Unknown vaccine'
-                  : vaccine['name_en'] ??
-                        vaccine['name_km'] ??
+                  : reminderVaccine['name_en'] ??
+                        reminderVaccine['name_km'] ??
                         'Unknown vaccine')
               .toString(),
       dueDate: dueDay,
       flockId: VaccinationScheduleService.flockIdFor(vaccination),
       vaccineId: _asInt(vaccine['vaccine_id'] ?? vaccination['vaccine_id']),
+      vaccinationId: _asInt(vaccination['vaccination_id']),
       days: dueDay.difference(today).inDays,
     );
   }

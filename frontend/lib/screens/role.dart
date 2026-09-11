@@ -78,7 +78,7 @@ class _RoleSelectionPageState extends State<RoleSelectionPage> {
                       }
                     },
                   ),
-                  const Icon(Icons.vaccines, color: brandGreen, size: 28),
+                  // const Icon(Icons.vaccines, color: brandGreen, size: 28),
                   const SizedBox(width: 8),
                   const Text(
                     'VacTracker',

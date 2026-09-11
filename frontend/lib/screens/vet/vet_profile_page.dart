@@ -324,14 +324,14 @@ class _VetProfileScreenState extends State<VetProfileScreen> {
             fontWeight: FontWeight.bold,
           ),
         ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.language, color: primaryGreen),
-            onPressed: () {
-              _toggleLanguage(_selectedLanguage == 'en' ? 'km' : 'en');
-            },
-          ),
-        ],
+        // actions: [
+        //   IconButton(
+        //     icon: const Icon(Icons.language, color: primaryGreen),
+        //     onPressed: () {
+        //       _toggleLanguage(_selectedLanguage == 'en' ? 'km' : 'en');
+        //     },
+        //   ),
+        // ],
       ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -600,7 +600,7 @@ class _VetProfileScreenState extends State<VetProfileScreen> {
   }
 
   Widget _buildUserInfoCard(bool isKhmer) {
-    final email = _profileData?['email'] ?? 'Not provided';
+    // final email = _profileData?['email'] ?? 'Not provided';
     final phone =
         _profileData?['phone'] ?? _profileData?['phone_number'] ?? 'N/A';
     final role = _profileData?['role'] ?? 'Veterinary Specialist';
@@ -622,12 +622,12 @@ class _VetProfileScreenState extends State<VetProfileScreen> {
       ),
       child: Column(
         children: [
-          _buildInfoTile(
-            icon: Icons.email_outlined,
-            title: isKhmer ? 'អ៊ីមែល' : 'Email',
-            value: email,
-          ),
-          Divider(height: 1, color: Colors.grey[200]),
+          // _buildInfoTile(
+          //   icon: Icons.email_outlined,
+          //   title: isKhmer ? 'អ៊ីមែល' : 'Email',
+          //   value: email,
+          // ),
+          // Divider(height: 1, color: Colors.grey[200]),
           _buildInfoTile(
             icon: Icons.phone_outlined,
             title: isKhmer ? 'លេខទូរស័ព្ទ' : 'Phone',

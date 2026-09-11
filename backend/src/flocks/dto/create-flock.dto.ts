@@ -21,9 +21,10 @@ export class CreateFlockDto {
   breed?: string;
 
 
-  // Chicken age
+  // Chicken age (optional - the UI derives flock age from date_acquired instead)
+  @IsOptional()
   @IsInt()
-  age!: number;
+  age?: number;
 
 
   // days / weeks / months

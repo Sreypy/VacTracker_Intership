@@ -101,13 +101,15 @@ export class VetDashboardService {
       sr => sr.status === ReportStatus.PENDING,
     ).length;
 
-    const overdueVaccinations = vaccinations.filter(v => {
-      if (v.status === VaccinationStatus.COMPLETED) return false;
-      if (!v.next_due_date) return false;
-      const nextDue = new Date(v.next_due_date);
-      nextDue.setHours(0, 0, 0, 0);
-      return nextDue < today;
-    }).length;
+    const activeCases = sickReports.filter(
+      sr =>
+        sr.status !== ReportStatus.RESOLVED &&
+        sr.status !== ReportStatus.REVIEWED,
+    ).length;
+
+    const resolvedReports = sickReports.filter(
+      sr => sr.status === ReportStatus.RESOLVED,
+    ).length;
 
     // Build connected farmers list with their flocks
     const farmersList = connections.map(connection => {
@@ -181,7 +183,8 @@ export class VetDashboardService {
       connectedFarmers,
       totalFlocks,
       newSickReports,
-      overdueVaccinations,
+      activeCases,
+      resolvedReports,
       farmers: farmersList,
     };
   }

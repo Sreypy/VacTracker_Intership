@@ -16,13 +16,14 @@ export class OtpCode {
   @Column()
   code_hash!: string;
 
-  @Column({
-    default: 0,
-  })
+  @Column({ default: 0 })
   attempts!: number;
 
   @Column()
   expires_at!: Date;
+
+  @Column({ default: false })
+  used!: boolean;
 
   @CreateDateColumn()
   created_at!: Date;

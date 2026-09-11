@@ -36,10 +36,10 @@ class AuthService {
   }
 
   // Send OTP for existing users
-  Future sendOtp(String phone) async {
+  Future<Map<String, dynamic>> sendOtp(String phone) async {
     final response = await dio.post("/auth/send-otp", data: {"phone": phone});
 
-    return response.data;
+    return Map<String, dynamic>.from(response.data as Map);
   }
 
   // Verify OTP and login

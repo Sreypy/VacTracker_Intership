@@ -29,8 +29,82 @@ class _FarmerDetailPageState extends State<FarmerDetailPage>
 
   static const Color alertRed = Color(0xFFDC2626);
   static const Color alertRedBg = Color(0xFFFEF2F2);
+  static const Color warningOrange = Color(0xFFD97706);
+  static const Color warningOrangeBg = Color(0xFFFFFBEB);
   static const Color successGreen = Color(0xFF16A34A);
   static const Color successGreenBg = Color(0xFFF0FDF4);
+
+  // Localization (English + Khmer)
+  static const Map<String, Map<String, String>> _localizedValues = {
+    'en': {
+      'tab_overview': 'Overview',
+      'tab_flocks': 'Flocks',
+      'tab_vaccines': 'Vaccines',
+      'tab_reports': 'Reports',
+      'label_owner': 'Owner',
+      'label_phone': 'Phone',
+      'metric_total_chickens': 'Total Chickens',
+      'metric_total_flocks': 'Total Flocks',
+      'metric_sick_reports': 'Sick Reports',
+      'metric_vaccines_due': 'Vaccines Due',
+      'metric_vaccines_completed': 'Vaccines Completed',
+
+      'total_chickens': 'Total Chickens',
+      'total_active_flocks': 'Total Active Flocks',
+      'active_sick_reports': 'Active Sick Reports',
+      'pending_vaccinations': 'Pending Vaccinations',
+      'no_flocks': 'No flocks registered',
+      'chickens': 'Chickens',
+      'no_vaccines': 'No vaccine records',
+      'label_flock': 'Flock',
+      'label_given': 'Given',
+      'label_next_due': 'Next Due',
+      'status_due_soon': 'Due Soon',
+      'status_overdue': 'Overdue',
+      'status_completed': 'Completed',
+      'status_up_to_date': 'Up to Date',
+      'no_sick_reports': 'No sick reports',
+      'affected_label': 'Affected',
+      'load_failed': 'Failed to load details',
+      'retry': 'Retry',
+    },
+    'km': {
+      'tab_overview': 'បូកសរុប',
+      'tab_flocks': 'ហ្វូង',
+      'tab_vaccines': 'វ៉ាក់សាំង',
+      'tab_reports': 'របាយការណ៍',
+      'label_owner': 'ម្ចាស់',
+      'label_phone': 'លេខទូរស័ព្ទ',
+      'metric_total_chickens': 'បក្សីសរុប',
+      'metric_total_flocks': 'ចំនួនហ្វូងសរុប',
+      'metric_sick_reports': 'របាយការណ៍សត្វឈឺ',
+      'metric_vaccines_due': 'ការចាក់វ៉ាក់សាំង',
+      'metric_vaccines_completed': 'វ៉ាក់សាំងបានចាក់',
+      'total_chickens': 'បក្សីសរុប',
+      'total_active_flocks': 'ហ្វូងសកម្មសរុប',
+      'active_sick_reports': 'របាយការណ៍សត្វឈឺសកម្ម',
+      'pending_vaccinations': 'ការចាក់វ៉ាក់សាំងដែលចាំបាច់',
+      'no_flocks': 'មិនមានហ្វូងបក្សីបានចុះឈ្មោះ',
+      'chickens': 'ក្បាល',
+      'no_vaccines': 'មិនមានកំណត់ត្រាវ៉ាក់សាំង',
+      'label_flock': 'ហ្វូង',
+      'label_given': 'ចាក់បាន',
+      'label_next_due': 'កំណត់បន្ទាប់',
+      'status_due_soon': 'ជិតដល់ពេល',
+      'status_overdue': 'ហួសកំណត់',
+      'status_completed': 'បានបញ្ចប់',
+      'status_up_to_date': 'ទាន់ពេល',
+      'no_sick_reports': 'មិនមានរបាយការណ៍សត្វឈឺ',
+      'affected_label': 'សត្វរងផលប៉ះពាល់',
+      'load_failed': 'មិនអាចផ្ទុកព័ត៌មានបានទេ។',
+      'retry': 'ព្យាយាមម្តងទៀត',
+    },
+  };
+
+  String _getText(String key) {
+    return _localizedValues[widget.languageCode]?[key] ??
+        _localizedValues['en']![key]!;
+  }
 
   late TabController _tabController;
   FarmerDetail? _farmerDetail;
@@ -138,12 +212,17 @@ class _FarmerDetailPageState extends State<FarmerDetailPage>
                           labelStyle: const TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 13,
+                            letterSpacing: 0.2,
                           ),
-                          tabs: const [
-                            Tab(text: 'Overview'),
-                            Tab(text: 'Flocks'),
-                            Tab(text: 'Vaccines'),
-                            Tab(text: 'Reports'),
+                          labelPadding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 10,
+                          ),
+                          tabs: [
+                            Tab(text: _getText('tab_overview')),
+                            Tab(text: _getText('tab_flocks')),
+                            Tab(text: _getText('tab_vaccines')),
+                            Tab(text: _getText('tab_reports')),
                           ],
                         ),
                       ),
@@ -273,12 +352,12 @@ class _FarmerDetailPageState extends State<FarmerDetailPage>
             children: [
               _buildCompactInfoTile(
                 icon: Icons.person_outline,
-                label: 'Owner',
+                label: _getText('label_owner'),
                 value: farm.farmer.name,
               ),
               _buildCompactInfoTile(
                 icon: Icons.smartphone_outlined,
-                label: 'Phone',
+                label: _getText('label_phone'),
                 value: farm.farmer.phone,
               ),
             ],
@@ -326,6 +405,9 @@ class _FarmerDetailPageState extends State<FarmerDetailPage>
   Widget _buildMetricsSection() {
     if (_farmerDetail == null) return const SizedBox.shrink();
     final summary = _farmerDetail!.summary;
+    final completedVaccines = _farmerDetail!.vaccinations
+        .where((v) => v.status.toLowerCase() == 'completed')
+        .length;
 
     return GridView.count(
       crossAxisCount: 2,
@@ -336,7 +418,7 @@ class _FarmerDetailPageState extends State<FarmerDetailPage>
       childAspectRatio: 2.1,
       children: [
         _buildMetricCard(
-          title: 'Total Chickens',
+          title: _getText('metric_total_chickens'),
           value: '${summary.totalChickens}',
           icon: Icons.pets_outlined,
           color: primaryGreen,
@@ -344,7 +426,7 @@ class _FarmerDetailPageState extends State<FarmerDetailPage>
           onTap: () => _tabController.animateTo(1),
         ),
         _buildMetricCard(
-          title: 'Total Flocks',
+          title: _getText('metric_total_flocks'),
           value: '${summary.totalFlocks}',
           icon: Icons.grid_view_outlined,
           color: primaryGreen,
@@ -352,7 +434,7 @@ class _FarmerDetailPageState extends State<FarmerDetailPage>
           onTap: () => _tabController.animateTo(1),
         ),
         _buildMetricCard(
-          title: 'Sick Reports',
+          title: _getText('metric_sick_reports'),
           value: '${summary.activeSickReports}',
           icon: Icons.medical_information_outlined,
           color: summary.activeSickReports > 0 ? alertRed : successGreen,
@@ -360,11 +442,11 @@ class _FarmerDetailPageState extends State<FarmerDetailPage>
           onTap: () => _tabController.animateTo(3),
         ),
         _buildMetricCard(
-          title: 'Vaccines Due',
-          value: '${summary.vaccinationsDue}',
-          icon: Icons.vaccines_outlined,
-          color: summary.vaccinationsDue > 0 ? alertRed : successGreen,
-          bgColor: summary.vaccinationsDue > 0 ? alertRedBg : successGreenBg,
+          title: _getText('metric_vaccines_completed'),
+          value: '$completedVaccines',
+          icon: Icons.check_circle_outline,
+          color: successGreen,
+          bgColor: successGreenBg,
           onTap: () => _tabController.animateTo(2),
         ),
       ],
@@ -446,17 +528,23 @@ class _FarmerDetailPageState extends State<FarmerDetailPage>
           ),
           child: Column(
             children: [
-              _buildListRow('Total Chickens', '${summary.totalChickens}'),
-              const Divider(height: 24, color: cardBorder),
-              _buildListRow('Total Active Flocks', '${summary.totalFlocks}'),
+              _buildListRow(
+                _getText('total_chickens'),
+                '${summary.totalChickens}',
+              ),
               const Divider(height: 24, color: cardBorder),
               _buildListRow(
-                'Active Sick Reports',
+                _getText('total_active_flocks'),
+                '${summary.totalFlocks}',
+              ),
+              const Divider(height: 24, color: cardBorder),
+              _buildListRow(
+                _getText('active_sick_reports'),
                 '${summary.activeSickReports}',
               ),
               const Divider(height: 24, color: cardBorder),
               _buildListRow(
-                'Pending Vaccinations',
+                _getText('pending_vaccinations'),
                 '${summary.vaccinationsDue}',
               ),
             ],
@@ -485,7 +573,7 @@ class _FarmerDetailPageState extends State<FarmerDetailPage>
 
   Widget _buildFlocksTab() {
     if (_farmerDetail!.flocks.isEmpty) {
-      return _buildEmptyState('No flocks registered');
+      return _buildEmptyState(_getText('no_flocks'));
     }
 
     return ListView.builder(
@@ -524,10 +612,10 @@ class _FarmerDetailPageState extends State<FarmerDetailPage>
                 ),
               ),
               subtitle: Text(
-                '${flock.birdCount} Chickens • ${flock.breed}',
+                '${flock.birdCount} ${_getText('chickens')} • ${flock.breed}',
                 style: const TextStyle(color: textMuted),
               ),
-              trailing: const Icon(Icons.chevron_right, color: textMuted),
+              // trailing: const Icon(Icons.chevron_right, color: textMuted),
               onTap: () => context.push(
                 '/flock-detail/${flock.flockId}/${widget.languageCode}',
               ),
@@ -540,7 +628,7 @@ class _FarmerDetailPageState extends State<FarmerDetailPage>
 
   Widget _buildVaccinationsTab() {
     if (_farmerDetail!.vaccinations.isEmpty) {
-      return _buildEmptyState('No vaccine records');
+      return _buildEmptyState(_getText('no_vaccines'));
     }
 
     return ListView.builder(
@@ -548,44 +636,91 @@ class _FarmerDetailPageState extends State<FarmerDetailPage>
       itemCount: _farmerDetail!.vaccinations.length,
       itemBuilder: (context, index) {
         final vax = _farmerDetail!.vaccinations[index];
+        final vaxStatus = _vaccinationStatusStyle(vax.status);
+        final nextDueText = vax.nextDueDate == null
+            ? '—'
+            : _formatDate(vax.nextDueDate!);
+
         return Container(
           margin: const EdgeInsets.only(bottom: 12),
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(16),
             border: Border.all(color: cardBorder),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF0F172A).withValues(alpha: 0.04),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
           ),
           child: Material(
             color: Colors.transparent,
-            borderRadius: BorderRadius.circular(14),
-            child: ListTile(
-              isThreeLine: true,
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 16,
-                vertical: 8,
-              ),
-              leading: CircleAvatar(
-                backgroundColor: primaryLight,
-                child: const Icon(
-                  Icons.vaccines_outlined,
-                  color: primaryGreen,
-                  size: 20,
-                ),
-              ),
-              title: Text(
-                vax.vaccineName,
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  color: textMain,
-                ),
-              ),
-              subtitle: Text(
-                'Flock: ${vax.flockName}\nDate: ${_formatDate(vax.dateGiven)}',
-                style: const TextStyle(color: textMuted, height: 1.3),
-              ),
-              trailing: const Icon(Icons.chevron_right, color: textMuted),
+            borderRadius: BorderRadius.circular(16),
+            child: InkWell(
               onTap: () => context.push(
                 '/flock-detail/${vax.flockId}/${widget.languageCode}',
+              ),
+              borderRadius: BorderRadius.circular(16),
+              child: Padding(
+                padding: const EdgeInsets.all(14),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        CircleAvatar(
+                          radius: 20,
+                          backgroundColor: primaryLight,
+                          child: Icon(
+                            Icons.vaccines_outlined,
+                            color: primaryGreen,
+                            size: 18,
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            vax.vaccineName,
+                            style: const TextStyle(
+                              color: textMain,
+                              fontSize: 15,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        _buildVaccinationStatusBadge(vaxStatus),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    const Divider(height: 1, color: cardBorder),
+                    const SizedBox(height: 10),
+                    _buildVaccinationInfoRow(
+                      icon: Icons.groups_outlined,
+                      label: '${_getText('label_flock')}:',
+                      value: vax.flockName,
+                    ),
+                    const SizedBox(height: 4),
+                    _buildVaccinationInfoRow(
+                      icon: Icons.calendar_today_outlined,
+                      label: '${_getText('label_given')}:',
+                      value: _formatDate(vax.dateGiven),
+                    ),
+                    const SizedBox(height: 4),
+                    _buildVaccinationInfoRow(
+                      icon: Icons.schedule_outlined,
+                      label: '${_getText('label_next_due')}:',
+                      value: nextDueText,
+                      valueColor: vax.nextDueDate == null
+                          ? textMuted
+                          : vaxStatus.fgColor,
+                      valueWeight: FontWeight.bold,
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -594,9 +729,106 @@ class _FarmerDetailPageState extends State<FarmerDetailPage>
     );
   }
 
+  Widget _buildVaccinationInfoRow({
+    required IconData icon,
+    required String label,
+    required String value,
+    Color? valueColor,
+    FontWeight valueWeight = FontWeight.w500,
+  }) {
+    return Row(
+      children: [
+        Icon(icon, color: textMuted, size: 14),
+        const SizedBox(width: 10),
+        SizedBox(
+          width: 76,
+          child: Text(
+            label,
+            style: const TextStyle(
+              color: textMuted,
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+            ),
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+        Expanded(
+          child: Text(
+            value,
+            style: TextStyle(
+              color: valueColor ?? textMain,
+              fontSize: 13,
+              fontWeight: valueWeight,
+            ),
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+      ],
+    );
+  }
+
+  _VaccinationStatusStyle _vaccinationStatusStyle(String rawStatus) {
+    switch (rawStatus.toLowerCase()) {
+      case 'due_soon':
+        return _VaccinationStatusStyle(
+          label: _getText('status_due_soon'),
+          fgColor: warningOrange,
+          bgColor: warningOrangeBg,
+          icon: Icons.warning_amber_rounded,
+        );
+      case 'overdue':
+        return _VaccinationStatusStyle(
+          label: _getText('status_overdue'),
+          fgColor: alertRed,
+          bgColor: alertRedBg,
+          icon: Icons.error_outline,
+        );
+      case 'completed':
+        return _VaccinationStatusStyle(
+          label: _getText('status_completed'),
+          fgColor: successGreen,
+          bgColor: successGreenBg,
+          icon: Icons.check_circle_outline,
+        );
+      case 'on_time':
+      default:
+        return _VaccinationStatusStyle(
+          label: _getText('status_up_to_date'),
+          fgColor: successGreen,
+          bgColor: successGreenBg,
+          icon: Icons.check_circle_outline,
+        );
+    }
+  }
+
+  Widget _buildVaccinationStatusBadge(_VaccinationStatusStyle vaxStatus) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: vaxStatus.bgColor,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(vaxStatus.icon, color: vaxStatus.fgColor, size: 12),
+          const SizedBox(width: 4),
+          Text(
+            vaxStatus.label,
+            style: TextStyle(
+              color: vaxStatus.fgColor,
+              fontSize: 11,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildSickReportsTab() {
     if (_farmerDetail!.sickReports.isEmpty) {
-      return _buildEmptyState('No sick reports');
+      return _buildEmptyState(_getText('no_sick_reports'));
     }
 
     return ListView.builder(
@@ -639,7 +871,7 @@ class _FarmerDetailPageState extends State<FarmerDetailPage>
                 ),
               ),
               subtitle: Text(
-                '${report.reportType.toUpperCase()} • ${report.affectedCount} Affected',
+                '${report.reportType.toUpperCase()} • ${_getText('affected_label')} ${report.affectedCount}',
                 style: const TextStyle(color: textMuted),
               ),
               trailing: const Icon(Icons.chevron_right, color: textMuted),
@@ -671,9 +903,9 @@ class _FarmerDetailPageState extends State<FarmerDetailPage>
           children: [
             const Icon(Icons.error_outline, color: alertRed, size: 48),
             const SizedBox(height: 16),
-            const Text(
-              'Failed to load details',
-              style: TextStyle(
+            Text(
+              _getText('load_failed'),
+              style: const TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
                 color: textMain,
@@ -689,7 +921,7 @@ class _FarmerDetailPageState extends State<FarmerDetailPage>
             ElevatedButton.icon(
               onPressed: _fetchFarmerDetail,
               icon: const Icon(Icons.refresh),
-              label: const Text('Retry'),
+              label: Text(_getText('retry')),
               style: ElevatedButton.styleFrom(
                 backgroundColor: primaryGreen,
                 foregroundColor: Colors.white,
@@ -783,9 +1015,29 @@ class _SliverTabBarDelegate extends SliverPersistentHeaderDelegate {
     double shrinkOffset,
     bool overlapsContent,
   ) {
-    return Container(color: Colors.white, child: _tabBar);
+    return Container(
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        border: Border(bottom: BorderSide(color: Color(0xFFE2E8F0))),
+      ),
+      child: _tabBar,
+    );
   }
 
   @override
   bool shouldRebuild(_SliverTabBarDelegate oldDelegate) => false;
+}
+
+class _VaccinationStatusStyle {
+  final String label;
+  final Color fgColor;
+  final Color bgColor;
+  final IconData icon;
+
+  _VaccinationStatusStyle({
+    required this.label,
+    required this.fgColor,
+    required this.bgColor,
+    required this.icon,
+  });
 }

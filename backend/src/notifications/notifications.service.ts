@@ -84,10 +84,11 @@ export class NotificationsService {
     );
     const absDays = Math.abs(diffDays);
 
+    const reminderVaccine = vaccination.next_vaccine ?? vaccination.vaccine;
     const vaccineNameEn =
-      vaccination.vaccine.name_en || vaccination.vaccine.name_km || 'Unknown vaccine';
+      reminderVaccine.name_en || reminderVaccine.name_km || 'Unknown vaccine';
     const vaccineNameKm =
-      vaccination.vaccine.name_km || vaccination.vaccine.name_en || 'Unknown vaccine';
+      reminderVaccine.name_km || reminderVaccine.name_en || 'Unknown vaccine';
     const flockName = vaccination.flock.batch_name || 'Unknown flock';
 
     const notification = this.notificationRepository.create({
@@ -103,7 +104,7 @@ export class NotificationsService {
         flock_name: flockName,
         due_date: dueDate.toISOString().split('T')[0],
         flock_id: vaccination.flock.flock_id,
-        vaccine_id: vaccination.vaccine.vaccine_id,
+        vaccine_id: reminderVaccine.vaccine_id,
       },
     });
 
@@ -128,6 +129,7 @@ export class NotificationsService {
       .leftJoinAndSelect('vaccination.flock', 'flock')
       .leftJoinAndSelect('flock.farmer', 'farmer')
       .leftJoinAndSelect('vaccination.vaccine', 'vaccine')
+      .leftJoinAndSelect('vaccination.next_vaccine', 'next_vaccine')
       .where('farmer.user_id = :farmerId', { farmerId })
       .andWhere('vaccination.next_due_date < :today', { today: todayStr })
       .andWhere('vaccination.status != :completed', {

@@ -22,24 +22,107 @@ class _VetDashboardPageState extends State<VetDashboardPage> {
 
   // Modern Color Palette
   static const Color primaryGreen = Color(0xFF0F5132);
-  static const Color lightGreenBg = Color(0xFFE8F5E9);
-  static const Color accentGreen = Color(0xFF198754);
-  static const Color backgroundSurface = Color(0xFFF8FAF8);
+  static const Color accentGreen = Color(0xFF10B981);
+  static const Color lightGreenBg = Color(0xFFECFDF5);
+  static const Color backgroundSurface = Color(0xFFF8FAFC);
   static const Color cardSurface = Colors.white;
 
   // Text Colors
-  static const Color textPrimary = Color(0xFF1E293B);
-  static const Color textSecondary = Color(0xFF64748B);
+  static const Color textPrimary = Color(0xFF0F172A);
+  static const Color textSecondary = Color(0xFF475569);
   static const Color textMuted = Color(0xFF94A3B8);
   static const Color borderSubtle = Color(0xFFE2E8F0);
 
   // Status Colors
-  static const Color statusDanger = Color(0xFFDC2626);
+  static const Color statusDanger = Color(0xFFEF4444);
   static const Color statusDangerBg = Color(0xFFFEF2F2);
-  static const Color statusWarning = Color(0xFFD97706);
+  static const Color statusWarning = Color(0xFFF59E0B);
   static const Color statusWarningBg = Color(0xFFFFFBEB);
-  static const Color statusSuccess = Color(0xFF16A34A);
-  static const Color statusSuccessBg = Color(0xFFF0FDF4);
+  static const Color statusSuccess = Color(0xFF10B981);
+  static const Color statusSuccessBg = Color(0xFFECFDF5);
+
+  // Localization (English + Khmer)
+  static const Map<String, Map<String, String>> _localizedValues = {
+    'en': {
+      'greeting_morning': 'Good Morning',
+      'greeting_afternoon': 'Good Afternoon',
+      'greeting_evening': 'Good Evening',
+      'veterinary_portal': 'Veterinary Portal',
+      'banner_subtitle': 'Monitor assigned farmers & flock health status',
+      'section_overview': 'Overview',
+      'section_my_farmers': 'My Farmers',
+      'action_view_all': 'View All',
+      'metric_farmers': 'Farmers',
+      'metric_total_flocks': 'Total Flocks',
+      'metric_sick_reports': 'Sick Reports',
+      'metric_resolved_reports': 'Resolved Reports',
+      'unit_flocks': 'Flocks',
+      'unit_birds': 'Birds',
+      'nav_home': 'Home',
+      'nav_reports': 'Reports',
+      'nav_farmers': 'Farmers',
+      'nav_profile': 'Profile',
+      'error_title': 'Unable to load dashboard',
+      'retry': 'Retry',
+      'empty_farmers_title': 'No assigned farmers yet',
+      'empty_farmers_subtitle': 'Farmers assigned to you will appear here.',
+      'status_healthy': 'HEALTHY',
+      'status_sick': 'SICK',
+      'status_overdue': 'OVERDUE',
+      'status_due_soon': 'DUE SOON',
+    },
+    'km': {
+      'greeting_morning': 'អរុណសួស្តី',
+      'greeting_afternoon': 'ទិវាសួស្តី',
+      'greeting_evening': 'សាយណ្ហសួស្តី',
+      'veterinary_portal': 'សេវាពេទ្យសត្វ',
+      'banner_subtitle': 'ត្រួតពិនិត្យកសិករដែលបានកំណត់ និងសុខភាពហ្វូងបក្សី',
+      'section_overview': 'បូកសរុប',
+      'section_my_farmers': 'កសិកររបស់ខ្ញុំ',
+      'action_view_all': 'មើលទាំងអស់',
+      'metric_farmers': 'កសិករ',
+      'metric_total_flocks': 'ចំនួនហ្វូង',
+      'metric_sick_reports': 'របាយការណ៍សត្វឈឺ',
+      'metric_resolved_reports': 'បានដោះស្រាយ',
+      'unit_flocks': 'ហ្វូង',
+      'unit_birds': 'ក្បាល',
+      'nav_home': 'ទំព័រដើម',
+      'nav_reports': 'របាយការណ៍',
+      'nav_farmers': 'កសិករ',
+      'nav_profile': 'ប្រវត្តិរូប',
+      'error_title': 'មិនអាចផ្ទុកផ្ទាំងព័ត៌មានបានទេ',
+      'retry': 'ព្យាយាមម្តងទៀត',
+      'empty_farmers_title': 'មិនមានកសិករដែលបានកំណត់នៅឡើយទេ',
+      'empty_farmers_subtitle': 'កសិករដែលបានកំណត់ឱ្យអ្នកនឹងបង្ហាញនៅទីនេះ។',
+      'status_healthy': 'សុខភាពល្អ',
+      'status_sick': 'មានសត្វឈឺ',
+      'status_overdue': 'ហួសកំណត់',
+      'status_due_soon': 'ជិតដល់ពេល',
+    },
+  };
+
+  String _getText(String key) {
+    return _localizedValues[widget.languageCode]?[key] ??
+        _localizedValues['en']![key]!;
+  }
+
+  /// Localized per-farmer status badge label.
+  /// English keeps the backend-provided `statusText` (e.g. "2 SICK REPORTS");
+  /// Khmer maps from the status enum because backend text is English only.
+  String _farmerStatusText(FarmerData farmer) {
+    if (widget.languageCode != 'km') return farmer.statusText;
+    switch (farmer.status) {
+      case 'sick':
+        return _getText('status_sick');
+      case 'overdue':
+        return _getText('status_overdue');
+      case 'due_soon':
+        return _getText('status_due_soon');
+      case 'healthy':
+      default:
+        return _getText('status_healthy');
+    }
+  }
 
   VetDashboardStats? _dashboardStats;
   bool _isLoading = true;
@@ -59,9 +142,9 @@ class _VetDashboardPageState extends State<VetDashboardPage> {
 
   String _getGreeting() {
     final hour = DateTime.now().hour;
-    if (hour < 12) return 'Good Morning';
-    if (hour < 17) return 'Good Afternoon';
-    return 'Good Evening';
+    if (hour < 12) return _getText('greeting_morning');
+    if (hour < 17) return _getText('greeting_afternoon');
+    return _getText('greeting_evening');
   }
 
   Future<void> _fetchVetProfile() async {
@@ -108,7 +191,7 @@ class _VetDashboardPageState extends State<VetDashboardPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color.fromARGB(255, 255, 255, 255),
+      backgroundColor: backgroundSurface,
       appBar: _buildAppBar(),
       body: SafeArea(
         child: RefreshIndicator(
@@ -133,23 +216,20 @@ class _VetDashboardPageState extends State<VetDashboardPage> {
                     _buildHeaderBanner(),
                     const SizedBox(height: 24),
                     if (_isLoading)
-                      const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 80.0),
-                        child: Center(
-                          child: CircularProgressIndicator(
-                            color: primaryGreen,
-                            strokeWidth: 3,
-                          ),
-                        ),
-                      )
+                      _buildLoadingView()
                     else if (_errorMessage != null)
                       _buildErrorView()
                     else ...[
-                      _buildSectionTitle('Overview'),
+                      _buildSectionHeader(_getText('section_overview')),
                       const SizedBox(height: 12),
                       _buildMetricsGrid(),
                       const SizedBox(height: 28),
-                      _buildFarmerHeader(),
+                      _buildSectionHeader(
+                        _getText('section_my_farmers'),
+                        actionText: _getText('action_view_all'),
+                        onActionTap: () =>
+                            context.push('/my-farmers/${widget.languageCode}'),
+                      ),
                       const SizedBox(height: 12),
                       if (_dashboardStats?.farmers.isEmpty ?? true)
                         _buildEmptyFarmersState()
@@ -212,10 +292,10 @@ class _VetDashboardPageState extends State<VetDashboardPage> {
             ),
           ),
           const SizedBox(width: 12),
-          const Column(
+          Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
+              const Text(
                 "VacTracker",
                 style: TextStyle(
                   color: textPrimary,
@@ -225,8 +305,8 @@ class _VetDashboardPageState extends State<VetDashboardPage> {
                 ),
               ),
               Text(
-                "Veterinary Portal",
-                style: TextStyle(
+                _getText('veterinary_portal'),
+                style: const TextStyle(
                   color: textSecondary,
                   fontSize: 11,
                   fontWeight: FontWeight.w500,
@@ -236,54 +316,25 @@ class _VetDashboardPageState extends State<VetDashboardPage> {
           ),
         ],
       ),
-      // actions: [
-      //   Stack(
-      //     alignment: Alignment.center,
-      //     children: [
-      //       IconButton(
-      //         icon: const Icon(
-      //           Icons.notifications_outlined,
-      //           color: textPrimary,
-      //           size: 24,
-      //         ),
-      //         onPressed: () =>
-      //             context.push('/notifications/${widget.languageCode}'),
-      //       ),
-      //       Positioned(
-      //         top: 10,
-      //         right: 12,
-      //         child: Container(
-      //           width: 8,
-      //           height: 8,
-      //           decoration: const BoxDecoration(
-      //             color: statusDanger,
-      //             shape: BoxShape.circle,
-      //           ),
-      //         ),
-      //       ),
-      //     ],
-      //   ),
-      //   const SizedBox(width: 12),
-      // ],
     );
   }
 
   Widget _buildHeaderBanner() {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(22),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
           colors: [primaryGreen, Color(0xFF145A32)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
             color: primaryGreen.withValues(alpha: 0.25),
-            blurRadius: 16,
-            offset: const Offset(0, 6),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
           ),
         ],
       ),
@@ -295,8 +346,8 @@ class _VetDashboardPageState extends State<VetDashboardPage> {
             children: [
               Container(
                 padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 4,
+                  horizontal: 12,
+                  vertical: 6,
                 ),
                 decoration: BoxDecoration(
                   color: Colors.white.withValues(alpha: 0.15),
@@ -306,32 +357,38 @@ class _VetDashboardPageState extends State<VetDashboardPage> {
                   _getGreeting(),
                   style: const TextStyle(
                     color: Colors.white,
-                    fontSize: 11,
+                    fontSize: 12,
                     fontWeight: FontWeight.w600,
-                    letterSpacing: 0.2,
                   ),
                 ),
               ),
-              const Icon(
-                Icons.verified_user_rounded,
-                color: Colors.white54,
-                size: 20,
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.12),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.verified_user_rounded,
+                  color: Colors.white,
+                  size: 18,
+                ),
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 16),
           Text(
             '$_vetName 👋',
             style: const TextStyle(
               color: Colors.white,
-              fontSize: 22,
+              fontSize: 24,
               fontWeight: FontWeight.bold,
-              letterSpacing: -0.4,
+              letterSpacing: -0.5,
             ),
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 6),
           Text(
-            'Monitor your assigned farmers & poultry health',
+            _getText('banner_subtitle'),
             style: TextStyle(
               color: Colors.white.withValues(alpha: 0.85),
               fontSize: 13,
@@ -343,15 +400,46 @@ class _VetDashboardPageState extends State<VetDashboardPage> {
     );
   }
 
-  Widget _buildSectionTitle(String title) {
-    return Text(
-      title,
-      style: const TextStyle(
-        color: textPrimary,
-        fontSize: 16,
-        fontWeight: FontWeight.bold,
-        letterSpacing: -0.2,
-      ),
+  Widget _buildSectionHeader(
+    String title, {
+    String? actionText,
+    VoidCallback? onActionTap,
+  }) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          title,
+          style: const TextStyle(
+            color: textPrimary,
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            letterSpacing: -0.3,
+          ),
+        ),
+        if (actionText != null && onActionTap != null)
+          GestureDetector(
+            onTap: onActionTap,
+            child: Row(
+              children: [
+                Text(
+                  actionText,
+                  style: const TextStyle(
+                    color: accentGreen,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(width: 2),
+                const Icon(
+                  Icons.chevron_right_rounded,
+                  color: accentGreen,
+                  size: 18,
+                ),
+              ],
+            ),
+          ),
+      ],
     );
   }
 
@@ -360,13 +448,13 @@ class _VetDashboardPageState extends State<VetDashboardPage> {
       crossAxisCount: 2,
       crossAxisSpacing: 12,
       mainAxisSpacing: 12,
-      childAspectRatio: 1.3,
+      childAspectRatio: 1.05,
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       children: [
         _buildMetricCard(
           icon: Icons.people_alt_outlined,
-          label: 'Farmers',
+          label: _getText('metric_farmers'),
           value: '${_dashboardStats?.connectedFarmers ?? 0}',
           iconBgColor: lightGreenBg,
           iconColor: primaryGreen,
@@ -374,7 +462,7 @@ class _VetDashboardPageState extends State<VetDashboardPage> {
         ),
         _buildMetricCard(
           icon: Icons.pets_outlined,
-          label: 'Total Flocks',
+          label: _getText('metric_total_flocks'),
           value: '${_dashboardStats?.totalFlocks ?? 0}',
           iconBgColor: const Color(0xFFE0F2FE),
           iconColor: const Color(0xFF0284C7),
@@ -382,7 +470,7 @@ class _VetDashboardPageState extends State<VetDashboardPage> {
         ),
         _buildMetricCard(
           icon: Icons.medical_services_outlined,
-          label: 'Sick Reports',
+          label: _getText('metric_sick_reports'),
           value: '${_dashboardStats?.newSickReports ?? 0}',
           iconBgColor: statusDangerBg,
           iconColor: statusDanger,
@@ -390,13 +478,14 @@ class _VetDashboardPageState extends State<VetDashboardPage> {
           onTap: () => context.push('/vet-reports?lang=${widget.languageCode}'),
         ),
         _buildMetricCard(
-          icon: Icons.vaccines_outlined,
-          label: 'Overdue Vaccines',
-          value: '${_dashboardStats?.overdueVaccinations ?? 0}',
-          iconBgColor: statusWarningBg,
-          iconColor: statusWarning,
-          isAlert: (_dashboardStats?.overdueVaccinations ?? 0) > 0,
-          onTap: () => context.push('/my-farmers/${widget.languageCode}'),
+          icon: Icons.check_circle_outline_rounded,
+          label: _getText('metric_resolved_reports'),
+          value: '${_dashboardStats?.resolvedReports ?? 0}',
+          iconBgColor: statusSuccessBg,
+          iconColor: statusSuccess,
+          onTap: () => context.push(
+            '/vet-reports?lang=${widget.languageCode}&status=resolved',
+          ),
         ),
       ],
     );
@@ -414,27 +503,27 @@ class _VetDashboardPageState extends State<VetDashboardPage> {
     return Container(
       decoration: BoxDecoration(
         color: cardSurface,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(18),
         border: Border.all(
-          color: isAlert ? iconColor.withValues(alpha: 0.3) : borderSubtle,
+          color: isAlert ? iconColor.withValues(alpha: 0.4) : borderSubtle,
           width: isAlert ? 1.5 : 1,
         ),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.02),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
       child: Material(
         color: Colors.transparent,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(18),
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(18),
           child: Padding(
-            padding: const EdgeInsets.all(14),
+            padding: const EdgeInsets.all(12),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -443,34 +532,53 @@ class _VetDashboardPageState extends State<VetDashboardPage> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Container(
-                      padding: const EdgeInsets.all(8),
+                      padding: const EdgeInsets.all(9),
                       decoration: BoxDecoration(
                         color: iconBgColor,
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius: BorderRadius.circular(12),
                       ),
-                      child: Icon(icon, color: iconColor, size: 20),
+                      child: Icon(icon, color: iconColor, size: 18),
                     ),
+                    if (isAlert)
+                      Container(
+                        width: 8,
+                        height: 8,
+                        decoration: BoxDecoration(
+                          color: iconColor,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
                   ],
                 ),
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
                       value,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         color: isAlert ? iconColor : textPrimary,
-                        fontSize: 22,
+                        fontSize: 24,
                         fontWeight: FontWeight.bold,
                         height: 1.1,
                       ),
                     ),
-                    const SizedBox(height: 2),
-                    Text(
-                      label,
-                      style: const TextStyle(
-                        color: textSecondary,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
+                    const SizedBox(height: 3),
+                    Flexible(
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          label,
+                          maxLines: 1,
+                          style: const TextStyle(
+                            color: textSecondary,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
                       ),
                     ),
                   ],
@@ -480,32 +588,6 @@ class _VetDashboardPageState extends State<VetDashboardPage> {
           ),
         ),
       ),
-    );
-  }
-
-  Widget _buildFarmerHeader() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        _buildSectionTitle('My Farmers'),
-        GestureDetector(
-          onTap: () => context.push('/my-farmers/${widget.languageCode}'),
-          child: const Row(
-            children: [
-              Text(
-                'View All',
-                style: TextStyle(
-                  color: accentGreen,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-              SizedBox(width: 2),
-              Icon(Icons.chevron_right_rounded, color: accentGreen, size: 16),
-            ],
-          ),
-        ),
-      ],
     );
   }
 
@@ -530,15 +612,15 @@ class _VetDashboardPageState extends State<VetDashboardPage> {
     }
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 10),
+      margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         color: cardSurface,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(color: borderSubtle),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.02),
-            blurRadius: 6,
+            blurRadius: 8,
             offset: const Offset(0, 2),
           ),
         ],
@@ -552,99 +634,106 @@ class _VetDashboardPageState extends State<VetDashboardPage> {
           ),
           borderRadius: BorderRadius.circular(16),
           child: Padding(
-            padding: const EdgeInsets.all(14),
+            padding: const EdgeInsets.all(16),
             child: Row(
               children: [
                 Container(
-                  width: 44,
-                  height: 44,
+                  width: 48,
+                  height: 48,
                   decoration: BoxDecoration(
                     color: backgroundSurface,
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(14),
                     border: Border.all(color: borderSubtle),
                   ),
                   child: const Icon(
                     Icons.person_outline_rounded,
-                    color: textPrimary,
-                    size: 22,
+                    color: primaryGreen,
+                    size: 24,
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 14),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
                         farmer.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
                           color: textPrimary,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w400,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
                       const SizedBox(height: 4),
-                      FittedBox(
-                        fit: BoxFit.scaleDown,
-                        alignment: Alignment.centerLeft,
-                        child: Row(
-                          children: [
-                            const Icon(
-                              Icons.grid_view,
-                              size: 12,
-                              color: textMuted,
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              '${farmer.flockCount} Flocks',
+                      // FIXED: Inner Row with Flexible wraps to prevent overflow
+                      Row(
+                        children: [
+                          const Icon(
+                            Icons.grid_view_rounded,
+                            size: 13,
+                            color: textMuted,
+                          ),
+                          const SizedBox(width: 4),
+                          Flexible(
+                            child: Text(
+                              '${farmer.flockCount} ${_getText('unit_flocks')}',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                               style: const TextStyle(
                                 color: textSecondary,
                                 fontSize: 12,
-                                fontWeight: FontWeight.w400,
+                                fontWeight: FontWeight.w500,
                               ),
                             ),
-                            const SizedBox(width: 8),
-                            const Text(
+                          ),
+                          const Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 6),
+                            child: Text(
                               '•',
-                              style: TextStyle(
-                                color: textMuted,
-                                fontSize: 12,
-                              ),
+                              style: TextStyle(color: textMuted, fontSize: 12),
                             ),
-                            const SizedBox(width: 8),
-                            const Icon(
-                              Icons.pets,
-                              size: 12,
-                              color: textMuted,
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              '${farmer.totalBirds} Birds',
+                          ),
+                          const Icon(
+                            Icons.pets_rounded,
+                            size: 13,
+                            color: textMuted,
+                          ),
+                          const SizedBox(width: 4),
+                          Flexible(
+                            child: Text(
+                              '${farmer.totalBirds} ${_getText('unit_birds')}',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                               style: const TextStyle(
                                 color: textSecondary,
                                 fontSize: 12,
+                                fontWeight: FontWeight.w500,
                               ),
                             ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
                 ),
+                const SizedBox(width: 8),
                 Container(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 10,
+                    horizontal: 10,
+                    vertical: 6,
                   ),
                   decoration: BoxDecoration(
                     color: statusBg,
-                    borderRadius: BorderRadius.circular(15),
+                    borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
-                    farmer.statusText,
+                    _farmerStatusText(farmer),
                     style: TextStyle(
                       color: statusFg,
-                      fontSize: 10,
-                      fontWeight: FontWeight.w400,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
                 ),
@@ -652,7 +741,7 @@ class _VetDashboardPageState extends State<VetDashboardPage> {
                 const Icon(
                   Icons.chevron_right_rounded,
                   color: textMuted,
-                  size: 10,
+                  size: 20,
                 ),
               ],
             ),
@@ -693,40 +782,55 @@ class _VetDashboardPageState extends State<VetDashboardPage> {
         unselectedItemColor: textMuted,
         showSelectedLabels: false,
         showUnselectedLabels: false,
-        items: const [
+        selectedFontSize: 11,
+        unselectedFontSize: 11,
+        items: [
           BottomNavigationBarItem(
-            icon: Icon(Icons.home_outlined, size: 24),
-            label: 'Home',
+            icon: const Icon(Icons.home_outlined, size: 24),
+            activeIcon: const Icon(Icons.home_rounded, size: 24),
+            label: _getText('nav_home'),
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.assignment_outlined, size: 24),
-            label: 'Reports',
+            icon: const Icon(Icons.assignment_outlined, size: 24),
+            activeIcon: const Icon(Icons.assignment_rounded, size: 24),
+            label: _getText('nav_reports'),
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.people_outline_rounded, size: 24),
-            label: 'Farmers',
+            icon: const Icon(Icons.people_outline_rounded, size: 24),
+            activeIcon: const Icon(Icons.people_rounded, size: 24),
+            label: _getText('nav_farmers'),
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.person_outline_rounded, size: 24),
-            label: 'Profile',
+            icon: const Icon(Icons.person_outline_rounded, size: 24),
+            activeIcon: const Icon(Icons.person_rounded, size: 24),
+            label: _getText('nav_profile'),
           ),
         ],
       ),
     );
   }
 
+  Widget _buildLoadingView() {
+    return const Padding(
+      padding: EdgeInsets.symmetric(vertical: 80.0),
+      child: Center(
+        child: CircularProgressIndicator(color: primaryGreen, strokeWidth: 3),
+      ),
+    );
+  }
+
   Widget _buildErrorView() {
     return Container(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(28),
       decoration: BoxDecoration(
         color: cardSurface,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(20),
         border: Border.all(color: borderSubtle),
       ),
       child: Column(
         children: [
           Container(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(14),
             decoration: const BoxDecoration(
               color: statusDangerBg,
               shape: BoxShape.circle,
@@ -737,33 +841,33 @@ class _VetDashboardPageState extends State<VetDashboardPage> {
               size: 32,
             ),
           ),
-          const SizedBox(height: 12),
-          const Text(
-            'Unable to load dashboard',
-            style: TextStyle(
+          const SizedBox(height: 14),
+          Text(
+            _getText('error_title'),
+            style: const TextStyle(
               color: textPrimary,
               fontSize: 16,
               fontWeight: FontWeight.bold,
             ),
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 6),
           Text(
             _errorMessage!,
             style: const TextStyle(color: textSecondary, fontSize: 13),
             textAlign: TextAlign.center,
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 18),
           ElevatedButton.icon(
             onPressed: _fetchDashboardStats,
             icon: const Icon(Icons.refresh_rounded, size: 18),
-            label: const Text('Retry'),
+            label: Text(_getText('retry')),
             style: ElevatedButton.styleFrom(
               backgroundColor: primaryGreen,
               foregroundColor: Colors.white,
               elevation: 0,
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: BorderRadius.circular(12),
               ),
             ),
           ),
@@ -778,13 +882,13 @@ class _VetDashboardPageState extends State<VetDashboardPage> {
       padding: const EdgeInsets.all(32),
       decoration: BoxDecoration(
         color: cardSurface,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(20),
         border: Border.all(color: borderSubtle),
       ),
       child: Column(
         children: [
           Container(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(16),
             decoration: const BoxDecoration(
               color: backgroundSurface,
               shape: BoxShape.circle,
@@ -792,22 +896,22 @@ class _VetDashboardPageState extends State<VetDashboardPage> {
             child: const Icon(
               Icons.group_off_outlined,
               color: textMuted,
-              size: 32,
+              size: 36,
             ),
           ),
-          const SizedBox(height: 12),
-          const Text(
-            'No assigned farmers yet',
-            style: TextStyle(
+          const SizedBox(height: 14),
+          Text(
+            _getText('empty_farmers_title'),
+            style: const TextStyle(
               color: textPrimary,
-              fontSize: 15,
-              fontWeight: FontWeight.w600,
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
             ),
           ),
           const SizedBox(height: 4),
-          const Text(
-            'Farmers assigned to you will appear here.',
-            style: TextStyle(color: textSecondary, fontSize: 12),
+          Text(
+            _getText('empty_farmers_subtitle'),
+            style: const TextStyle(color: textSecondary, fontSize: 13),
           ),
         ],
       ),

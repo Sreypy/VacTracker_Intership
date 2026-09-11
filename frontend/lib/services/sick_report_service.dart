@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 
 import 'package:frontend/config/api_config.dart';
 import 'package:frontend/models/sick_report.dart';
@@ -82,6 +83,9 @@ class SickReportService {
     }
 
     final url = Uri.parse('${ApiConfig.baseUrl}/sick-reports/$reportId');
+    final requestBody = {'status': 'resolved'};
+    debugPrint('PATCH $url body: ${jsonEncode(requestBody)}');
+
     final response = await http
         .patch(
           url,
@@ -90,13 +94,26 @@ class SickReportService {
             'Accept': 'application/json',
             'Content-Type': 'application/json',
           },
-          body: jsonEncode({'status': 'resolved'}),
+          body: jsonEncode(requestBody),
         )
         .timeout(const Duration(seconds: 8));
 
     if (response.statusCode != 200 && response.statusCode != 204) {
+      debugPrint('PATCH $url error ${response.statusCode}: ${response.body}');
+      String message = response.body;
+      try {
+        final decoded = jsonDecode(response.body);
+        if (decoded is Map && decoded['message'] != null) {
+          final serverMessage = decoded['message'];
+          message = serverMessage is List
+              ? serverMessage.join(', ')
+              : serverMessage.toString();
+        }
+      } catch (_) {
+        // Keep the raw response when the server does not return JSON.
+      }
       throw Exception(
-        'Failed to mark report as resolved: ${response.statusCode} ${response.body}',
+        'Failed to mark report as resolved: ${response.statusCode} $message',
       );
     }
 

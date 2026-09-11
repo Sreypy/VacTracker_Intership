@@ -103,9 +103,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
       if (!mounted) return;
 
-      final otpCode = result is Map && result['otp'] != null
-          ? result['otp'].toString()
-          : '';
+        final otpCode = result['development_otp']?.toString();
 
       await LoginOtpScreen.showOtpDialog(
         context: context,
@@ -139,6 +137,7 @@ class _LoginScreenState extends State<LoginScreen> {
         onResend: () async {
           final resendResult = await authService.sendOtp(phone);
           debugPrint('OTP resend result: $resendResult');
+          return resendResult['development_otp']?.toString();
         },
       );
     } catch (e) {

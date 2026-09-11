@@ -32,6 +32,7 @@ export class RemindersService {
       .leftJoinAndSelect('reminder.vaccination', 'vaccination')
       .leftJoinAndSelect('vaccination.flock', 'flock')
       .leftJoinAndSelect('vaccination.vaccine', 'vaccine')
+      .leftJoinAndSelect('vaccination.next_vaccine', 'next_vaccine')
       .where('reminder.farmer_id = :farmerId', { farmerId })
       .andWhere('reminder.status != :completed', {
         completed: ReminderStatus.COMPLETED,
@@ -56,12 +57,14 @@ export class RemindersService {
           farmer: true,
         },
         vaccine: true,
+        next_vaccine: true,
       },
     });
 
     for (const vaccination of vaccinations) {
       if (
         vaccination.status !== VaccinationStatus.COMPLETED &&
+        vaccination.reminder_enabled &&
         vaccination.next_due_date
       ) {
         await this.createReminder(vaccination);
@@ -93,8 +96,27 @@ export class RemindersService {
     );
   }
 
+  async markReminderCompleted(
+    farmerId: number,
+    vaccinationId: number,
+  ): Promise<void> {
+    await this.reminderRepository
+      .createQueryBuilder()
+      .update(Reminder)
+      .set({ status: ReminderStatus.COMPLETED })
+      .where('farmer_id = :farmerId', { farmerId })
+      .andWhere('vaccination_id = :vaccinationId', { vaccinationId })
+      .andWhere('status IN (:...statuses)', {
+        statuses: [ReminderStatus.PENDING, ReminderStatus.SENT],
+      })
+      .execute();
+  }
+
   async createReminder(vaccination: Vaccination): Promise<Reminder | null> {
-    if (vaccination.status === VaccinationStatus.COMPLETED) {
+    if (
+      vaccination.status === VaccinationStatus.COMPLETED ||
+      !vaccination.reminder_enabled
+    ) {
       return null;
     }
 
@@ -107,6 +129,7 @@ export class RemindersService {
           farmer: true,
         },
         vaccine: true,
+        next_vaccine: true,
       },
     });
 
@@ -148,7 +171,11 @@ export class RemindersService {
   private _buildReminderMessage(vaccination: Vaccination): string {
     const flockName = vaccination.flock?.batch_name ?? 'your flock';
     const vaccineName =
-      vaccination.vaccine?.name_en ?? vaccination.vaccine?.name_km ?? 'vaccine';
+      vaccination.next_vaccine?.name_en ??
+      vaccination.next_vaccine?.name_km ??
+      vaccination.vaccine?.name_en ??
+      vaccination.vaccine?.name_km ??
+      'vaccine';
     const dueDate = vaccination.next_due_date;
 
     if (!dueDate) {
