@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../services/auth_service.dart';
 import '../../services/vet_dashboard_service.dart';
+import '../../widgets/notification_header_button.dart';
 
 class VetDashboardPage extends StatefulWidget {
   final String languageCode;
@@ -254,6 +255,15 @@ class _VetDashboardPageState extends State<VetDashboardPage> {
       scrolledUnderElevation: 0.5,
       titleSpacing: 20,
       centerTitle: false,
+      actions: [
+        NotificationHeaderButton(
+          languageCode: widget.languageCode,
+          color: textPrimary,
+          showCount: true,
+          notificationsRoute: '/vet-notifications',
+        ),
+        const SizedBox(width: 6),
+      ],
       bottom: PreferredSize(
         preferredSize: const Size.fromHeight(1),
         child: Container(color: borderSubtle, height: 1),

@@ -12,6 +12,12 @@ export enum ConnectionStatus {
   PENDING = 'pending',
   ACCEPTED = 'accepted',
   REJECTED = 'rejected',
+  /**
+   * The farmer (or vet) ended the relationship. The historical connection
+   * row is kept (deactivated, not deleted) so vaccination / sick-report
+   * history stays intact and the pair can reconnect later.
+   */
+  DISCONNECTED = 'disconnected',
 }
 
 @Entity('vet_farmer_connections')

@@ -2,6 +2,7 @@ import {
   BadRequestException,
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -12,10 +13,13 @@ import { UpdateSickReportDto } from './dto/update-sick-report.dto';
 import { NotificationsService } from '../notifications/notifications.service';
 import { User, UserRole } from '../users/entities/user.entity';
 import { VetFarmerConnection, ConnectionStatus } from '../users/entities/vet-farmer-connection.entity';
+import { Flock } from '../flocks/entities/flock.entity';
 import { CloudinaryService } from 'src/cloudinary/cloudinary.service';
 
 @Injectable()
 export class SickReportsService {
+  private readonly logger = new Logger(SickReportsService.name);
+
   constructor(
     @InjectRepository(SickReport)
     private sickReportRepository: Repository<SickReport>,
@@ -25,6 +29,9 @@ export class SickReportsService {
 
     @InjectRepository(VetFarmerConnection)
     private connectionRepository: Repository<VetFarmerConnection>,
+
+    @InjectRepository(Flock)
+    private flockRepository: Repository<Flock>,
 
     private readonly notificationsService: NotificationsService,
     private readonly cloudinaryService: CloudinaryService,
@@ -55,7 +62,57 @@ export class SickReportsService {
       reportDate: reportDate.toISOString().split('T')[0],
       photoUrl,
     });
-    return await this.sickReportRepository.save(sickReport);
+    const saved = await this.sickReportRepository.save(sickReport);
+
+    // Notify every connected veterinarian about the new sick report.
+    // Wrapped in try/catch: a notification failure must never break the
+    // report creation itself.
+    try {
+      await this.notifyConnectedVets(saved);
+    } catch (error) {
+      this.logger.error(
+        `Failed to create vet notifications for sick report ${saved.report_id}`,
+        error instanceof Error ? error.stack : String(error),
+      );
+    }
+
+    return saved;
+  }
+
+  /**
+   * Creates a sick-report notification for every veterinarian that has an
+   * ACCEPTED connection with the reporting farmer.
+   */
+  private async notifyConnectedVets(sickReport: SickReport) {
+    const connections = await this.connectionRepository.find({
+      where: {
+        farmerId: sickReport.reportedBy,
+        status: ConnectionStatus.ACCEPTED,
+      },
+    });
+
+    const vetIds = connections.map((connection) => connection.vetId);
+    if (vetIds.length === 0) {
+      return;
+    }
+
+    const [flock, reporter] = await Promise.all([
+      this.flockRepository.findOne({
+        where: { flock_id: sickReport.flockId },
+      }),
+      this.userRepository.findOne({
+        where: { user_id: sickReport.reportedBy },
+      }),
+    ]);
+
+    await this.notificationsService.createSickReportNotificationsForVets({
+      vetIds,
+      farmerName: reporter?.name ?? 'A farmer',
+      flockName: flock?.batch_name ?? 'a flock',
+      affectedCount: sickReport.affectedCount,
+      reportId: sickReport.report_id,
+      reportDate: sickReport.reportDate,
+    });
   }
 
   // Get all sick reports accessible to the logged-in user

@@ -186,4 +186,154 @@ export class NotificationsService {
       where: { farmerId, isRead: false },
     });
   }
+
+  // ==========================================
+  // VETERINARIAN NOTIFICATIONS
+  // (sick reports + farmer connection requests)
+  // ==========================================
+
+  /**
+   * All notifications for a veterinarian. Unlike the farmer flow this does
+   * NOT sync vaccination reminders – those are farmer-only notifications.
+   */
+  async findByVet(vetId: number): Promise<Notification[]> {
+    return this.notificationRepository.find({
+      where: { vetId },
+      order: { created_at: 'DESC' },
+    });
+  }
+
+  async getVetUnreadCount(vetId: number): Promise<number> {
+    return this.notificationRepository.count({
+      where: { vetId, isRead: false },
+    });
+  }
+
+  async markVetNotificationAsRead(id: number, vetId: number): Promise<void> {
+    await this.notificationRepository.update(
+      { notification_id: id, vetId },
+      { isRead: true },
+    );
+  }
+
+  async markAllVetAsRead(vetId: number): Promise<void> {
+    await this.notificationRepository.update(
+      { vetId, isRead: false },
+      { isRead: true },
+    );
+  }
+
+  /**
+   * Sets the persistent connection status on a farmer-connection-request
+   * notification and marks it as read/handled. Called when the vet accepts
+   * or rejects the request so the notification keeps reflecting the real
+   * connection state after a reload.
+   */
+  async setConnectionRequestStatus(
+    vetId: number,
+    connectionId: number,
+    connectionStatus: 'pending' | 'connected' | 'rejected',
+  ): Promise<void> {
+    const notifications = await this.notificationRepository.find({
+      where: {
+        vetId,
+        type: NotificationType.FARMER_CONNECTION_REQUEST,
+        referenceId: connectionId,
+      },
+    });
+
+    for (const notification of notifications) {
+      notification.data = {
+        ...(notification.data ?? {}),
+        connection_status: connectionStatus,
+      };
+      notification.isRead = true;
+      await this.notificationRepository.save(notification);
+    }
+  }
+
+  /**
+   * Creates a notification for the veterinarian when a farmer requests a
+   * connection with their vet code.
+   */
+  async createConnectionRequestNotification(params: {
+    vetId: number;
+    connectionId: number;
+    farmerName: string;
+  }): Promise<Notification> {
+    const notification = this.notificationRepository.create({
+      vetId: params.vetId,
+      title: 'New Farmer Connection Request',
+      message: `${params.farmerName} wants to connect with you.`,
+      type: NotificationType.FARMER_CONNECTION_REQUEST,
+      referenceId: params.connectionId,
+      data: {
+        connection_id: params.connectionId,
+        farmer_name: params.farmerName,
+        connection_status: 'pending',
+        status: 'pending', // legacy alias kept for older clients
+      },
+    });
+    return this.notificationRepository.save(notification);
+  }
+
+  /**
+   * Creates a notification for the veterinarian when a farmer disconnects.
+   */
+  async createFarmerDisconnectedNotification(params: {
+    vetId: number;
+    connectionId: number;
+    farmerName: string;
+  }): Promise<Notification> {
+    const notification = this.notificationRepository.create({
+      vetId: params.vetId,
+      title: 'Farmer Disconnected',
+      message: `${params.farmerName} has disconnected from your veterinary service.`,
+      type: NotificationType.FARMER_DISCONNECTED,
+      referenceId: params.connectionId,
+      data: {
+        connection_id: params.connectionId,
+        farmer_name: params.farmerName,
+        connection_status: 'disconnected',
+        status: 'disconnected', // legacy alias kept for older clients
+      },
+    });
+    return this.notificationRepository.save(notification);
+  }
+
+  /**
+   * Creates a notification for every ACCEPTED (connected) veterinarian of a
+   * farmer when the farmer submits a new sick report.
+   */
+  async createSickReportNotificationsForVets(params: {
+    vetIds: number[];
+    farmerName: string;
+    flockName: string;
+    affectedCount: number;
+    reportId: number;
+    reportDate: string;
+  }): Promise<Notification[]> {
+    if (!params.vetIds.length) {
+      return [];
+    }
+
+    const notifications = params.vetIds.map((vetId) =>
+      this.notificationRepository.create({
+        vetId,
+        title: 'New Sick Report',
+        message: `${params.farmerName} reported sick chickens in ${params.flockName}.`,
+        type: NotificationType.SICK_REPORT,
+        referenceId: params.reportId,
+        data: {
+          report_id: params.reportId,
+          farmer_name: params.farmerName,
+          flock_name: params.flockName,
+          affected_count: params.affectedCount,
+          report_date: params.reportDate,
+        },
+      }),
+    );
+
+    return this.notificationRepository.save(notifications);
+  }
 }

@@ -6,13 +6,15 @@ import { UsersController } from './users.controller';
 import { UsersService } from './users.service';
 import { VetFarmerConnection } from './entities/vet-farmer-connection.entity';
 import { CloudinaryModule } from 'src/cloudinary/cloudinary.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
   imports: [TypeOrmModule.forFeature([
               User,
               VetFarmerConnection,
-            ]), 
-            CloudinaryModule
+            ]),
+            CloudinaryModule,
+            NotificationsModule,
         ],
   controllers: [UsersController],
   providers: [UsersService],

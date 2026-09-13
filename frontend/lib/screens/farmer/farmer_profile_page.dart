@@ -86,6 +86,39 @@ class _FarmerProfilePageState extends State<FarmerProfilePage> {
   List<dynamic> _connectedVets = [];
   bool _isLoadingVets = false;
 
+  // Connection state helpers (pending / accepted / rejected)
+  bool get _hasAcceptedVet => _connectedVets.any(
+        (vet) => (vet['status'] ?? 'accepted').toString() == 'accepted',
+      );
+
+  bool get _hasPendingVet => _connectedVets.any(
+        (vet) => (vet['status'] ?? '').toString() == 'pending',
+      );
+
+  bool get _hasRejectedVet => _connectedVets.any(
+            (vet) => (vet['status'] ?? '').toString() == 'rejected',
+          ) &&
+      !_hasAcceptedVet &&
+      !_hasPendingVet;
+
+  /// True when a connection was ended (status = disconnected) and the
+  /// farmer has no other active (pending/accepted) connection.
+  bool get _hasDisconnectedVet => _connectedVets.any(
+            (vet) => (vet['status'] ?? '').toString() == 'disconnected',
+          ) &&
+      !_hasAcceptedVet &&
+      !_hasPendingVet;
+
+  /// The accepted (connected) veterinarian, if any.
+  dynamic get _acceptedVet {
+    for (final vet in _connectedVets) {
+      if ((vet['status'] ?? '').toString() == 'accepted') return vet;
+    }
+    return null;
+  }
+
+  bool _isDisconnectingVet = false;
+
   // Design System Colors
   static const Color backgroundLight = Color(0xFFF8FAFC);
   static const Color brandDarkGreen = Color(0xFF034418);
@@ -340,8 +373,128 @@ class _FarmerProfilePageState extends State<FarmerProfilePage> {
     }
   }
 
+  Future<void> _disconnectVet(dynamic vet) async {
+    final isKhmer = _currentLang == 'km';
+    final vetName = (vet['name'] ?? '').toString();
+    final messenger = ScaffoldMessenger.of(context);
+
+    // Always confirm first – never disconnect immediately.
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(
+          isKhmer ? 'ផ្តាច់វេជ្ជបណ្ឌិតសត្វ?' : 'Disconnect Veterinarian?',
+          style: const TextStyle(
+            color: textDarkBlue,
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        content: Text(
+          isKhmer
+              ? 'តើអ្នកពិតជាចង់ផ្តាច់ពីវេជ្ជបណ្ឌិត $vetName មែនទេ?'
+              : 'Are you sure you want to disconnect from Dr. $vetName?',
+          style: const TextStyle(color: textGrey, fontSize: 14),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: Text(
+              isKhmer ? 'បោះបង់' : 'Cancel',
+              style: const TextStyle(color: textGrey),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: alertRed,
+              foregroundColor: Colors.white,
+              elevation: 0,
+            ),
+            child: Text(
+              isKhmer ? 'ផ្តាច់' : 'Disconnect',
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+    if (!mounted) return;
+
+    final token = await StorageService.getToken();
+    if (token == null) return;
+
+    setState(() => _isDisconnectingVet = true);
+
+    try {
+      final response = await http.post(
+        Uri.parse('${ApiConfig.baseUrl}/users/disconnect-vet'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({'vet_id': vet['user_id']}),
+      );
+
+      if (!mounted) return;
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text(
+              isKhmer
+                  ? 'បានផ្តាច់ពីវេជ្ជបណ្ឌិតសត្វដោយជោគជ័យ'
+                  : 'Veterinarian disconnected',
+            ),
+            backgroundColor: brandDarkGreen,
+          ),
+        );
+      } else {
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text(
+              isKhmer
+                  ? 'មិនអាចផ្តាច់ពីវេជ្ជបណ្ឌិតសត្វបានទេ'
+                  : 'Failed to disconnect veterinarian',
+            ),
+            backgroundColor: alertRed,
+          ),
+        );
+      }
+
+      await _loadConnectedVets();
+    } catch (e) {
+      if (mounted) {
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text(
+              isKhmer
+                  ? 'មិនអាចផ្តាច់ពីវេជ្ជបណ្ឌិតសត្វបានទេ'
+                  : 'Failed to disconnect veterinarian',
+            ),
+            backgroundColor: alertRed,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isDisconnectingVet = false);
+      }
+    }
+  }
+
   Future<void> _connectToVet() async {
-    final vetCode = _vetCodeController.text.trim();
+    // Normalize the vet code before sending: trim spaces, remove internal
+    // whitespace and convert to uppercase.
+    // Example: " sokha-4827 " -> "SOKHA-4827"
+    final vetCode = _vetCodeController.text
+        .trim()
+        .replaceAll(RegExp(r'\s+'), '')
+        .toUpperCase();
 
     if (vetCode.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -349,7 +502,7 @@ class _FarmerProfilePageState extends State<FarmerProfilePage> {
           content: Text(
             _currentLang == 'km'
                 ? 'សូមបញ្ចូលកូដវេជ្ជបណ្ឌិតសត្វ'
-                : 'Please enter vet share code',
+                : 'Please enter vet code',
           ),
           backgroundColor: alertRed,
         ),
@@ -380,7 +533,7 @@ class _FarmerProfilePageState extends State<FarmerProfilePage> {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
         },
-        body: jsonEncode({'vetShareCode': vetCode}),
+        body: jsonEncode({'vet_code': vetCode}),
       );
 
       if (response.statusCode == 200 || response.statusCode == 201) {
@@ -389,8 +542,8 @@ class _FarmerProfilePageState extends State<FarmerProfilePage> {
           SnackBar(
             content: Text(
               _currentLang == 'km'
-                  ? 'បានភ្ជាប់ជាមួយវេជ្ជបណ្ឌិតសត្វដោយជោគជ័យ'
-                  : 'Successfully connected with veterinarian',
+                  ? 'បានផ្ញើសំណើ! រង់ចាំវេជ្ជបណ្ឌិតសត្វទទួលយក។'
+                  : 'Request sent! Waiting for the veterinarian to accept.',
             ),
             backgroundColor: brandDarkGreen,
           ),
@@ -815,8 +968,8 @@ class _FarmerProfilePageState extends State<FarmerProfilePage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Show connection status (all connections are auto-accepted)
-                      if (_connectedVets.isNotEmpty)
+                      // Show connection status (pending / accepted)
+                      if (_hasAcceptedVet)
                         Container(
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
@@ -835,12 +988,71 @@ class _FarmerProfilePageState extends State<FarmerProfilePage> {
                               ),
                               const SizedBox(width: 10),
                               Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      _currentLang == 'km'
+                                          ? 'បានភ្ជាប់'
+                                          : 'Connected',
+                                      style: TextStyle(
+                                        color: brandDarkGreen,
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      (_acceptedVet?['name'] ?? '')
+                                              .toString()
+                                              .trim()
+                                              .isEmpty
+                                          ? (_currentLang == 'km'
+                                              ? 'វេជ្ជបណ្ឌិតសត្វ'
+                                              : 'Veterinarian')
+                                          : (_acceptedVet?['name'] ?? '')
+                                              .toString(),
+                                      style: TextStyle(
+                                        color: brandDarkGreen.withValues(
+                                          alpha: 0.85,
+                                        ),
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        )
+                      else if (_hasPendingVet)
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFFFBEB),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(
+                              color: const Color(
+                                0xFFD97706,
+                              ).withValues(alpha: 0.3),
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(
+                                Icons.schedule_rounded,
+                                color: Color(0xFFD97706),
+                                size: 20,
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
                                 child: Text(
                                   _currentLang == 'km'
-                                      ? 'បានភ្ជាប់ជាមួយវេជ្ជបណ្ឌិតសត្វរួចហើយ'
-                                      : 'Connected with veterinarian',
+                                      ? 'កំពុងរង់ចាំវេជ្ជបណ្ឌិតសត្វទទួលយកសំណើ'
+                                      : 'Waiting for the veterinarian to accept your request',
                                   style: TextStyle(
-                                    color: brandDarkGreen,
+                                    color: Color(0xFFD97706),
                                     fontSize: 14,
                                     fontWeight: FontWeight.w600,
                                   ),
@@ -849,7 +1061,109 @@ class _FarmerProfilePageState extends State<FarmerProfilePage> {
                             ],
                           ),
                         )
-                      else
+                      else ...[
+                        // 🔴 Not Connected (farmer disconnected)
+                        if (_hasDisconnectedVet)
+                          Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFEE2E2),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(
+                              color: alertRed.withValues(alpha: 0.3),
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(
+                                Icons.link_off_rounded,
+                                color: alertRed,
+                                size: 20,
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      _currentLang == 'km'
+                                          ? 'មិនបានភ្ជាប់'
+                                          : 'Not Connected',
+                                      style: TextStyle(
+                                        color: alertRed,
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      _currentLang == 'km'
+                                          ? 'គ្មានវេជ្ជបណ្ឌិតសត្វបានភ្ជាប់'
+                                          : 'No connected veterinarian',
+                                      style: TextStyle(
+                                        color: alertRed.withValues(alpha: 0.8),
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        // 🔴 Not Connected (request was rejected)
+                        if (_hasRejectedVet)
+                          Container(
+                            margin: const EdgeInsets.only(bottom: 12),
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFEE2E2),
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(
+                                color: alertRed.withValues(alpha: 0.3),
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(
+                                  Icons.cancel_rounded,
+                                  color: alertRed,
+                                  size: 20,
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        _currentLang == 'km'
+                                            ? 'មិនបានភ្ជាប់'
+                                            : 'Not Connected',
+                                        style: TextStyle(
+                                          color: alertRed,
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        _currentLang == 'km'
+                                            ? 'សំណើត្រូវបានបដិសេធ។ អ្នកអាចព្យាយាមម្តងទៀត។'
+                                            : 'Your request was rejected. You can try again.',
+                                        style: TextStyle(
+                                          color: alertRed.withValues(
+                                            alpha: 0.8,
+                                          ),
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                         Column(
                           children: [
                             Row(
@@ -857,10 +1171,12 @@ class _FarmerProfilePageState extends State<FarmerProfilePage> {
                                 Expanded(
                                   child: TextField(
                                     controller: _vetCodeController,
+                                    textCapitalization:
+                                        TextCapitalization.characters,
                                     decoration: InputDecoration(
                                       hintText: _currentLang == 'km'
-                                          ? 'បញ្ចូលកូដវេជ្ជបណ្ឌិតសត្វ'
-                                          : 'Enter vet share code',
+                                          ? 'បញ្ចូលកូដវេជ្ជបណ្ឌិត (ឧ. SOKHA-4827)'
+                                          : 'Enter Vet Code (e.g. SOKHA-4827)',
                                       hintStyle: TextStyle(
                                         color: textGrey.withValues(alpha: 0.6),
                                         fontSize: 14,
@@ -929,8 +1245,8 @@ class _FarmerProfilePageState extends State<FarmerProfilePage> {
                             const SizedBox(height: 12),
                             Text(
                               _currentLang == 'km'
-                                  ? 'សួរថ្ងៃទីចែករំលែកកូដពីវេជ្ជបណ្ឌិតសត្វរបស់អ្នក'
-                                  : 'Ask your vet for their share code to connect',
+                                  ? 'សូមសុំកូដ VacTracker ពីវេជ្ជបណ្ឌិតសត្វរបស់អ្នក។'
+                                  : 'Ask your veterinarian for their VacTracker code.',
                               style: TextStyle(
                                 color: textGrey,
                                 fontSize: 12,
@@ -939,6 +1255,7 @@ class _FarmerProfilePageState extends State<FarmerProfilePage> {
                             ),
                           ],
                         ),
+                      ],
                       const SizedBox(height: 16),
 
                       // Connected Vets List
@@ -996,11 +1313,72 @@ class _FarmerProfilePageState extends State<FarmerProfilePage> {
                                           ],
                                         ),
                                       ),
-                                      const Icon(
-                                        Icons.check_circle_rounded,
-                                        color: brandDarkGreen,
+                                      Icon(
+                                        (vet['status'] ?? 'accepted')
+                                                    .toString() ==
+                                                'accepted'
+                                            ? Icons.check_circle_rounded
+                                            : (vet['status'] ?? '')
+                                                        .toString() ==
+                                                    'pending'
+                                                ? Icons.schedule_rounded
+                                                : Icons.cancel_rounded,
+                                        color: (vet['status'] ?? 'accepted')
+                                                    .toString() ==
+                                                'accepted'
+                                            ? brandDarkGreen
+                                            : (vet['status'] ?? '')
+                                                        .toString() ==
+                                                    'pending'
+                                                ? const Color(0xFFD97706)
+                                                : textGrey,
                                         size: 18,
                                       ),
+                                      if ((vet['status'] ?? 'accepted')
+                                              .toString() ==
+                                          'accepted') ...[
+                                        const SizedBox(height: 6),
+                                        OutlinedButton(
+                                          onPressed: _isDisconnectingVet
+                                              ? null
+                                              : () => _disconnectVet(vet),
+                                          style: OutlinedButton.styleFrom(
+                                            foregroundColor: alertRed,
+                                            side: const BorderSide(
+                                              color: alertRed,
+                                              width: 1,
+                                            ),
+                                            minimumSize: const Size(0, 26),
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 8,
+                                            ),
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(6),
+                                            ),
+                                          ),
+                                          child: _isDisconnectingVet
+                                              ? const SizedBox(
+                                                  width: 12,
+                                                  height: 12,
+                                                  child:
+                                                      CircularProgressIndicator(
+                                                    strokeWidth: 2,
+                                                    color: alertRed,
+                                                  ),
+                                                )
+                                              : Text(
+                                                  _currentLang == 'km'
+                                                      ? 'ផ្តាច់វេជ្ជបណ្ឌិត'
+                                                      : 'Disconnect Vet',
+                                                  style: const TextStyle(
+                                                    fontSize: 10,
+                                                    fontWeight:
+                                                        FontWeight.bold,
+                                                  ),
+                                                ),
+                                        ),
+                                      ],
                                     ],
                                   ),
                                 ),

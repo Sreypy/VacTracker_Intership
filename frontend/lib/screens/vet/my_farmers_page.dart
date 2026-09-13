@@ -49,8 +49,7 @@ class _MyFarmersPageState extends State<MyFarmersPage> {
       'empty_no_results': 'No results found',
       'empty_no_farmers_subtitle':
           'Farmers linked with your practitioner code will automatically show up here.',
-      'empty_no_results_prefix':
-          'We couldn\'t find any records matching "',
+      'empty_no_results_prefix': 'We couldn\'t find any records matching "',
       'empty_no_results_suffix': '".',
       'unit_flocks': 'Flocks',
       'unit_birds': 'Birds',
@@ -62,6 +61,13 @@ class _MyFarmersPageState extends State<MyFarmersPage> {
       'status_sick': 'SICK',
       'status_overdue': 'OVERDUE',
       'status_due_soon': 'DUE SOON',
+      'requests_title': 'Connection Requests',
+      'requests_empty': 'No pending requests',
+      'accept': 'Accept',
+      'reject': 'Reject',
+      'request_accepted': 'Farmer connected!',
+      'request_rejected': 'Request rejected',
+      'requests_failed': 'Failed to update connection request',
     },
     'km': {
       'title_my_farmers': 'កសិកររបស់ខ្ញុំ',
@@ -86,6 +92,13 @@ class _MyFarmersPageState extends State<MyFarmersPage> {
       'status_sick': 'មានសត្វឈឺ',
       'status_overdue': 'ហួសកំណត់',
       'status_due_soon': 'ជិតដល់ពេល',
+      'requests_title': 'សំណើភ្ជាប់',
+      'requests_empty': 'មិនមានសំណើរង់ចាំ',
+      'accept': 'ទទួលយក',
+      'reject': 'បដិសេធ',
+      'request_accepted': 'កសិករត្រូវបានភ្ជាប់ជោគជ័យ!',
+      'request_rejected': 'បានបដិសេធសំណើ',
+      'requests_failed': 'មិនអាចធ្វើបច្ចុប្បន្នភាពសំណើបាន',
     },
   };
 
@@ -119,6 +132,11 @@ class _MyFarmersPageState extends State<MyFarmersPage> {
   String _searchQuery = '';
   String _vetInitials = 'S';
 
+  // Farmer connection requests (PENDING connections for this vet)
+  List<VetConnectionRequest> _connectionRequests = [];
+  bool _isLoadingRequests = false;
+  final Set<int> _respondingConnectionIds = {};
+
   final VetDashboardService _vetDashboardService = VetDashboardService();
   final AuthService _authService = AuthService();
 
@@ -127,6 +145,7 @@ class _MyFarmersPageState extends State<MyFarmersPage> {
     super.initState();
     _fetchVetProfile();
     _fetchDashboardStats();
+    _fetchConnectionRequests();
   }
 
   @override
@@ -185,6 +204,61 @@ class _MyFarmersPageState extends State<MyFarmersPage> {
           farmer.farmName.toLowerCase().contains(query) ||
           farmer.location.toLowerCase().contains(query);
     }).toList();
+  }
+
+  Future<void> _fetchConnectionRequests() async {
+    setState(() {
+      _isLoadingRequests = true;
+    });
+
+    try {
+      final requests = await _vetDashboardService.getConnectionRequests();
+      if (!mounted) return;
+      setState(() {
+        _connectionRequests = requests;
+        _isLoadingRequests = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _isLoadingRequests = false;
+      });
+    }
+  }
+
+  Future<void> _respondToConnection(int connectionId, bool accept) async {
+    final messenger = ScaffoldMessenger.of(context);
+    setState(() {
+      _respondingConnectionIds.add(connectionId);
+    });
+
+    try {
+      await _vetDashboardService.respondToConnection(connectionId, accept);
+      if (!mounted) return;
+      setState(() {
+        _respondingConnectionIds.remove(connectionId);
+      });
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            _getText(accept ? 'request_accepted' : 'request_rejected'),
+          ),
+          backgroundColor: accept ? primaryGreen : statusDangerFg,
+        ),
+      );
+      await _fetchConnectionRequests();
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _respondingConnectionIds.remove(connectionId);
+      });
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(_getText('requests_failed')),
+          backgroundColor: statusDangerFg,
+        ),
+      );
+    }
   }
 
   @override
@@ -487,15 +561,216 @@ class _MyFarmersPageState extends State<MyFarmersPage> {
       );
     }
 
+    final hasRequests = _connectionRequests.isNotEmpty;
+    final extraItems = hasRequests ? _connectionRequests.length + 1 : 0;
+
     return ListView.builder(
       physics: const AlwaysScrollableScrollPhysics(
         parent: BouncingScrollPhysics(),
       ),
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
-      itemCount: farmers.length,
+      itemCount: farmers.length + extraItems,
       itemBuilder: (context, index) {
+        if (hasRequests) {
+          if (index == 0) {
+            return _buildConnectionRequestsCard();
+          }
+          if (index <= _connectionRequests.length) {
+            return _buildConnectionRequestRow(_connectionRequests[index - 1]);
+          }
+          return _buildFarmerCard(
+            farmers[index - 1 - _connectionRequests.length],
+          );
+        }
         return _buildFarmerCard(farmers[index]);
       },
+    );
+  }
+
+  /// Card that groups the pending farmer connection requests.
+  Widget _buildConnectionRequestsCard() {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 14),
+      decoration: BoxDecoration(
+        color: surfaceWhite,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: borderLight),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF0F172A).withValues(alpha: 0.03),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(
+                  Icons.notifications_active_rounded,
+                  color: statusWarningFg,
+                  size: 20,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    _getText('requests_title'),
+                    style: const TextStyle(
+                      color: textMain,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            if (_isLoadingRequests)
+              const Center(
+                child: Padding(
+                  padding: EdgeInsets.all(8.0),
+                  child: CircularProgressIndicator(
+                    color: primaryGreen,
+                    strokeWidth: 2,
+                  ),
+                ),
+              )
+            else if (_connectionRequests.isEmpty)
+              Text(
+                _getText('requests_empty'),
+                style: const TextStyle(color: textMuted, fontSize: 13),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// A single pending connection request with Accept / Reject actions.
+  Widget _buildConnectionRequestRow(VetConnectionRequest request) {
+    final isResponding = _respondingConnectionIds.contains(
+      request.connectionId,
+    );
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 14),
+      decoration: BoxDecoration(
+        color: surfaceWhite,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: borderLight),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF0F172A).withValues(alpha: 0.03),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: statusWarningBg,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(
+                Icons.person_rounded,
+                color: darkGreen,
+                size: 22,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    request.farmerName,
+                    style: const TextStyle(
+                      color: textMain,
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  if (request.farmerPhone.isNotEmpty)
+                    Text(
+                      request.farmerPhone,
+                      style: const TextStyle(color: textMuted, fontSize: 12),
+                    ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            if (isResponding)
+              const SizedBox(
+                width: 22,
+                height: 22,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: primaryGreen,
+                ),
+              )
+            else ...[
+              OutlinedButton(
+                onPressed: () =>
+                    _respondToConnection(request.connectionId, false),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: statusDangerFg,
+                  side: const BorderSide(color: statusDangerFg),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 6,
+                  ),
+                  minimumSize: Size.zero,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                child: Text(
+                  _getText('reject'),
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 6),
+              ElevatedButton(
+                onPressed: () =>
+                    _respondToConnection(request.connectionId, true),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: primaryGreen,
+                  foregroundColor: Colors.white,
+                  elevation: 0,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 6,
+                  ),
+                  minimumSize: Size.zero,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                child: Text(
+                  _getText('accept'),
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
     );
   }
 

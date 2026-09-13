@@ -2,7 +2,7 @@ import { Body, Controller, Get, Param, Patch, Post, UseGuards, Request, Forbidde
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
-import { ConnectVetDto } from './dto/connect-vet.dto';
+import { ConnectVetDto, DisconnectVetDto } from './dto/connect-vet.dto';
 import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
 import { FileInterceptor } from '@nestjs/platform-express';
 import multer from 'multer';
@@ -59,6 +59,15 @@ export class UsersController {
   @Post('connect-vet')
   async connectToVet(@Request() req, @Body() connectVetDto: ConnectVetDto) {
     return this.usersService.connectToVet(req.user.user_id, connectVetDto);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('disconnect-vet')
+  async disconnectVet(
+    @Request() req,
+    @Body() disconnectVetDto: DisconnectVetDto,
+  ) {
+    return this.usersService.disconnectVet(req.user.user_id, disconnectVetDto);
   }
 
   @UseGuards(JwtAuthGuard)

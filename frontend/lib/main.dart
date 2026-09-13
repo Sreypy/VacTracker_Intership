@@ -27,6 +27,7 @@ import 'package:frontend/screens/vet/my_farmers_page.dart';
 import 'package:frontend/screens/vet/farmer_detail_page.dart';
 import 'package:frontend/screens/vet/sick_reports_screen.dart';
 import 'package:frontend/screens/vet/sick_report_detail_screen.dart';
+import 'package:frontend/screens/vet/vet_notification_screen.dart';
 import 'package:frontend/screens/vet/vet_response_sent_screen.dart';
 import 'package:frontend/screens/welcome_page.dart';
 import 'package:go_router/go_router.dart';
@@ -221,6 +222,13 @@ final GoRouter _router = GoRouter(
       builder: (context, state) {
         final language = state.pathParameters['lang'] ?? 'en';
         return NotificationScreen(languageCode: language);
+      },
+    ),
+    GoRoute(
+      path: '/vet-notifications/:lang',
+      builder: (context, state) {
+        final language = state.pathParameters['lang'] ?? 'en';
+        return VetNotificationScreen(languageCode: language);
       },
     ),
 

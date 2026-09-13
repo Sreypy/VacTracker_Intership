@@ -580,6 +580,7 @@ class _NotificationScreenState extends State<NotificationScreen>
 
   Widget _summaryRow(Color color, String label, int count) {
     return Row(
+      mainAxisSize: MainAxisSize.min,
       children: [
         Container(
           width: 14,
@@ -587,7 +588,13 @@ class _NotificationScreenState extends State<NotificationScreen>
           decoration: BoxDecoration(color: color, shape: BoxShape.circle),
         ),
         const SizedBox(width: 14),
-        Text(label, style: const TextStyle(color: colorMuted, fontSize: 15)),
+        Expanded(
+          child: Text(
+            label,
+            style: const TextStyle(color: colorMuted, fontSize: 15),
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
         const Spacer(),
         Text(
           count.toString(),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:frontend/services/storage_service.dart';
 import 'package:frontend/services/auth_service.dart';
 
@@ -38,7 +39,7 @@ class _VetProfileScreenState extends State<VetProfileScreen> {
   late String _selectedLanguage;
   bool _newSickReportsEnabled = true;
   bool _clientOverdueAlertsEnabled = true;
-  String? _vetShareLink;
+  String? _vetCode;
 
   // Profile Data
   Map<String, dynamic>? _profileData;
@@ -64,14 +65,16 @@ class _VetProfileScreenState extends State<VetProfileScreen> {
 
       setState(() {
         _profileData = profile;
-        _vetShareLink = profile['share_code'] ?? 'FG-VET-SOKHA-2024';
+        // Short user-facing vet code (e.g. SOKHA-4827). The backend ensures
+        // every veterinarian has one; fall back to the legacy share code.
+        _vetCode = (profile['vet_code'] ?? profile['share_code'])?.toString();
         _isLoadingProfile = false;
       });
     } catch (e) {
       setState(() {
         _errorMessage = e.toString();
         _isLoadingProfile = false;
-        _vetShareLink = 'FG-VET-SOKHA-2024';
+        _vetCode = null;
       });
     }
   }
@@ -85,18 +88,33 @@ class _VetProfileScreenState extends State<VetProfileScreen> {
     }
   }
 
-  void _copyShareCode() {
-    if (_vetShareLink == null) return;
-    Clipboard.setData(ClipboardData(text: _vetShareLink!));
+  void _copyVetCode() {
+    final code = _vetCode;
+    if (code == null || code.isEmpty) return;
+    Clipboard.setData(ClipboardData(text: code));
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
           _selectedLanguage == 'km'
-              ? 'បានចម្លងកូដដោយជោគជ័យ'
-              : 'Share code copied to clipboard!',
+              ? 'បានចម្លងកូដវេជ្ជបណ្ឌិត!'
+              : 'Vet code copied!',
         ),
         duration: const Duration(seconds: 2),
         backgroundColor: primaryGreen,
+      ),
+    );
+  }
+
+  Future<void> _shareVetCode() async {
+    final code = _vetCode;
+    if (code == null || code.isEmpty) return;
+    final isKhmer = _selectedLanguage == 'km';
+    await SharePlus.instance.share(
+      ShareParams(
+        text: isKhmer
+            ? 'ភ្ជាប់ជាមួយខ្ញុំនៅក្នុង VacTracker។\n\nកូដវេជ្ជបណ្ឌិត: $code'
+            : 'Connect with me on VacTracker.\n\nVet Code: $code',
+        sharePositionOrigin: Rect.fromLTWH(0, 0, 0, 0),
       ),
     );
   }
@@ -347,7 +365,7 @@ class _VetProfileScreenState extends State<VetProfileScreen> {
               const SizedBox(height: 16),
               _buildNotificationsCard(isKhmer),
               const SizedBox(height: 16),
-              _buildAccountManagementCard(isKhmer),
+              _buildConnectWithFarmersCard(isKhmer),
               const SizedBox(height: 16),
               _buildAppInfoCard(isKhmer),
               const SizedBox(height: 24),
@@ -813,14 +831,15 @@ class _VetProfileScreenState extends State<VetProfileScreen> {
     );
   }
 
-  Widget _buildAccountManagementCard(bool isKhmer) {
+  Widget _buildConnectWithFarmersCard(bool isKhmer) {
+    final hasCode = _vetCode != null && _vetCode!.isNotEmpty;
     return _buildSectionContainer(
       header: Row(
         children: [
-          const Icon(Icons.share_outlined, size: 20, color: textDark),
+          const Icon(Icons.people_outline_rounded, size: 20, color: textDark),
           const SizedBox(width: 8),
           Text(
-            isKhmer ? 'ការគ្រប់គ្រងគណនី' : 'Account Management',
+            isKhmer ? 'ភ្ជាប់ជាមួយកសិករ' : 'Connect with Farmers',
             style: const TextStyle(
               fontSize: 15,
               fontWeight: FontWeight.bold,
@@ -835,7 +854,7 @@ class _VetProfileScreenState extends State<VetProfileScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              isKhmer ? 'តំណភ្ជាប់ចែករំលែកគ្រូពេទ្យ' : 'Vet Share Link',
+              isKhmer ? 'កូដវេជ្ជបណ្ឌិតរបស់អ្នក' : 'Your Vet Code',
               style: const TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w500,
@@ -843,54 +862,91 @@ class _VetProfileScreenState extends State<VetProfileScreen> {
               ),
             ),
             const SizedBox(height: 8),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(
+                horizontal: 14,
+                vertical: 14,
+              ),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF1F5F9),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: const Color(0xFFE2E8F0)),
+              ),
+              child: Text(
+                hasCode ? _vetCode! : '—',
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: textDark,
+                  letterSpacing: 2,
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
             Row(
               children: [
                 Expanded(
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 14,
-                      vertical: 12,
+                  child: OutlinedButton.icon(
+                    onPressed: hasCode ? _copyVetCode : null,
+                    icon: const Icon(
+                      Icons.copy_rounded,
+                      size: 16,
+                      color: primaryGreen,
                     ),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF1F5F9),
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: const Color(0xFFE2E8F0)),
-                    ),
-                    child: Text(
-                      _vetShareLink ?? 'FG-VET-SOKHA-2024',
+                    label: Text(
+                      isKhmer ? 'ចម្លងកូដ' : 'Copy Code',
                       style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: textDark,
-                        letterSpacing: 0.5,
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                        color: primaryGreen,
                       ),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      side: const BorderSide(color: primaryGreen, width: 1.5),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 10),
                     ),
                   ),
                 ),
-                const SizedBox(width: 8),
-                InkWell(
-                  onTap: _copyShareCode,
-                  borderRadius: BorderRadius.circular(10),
-                  child: Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: primaryGreen,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: const Icon(
-                      Icons.copy,
+                const SizedBox(width: 10),
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: hasCode ? () => _shareVetCode() : null,
+                    icon: const Icon(
+                      Icons.share_rounded,
+                      size: 16,
                       color: Colors.white,
-                      size: 20,
+                    ),
+                    label: Text(
+                      isKhmer ? 'ចែករំលែកកូដ' : 'Share Code',
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: primaryGreen,
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 10),
                     ),
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 10),
             Text(
               isKhmer
-                  ? 'ចែករំលែកកូដនេះទៅកសិករ ដើម្បីឱ្យពួកគាត់អាចរាយការណ៍សត្វឈឺមកអ្នកបាន។'
-                  : 'Share this code with farmers so they can report sick animals to you.',
+                  ? 'ចែករំលែកកូដនេះទៅកសិករ ដើម្បីឱ្យពួកគេអាចភ្ជាប់មកជាមួយអ្នកបាន។'
+                  : 'Share this code with farmers so they can connect with you.',
               style: const TextStyle(
                 fontSize: 12,
                 color: textMuted,

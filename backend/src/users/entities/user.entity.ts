@@ -72,6 +72,14 @@ export class User {
   })
   share_code!: string;
 
+  /**
+   * Short user-facing veterinarian code, e.g. "SOKHA-4827".
+   * Generated at registration (or lazily for existing vets) and stays stable.
+   * The long UUID `share_code` above is kept for backward compatibility.
+   */
+  @Column({ unique: true, nullable: true })
+  vet_code!: string;
+
   @CreateDateColumn()
   created_at!: Date;
 

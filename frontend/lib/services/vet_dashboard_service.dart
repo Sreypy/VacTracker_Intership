@@ -95,6 +95,30 @@ class LastVaccination {
   }
 }
 
+class VetConnectionRequest {
+  final int connectionId;
+  final String status;
+  final String farmerName;
+  final String farmerPhone;
+
+  VetConnectionRequest({
+    required this.connectionId,
+    required this.status,
+    required this.farmerName,
+    required this.farmerPhone,
+  });
+
+  factory VetConnectionRequest.fromJson(Map<String, dynamic> json) {
+    final farmer = (json['farmer'] ?? {}) as Map<String, dynamic>;
+    return VetConnectionRequest(
+      connectionId: json['connection_id'] ?? 0,
+      status: json['status'] ?? 'pending',
+      farmerName: farmer['name']?.toString() ?? 'Unknown farmer',
+      farmerPhone: farmer['phone']?.toString() ?? '',
+    );
+  }
+}
+
 class VetDashboardService {
   Future<VetDashboardStats> getDashboardStats() async {
     final token = await StorageService.getToken();
@@ -119,6 +143,65 @@ class VetDashboardService {
       final message = response.body.isNotEmpty
           ? response.body
           : 'Failed to load vet dashboard stats';
+      throw Exception('Error ${response.statusCode}: $message');
+    }
+  }
+
+  /// Pending farmer connection requests for the logged-in veterinarian.
+  Future<List<VetConnectionRequest>> getConnectionRequests() async {
+    final token = await StorageService.getToken();
+
+    if (token == null || token.isEmpty) {
+      throw Exception('Authentication token is missing. Please log in again.');
+    }
+
+    final response = await http.get(
+      Uri.parse('${ApiConfig.baseUrl}/vet/connections/requests'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+    );
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      if (data is List) {
+        return data
+            .map((item) => VetConnectionRequest.fromJson(item))
+            .toList();
+      }
+      return [];
+    } else {
+      final message = response.body.isNotEmpty
+          ? response.body
+          : 'Failed to load connection requests';
+      throw Exception('Error ${response.statusCode}: $message');
+    }
+  }
+
+  /// Accepts or rejects a farmer connection request.
+  Future<void> respondToConnection(int connectionId, bool accept) async {
+    final token = await StorageService.getToken();
+
+    if (token == null || token.isEmpty) {
+      throw Exception('Authentication token is missing. Please log in again.');
+    }
+
+    final action = accept ? 'accept' : 'reject';
+    final response = await http.post(
+      Uri.parse('${ApiConfig.baseUrl}/vet/connections/$connectionId/$action'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+    );
+
+    if (response.statusCode != 200 && response.statusCode != 201) {
+      final message = response.body.isNotEmpty
+          ? response.body
+          : 'Failed to respond to connection request';
       throw Exception('Error ${response.statusCode}: $message');
     }
   }

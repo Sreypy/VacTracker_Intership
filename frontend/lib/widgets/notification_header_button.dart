@@ -6,10 +6,20 @@ class NotificationHeaderButton extends StatefulWidget {
   final String languageCode;
   final Color color;
 
+  /// Shows the unread count as a numeric badge (e.g. 🔔 2) instead of only
+  /// a small dot. Used on the vet dashboard.
+  final bool showCount;
+
+  /// Route of the notification screen to open. Farmers use the default
+  /// '/notifications/:lang', vets use '/vet-notifications/:lang'.
+  final String notificationsRoute;
+
   const NotificationHeaderButton({
     super.key,
     required this.languageCode,
     required this.color,
+    this.showCount = false,
+    this.notificationsRoute = '/notifications',
   });
 
   @override
@@ -33,7 +43,7 @@ class _NotificationHeaderButtonState extends State<NotificationHeaderButton> {
   }
 
   Future<void> _openNotifications() async {
-    await context.push('/notifications/${widget.languageCode}');
+    await context.push('${widget.notificationsRoute}/${widget.languageCode}');
     if (mounted) _loadUnreadCount();
   }
 
@@ -52,15 +62,34 @@ class _NotificationHeaderButtonState extends State<NotificationHeaderButton> {
           ),
           if (_unreadCount > 0)
             Positioned(
-              right: -2,
-              top: -2,
+              right: widget.showCount ? -10 : -2,
+              top: widget.showCount ? -4 : -2,
               child: Container(
-                width: 8,
-                height: 8,
-                decoration: const BoxDecoration(
-                  color: Color(0xFFA80000),
-                  shape: BoxShape.circle,
+                padding: widget.showCount
+                    ? const EdgeInsets.symmetric(horizontal: 5, vertical: 1)
+                    : EdgeInsets.zero,
+                constraints: widget.showCount
+                    ? const BoxConstraints(minWidth: 16)
+                    : const BoxConstraints(minWidth: 6, minHeight: 8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFA80000),
+                  borderRadius: BorderRadius.circular(10),
+                  shape: widget.showCount
+                      ? BoxShape.rectangle
+                      : BoxShape.circle,
                 ),
+                alignment: Alignment.center,
+                child: widget.showCount
+                    ? Text(
+                        _unreadCount > 99 ? '99+' : '$_unreadCount',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          height: 1.2,
+                        ),
+                      )
+                    : null,
               ),
             ),
         ],
