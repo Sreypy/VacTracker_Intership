@@ -291,9 +291,9 @@ class _SickReportScreenState extends State<SickReportScreen> {
         );
       }
 
-      final streamedResponse = await request
-          .send()
-          .timeout(const Duration(seconds: 20));
+      final streamedResponse = await request.send().timeout(
+        const Duration(seconds: 20),
+      );
       final response = await http.Response.fromStream(streamedResponse);
       if (response.statusCode < 200 || response.statusCode >= 300) {
         var serverMessage = response.body;
@@ -319,8 +319,20 @@ class _SickReportScreenState extends State<SickReportScreen> {
       setState(() {});
     } catch (error) {
       if (!mounted) return;
-      setState(
-        () => _errorMessage = '${_getText('failed')} ${error.toString()}',
+      final errorMessage = error.toString().replaceFirst('Exception: ', '');
+      final displayMessage =
+          errorMessage.contains('Please connect with a veterinarian first.')
+          ? 'Please connect with a veterinarian first.'
+          : '${_getText('failed')} $errorMessage';
+      setState(() {
+        _errorMessage = displayMessage;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(displayMessage),
+          backgroundColor: Colors.red.shade700,
+          behavior: SnackBarBehavior.floating,
+        ),
       );
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
@@ -488,10 +500,7 @@ class _SickReportScreenState extends State<SickReportScreen> {
                       Text(
                         _getText('photo_hint'),
                         textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          color: textMuted,
-                          fontSize: 13,
-                        ),
+                        style: const TextStyle(color: textMuted, fontSize: 13),
                       ),
                     ],
                   ),

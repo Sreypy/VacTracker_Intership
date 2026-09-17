@@ -2,21 +2,25 @@ class VaccinationScheduleSummary {
   final List<dynamic> overdue;
   final List<dynamic> dueSoon;
   final List<dynamic> upcoming;
+  final List<dynamic> dueToday;
 
   const VaccinationScheduleSummary({
     required this.overdue,
     required this.dueSoon,
     required this.upcoming,
+    required this.dueToday,
   });
 
   int get overdueCount => overdue.length;
   int get dueSoonCount => dueSoon.length;
   int get upcomingCount => upcoming.length;
+  int get dueTodayCount => dueToday.length;
 
   factory VaccinationScheduleSummary.fromRecords(List<dynamic> records) {
     final overdue = <dynamic>[];
     final dueSoon = <dynamic>[];
     final upcoming = <dynamic>[];
+    final dueToday = <dynamic>[];
 
     for (final record in records) {
       final dueDate = VaccinationScheduleService.dueDateFor(record);
@@ -36,6 +40,8 @@ class VaccinationScheduleSummary {
         } else {
           upcoming.add(record);
         }
+      } else {
+        dueToday.add(record);
       }
     }
 
@@ -43,6 +49,7 @@ class VaccinationScheduleSummary {
       overdue: overdue,
       dueSoon: dueSoon,
       upcoming: upcoming,
+      dueToday: dueToday,
     );
   }
 }

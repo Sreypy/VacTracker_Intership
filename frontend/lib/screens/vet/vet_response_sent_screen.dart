@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:frontend/widgets/notification_header_button.dart';
 
 class VetResponseSentScreen extends StatefulWidget {
   final String reportId;
@@ -95,6 +96,14 @@ class _VetResponseSentScreenState extends State<VetResponseSentScreen> {
             fontWeight: FontWeight.bold,
           ),
         ),
+        actions: [
+          NotificationHeaderButton(
+            languageCode: widget.languageCode,
+            color: primaryGreen,
+            notificationsRoute: '/vet-notifications',
+          ),
+          const SizedBox(width: 6),
+        ],
       ),
       bottomNavigationBar: _buildBottomNav(),
       body: SafeArea(

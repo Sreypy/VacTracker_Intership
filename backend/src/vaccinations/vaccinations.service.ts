@@ -140,6 +140,17 @@ export class VaccinationsService {
           status: VaccinationStatus.COMPLETED,
         })),
       );
+
+      // Update each completed vaccination's notification (the same row) to a
+      // green "Vaccination Completed" entry so it stays in history.
+      const completedAt = new Date();
+      for (const priorVaccination of completedPriorVaccinations) {
+        await this.notificationsService.markVaccinationCompleted({
+          farmerId: user.user_id,
+          vaccinationId: priorVaccination.vaccination_id,
+          completedAt,
+        });
+      }
     }
 
     // Determine next due date
@@ -226,7 +237,8 @@ export class VaccinationsService {
       );
     }
 
-    if (vaccination.vaccine.vaccine_id !== dto.vaccine_id) {
+    const scheduledVaccine = vaccination.next_vaccine ?? vaccination.vaccine;
+    if (scheduledVaccine.vaccine_id !== dto.vaccine_id) {
       throw new BadRequestException(
         'The scheduled vaccination does not match the selected vaccine',
       );
@@ -240,6 +252,21 @@ export class VaccinationsService {
       return vaccination;
     }
 
+    const nextVaccine = dto.next_vaccine_id != null
+      ? await this.vaccineRepository.findOne({
+          where: { vaccine_id: dto.next_vaccine_id },
+        })
+      : null;
+    if (dto.next_vaccine_id != null && !nextVaccine) {
+      throw new NotFoundException('Next vaccine not found');
+    }
+
+    vaccination.vaccine = scheduledVaccine;
+    vaccination.next_vaccine = nextVaccine;
+    vaccination.next_due_date = dto.next_due_date
+      ? new Date(dto.next_due_date)
+      : null;
+    vaccination.reminder_enabled = dto.create_reminder !== false;
     vaccination.date_given = new Date(dto.date_given);
     vaccination.status = VaccinationStatus.COMPLETED;
 
@@ -252,6 +279,13 @@ export class VaccinationsService {
     }
 
     const savedVaccination = await this.vaccinationRepository.save(vaccination);
+
+    // Keep the vaccination's single notification in history but turn it from a
+    // red "action needed" alert into a green "Vaccination Completed" entry.
+    await this.notificationsService.markVaccinationCompleted({
+      farmerId: user.user_id,
+      vaccinationId: vaccination.vaccination_id,
+    });
 
     await this.remindersService.markReminderCompleted(
       user.user_id,

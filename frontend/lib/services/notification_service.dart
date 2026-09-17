@@ -100,4 +100,25 @@ class NotificationService {
       // Silently ignore mark-all-as-read failures
     }
   }
+
+  /// Parses the creation timestamp from a notification (or vaccination) map,
+  /// accepting both the camelCase (`createdAt`) and snake_case (`created_at`)
+  /// forms returned by the API. Returns null when no usable timestamp exists.
+  static DateTime? parseCreatedAt(Map<String, dynamic> map) {
+    final raw = map['createdAt'] ?? map['created_at'];
+    return DateTime.tryParse(raw?.toString() ?? '');
+  }
+
+  /// Comparator that sorts by creation time, newest first. Entries without a
+  /// parseable timestamp are pushed to the bottom of the list.
+  ///
+  /// Every notification type (vet responses, due-today reminders, overdue
+  /// reminders) is sorted with this same comparator so the whole feed follows
+  /// one time order.
+  static int compareCreatedAtDesc(DateTime? first, DateTime? second) {
+    if (first == null && second == null) return 0;
+    if (first == null) return 1;
+    if (second == null) return -1;
+    return second.compareTo(first);
+  }
 }

@@ -42,6 +42,18 @@ export class SickReportsService {
     userId: number,
     photo?: Express.Multer.File,
   ) {
+    const connectedVets = await this.connectionRepository.find({
+      where: {
+        farmerId: userId,
+        status: ConnectionStatus.ACCEPTED,
+      },
+    });
+    if (connectedVets.length === 0) {
+      throw new BadRequestException(
+        'Please connect with a veterinarian first.',
+      );
+    }
+
     const reportDate = createSickReportDto.reportDate instanceof Date
       ? createSickReportDto.reportDate
       : new Date(createSickReportDto.reportDate);

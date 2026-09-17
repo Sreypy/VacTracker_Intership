@@ -88,24 +88,26 @@ class _FarmerProfilePageState extends State<FarmerProfilePage> {
 
   // Connection state helpers (pending / accepted / rejected)
   bool get _hasAcceptedVet => _connectedVets.any(
-        (vet) => (vet['status'] ?? 'accepted').toString() == 'accepted',
-      );
+    (vet) => (vet['status'] ?? 'accepted').toString() == 'accepted',
+  );
 
   bool get _hasPendingVet => _connectedVets.any(
-        (vet) => (vet['status'] ?? '').toString() == 'pending',
-      );
+    (vet) => (vet['status'] ?? '').toString() == 'pending',
+  );
 
-  bool get _hasRejectedVet => _connectedVets.any(
-            (vet) => (vet['status'] ?? '').toString() == 'rejected',
-          ) &&
+  bool get _hasRejectedVet =>
+      _connectedVets.any(
+        (vet) => (vet['status'] ?? '').toString() == 'rejected',
+      ) &&
       !_hasAcceptedVet &&
       !_hasPendingVet;
 
   /// True when a connection was ended (status = disconnected) and the
   /// farmer has no other active (pending/accepted) connection.
-  bool get _hasDisconnectedVet => _connectedVets.any(
-            (vet) => (vet['status'] ?? '').toString() == 'disconnected',
-          ) &&
+  bool get _hasDisconnectedVet =>
+      _connectedVets.any(
+        (vet) => (vet['status'] ?? '').toString() == 'disconnected',
+      ) &&
       !_hasAcceptedVet &&
       !_hasPendingVet;
 
@@ -1008,10 +1010,10 @@ class _FarmerProfilePageState extends State<FarmerProfilePage> {
                                               .trim()
                                               .isEmpty
                                           ? (_currentLang == 'km'
-                                              ? 'វេជ្ជបណ្ឌិតសត្វ'
-                                              : 'Veterinarian')
+                                                ? 'វេជ្ជបណ្ឌិតសត្វ'
+                                                : 'Veterinarian')
                                           : (_acceptedVet?['name'] ?? '')
-                                              .toString(),
+                                                .toString(),
                                       style: TextStyle(
                                         color: brandDarkGreen.withValues(
                                           alpha: 0.85,
@@ -1065,52 +1067,55 @@ class _FarmerProfilePageState extends State<FarmerProfilePage> {
                         // 🔴 Not Connected (farmer disconnected)
                         if (_hasDisconnectedVet)
                           Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFFEE2E2),
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(
-                              color: alertRed.withValues(alpha: 0.3),
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFEE2E2),
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(
+                                color: alertRed.withValues(alpha: 0.3),
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(
+                                  Icons.link_off_rounded,
+                                  color: alertRed,
+                                  size: 20,
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        _currentLang == 'km'
+                                            ? 'មិនបានភ្ជាប់'
+                                            : 'Not Connected',
+                                        style: TextStyle(
+                                          color: alertRed,
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        _currentLang == 'km'
+                                            ? 'គ្មានវេជ្ជបណ្ឌិតសត្វបានភ្ជាប់'
+                                            : 'No connected veterinarian',
+                                        style: TextStyle(
+                                          color: alertRed.withValues(
+                                            alpha: 0.8,
+                                          ),
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                          child: Row(
-                            children: [
-                              const Icon(
-                                Icons.link_off_rounded,
-                                color: alertRed,
-                                size: 20,
-                              ),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      _currentLang == 'km'
-                                          ? 'មិនបានភ្ជាប់'
-                                          : 'Not Connected',
-                                      style: TextStyle(
-                                        color: alertRed,
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      _currentLang == 'km'
-                                          ? 'គ្មានវេជ្ជបណ្ឌិតសត្វបានភ្ជាប់'
-                                          : 'No connected veterinarian',
-                                      style: TextStyle(
-                                        color: alertRed.withValues(alpha: 0.8),
-                                        fontSize: 12,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
                         // 🔴 Not Connected (request was rejected)
                         if (_hasRejectedVet)
                           Container(
@@ -1319,19 +1324,20 @@ class _FarmerProfilePageState extends State<FarmerProfilePage> {
                                                 'accepted'
                                             ? Icons.check_circle_rounded
                                             : (vet['status'] ?? '')
-                                                        .toString() ==
-                                                    'pending'
-                                                ? Icons.schedule_rounded
-                                                : Icons.cancel_rounded,
-                                        color: (vet['status'] ?? 'accepted')
+                                                      .toString() ==
+                                                  'pending'
+                                            ? Icons.schedule_rounded
+                                            : Icons.cancel_rounded,
+                                        color:
+                                            (vet['status'] ?? 'accepted')
                                                     .toString() ==
                                                 'accepted'
                                             ? brandDarkGreen
                                             : (vet['status'] ?? '')
-                                                        .toString() ==
-                                                    'pending'
-                                                ? const Color(0xFFD97706)
-                                                : textGrey,
+                                                      .toString() ==
+                                                  'pending'
+                                            ? const Color(0xFFD97706)
+                                            : textGrey,
                                         size: 18,
                                       ),
                                       if ((vet['status'] ?? 'accepted')
@@ -1359,23 +1365,18 @@ class _FarmerProfilePageState extends State<FarmerProfilePage> {
                                           ),
                                           child: _isDisconnectingVet
                                               ? const SizedBox(
-                                                  width: 12,
-                                                  height: 12,
+                                                  width: 9,
+                                                  height: 9,
                                                   child:
                                                       CircularProgressIndicator(
-                                                    strokeWidth: 2,
-                                                    color: alertRed,
-                                                  ),
+                                                        strokeWidth: 4,
+                                                        color: alertRed,
+                                                      ),
                                                 )
-                                              : Text(
-                                                  _currentLang == 'km'
-                                                      ? 'ផ្តាច់វេជ្ជបណ្ឌិត'
-                                                      : 'Disconnect Vet',
-                                                  style: const TextStyle(
-                                                    fontSize: 10,
-                                                    fontWeight:
-                                                        FontWeight.bold,
-                                                  ),
+                                              : const Icon(
+                                                  Icons.close,
+                                                  size: 16,
+                                                  color: alertRed,
                                                 ),
                                         ),
                                       ],
@@ -1702,9 +1703,7 @@ class _FarmerProfilePageState extends State<FarmerProfilePage> {
           child: LayoutBuilder(
             builder: (context, viewport) {
               return ConstrainedBox(
-                constraints: BoxConstraints(
-                  maxHeight: viewport.maxHeight - 48,
-                ),
+                constraints: BoxConstraints(maxHeight: viewport.maxHeight - 48),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -1909,10 +1908,7 @@ class _FarmerProfilePageState extends State<FarmerProfilePage> {
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(
-                color: brandDarkGreen,
-                width: 1.5,
-              ),
+              borderSide: const BorderSide(color: brandDarkGreen, width: 1.5),
             ),
           ),
         ),
@@ -1963,9 +1959,7 @@ class _FarmerProfilePageState extends State<FarmerProfilePage> {
       padding: const EdgeInsets.all(16),
       decoration: const BoxDecoration(
         color: Colors.white,
-        border: Border(
-          top: BorderSide(color: dialogInputBorder),
-        ),
+        border: Border(top: BorderSide(color: dialogInputBorder)),
       ),
       child: Row(
         children: [
@@ -2050,9 +2044,9 @@ class _FarmerProfilePageState extends State<FarmerProfilePage> {
     final province = provinceController.text.trim();
 
     if (name.isEmpty || phone.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(_getText('msg_required_fields'))),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(_getText('msg_required_fields'))));
       return;
     }
 
@@ -2121,7 +2115,6 @@ class _FarmerProfilePageState extends State<FarmerProfilePage> {
       );
 
       if (image == null) return;
-
 
       await _uploadProfileImage(image);
     } catch (e) {

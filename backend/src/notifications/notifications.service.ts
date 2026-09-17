@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { Notification, NotificationType } from './entities/notification.entity';
 import { Vaccination, VaccinationStatus } from '../vaccinations/entities/vaccination.entity';
 
@@ -15,10 +15,64 @@ export class NotificationsService {
     private readonly vaccinationRepository: Repository<Vaccination>,
   ) {}
 
+  /**
+   * The notification(s) currently tracking a vaccination's lifecycle.
+   *
+   * A vaccination may only ever have ONE notification across its lifetime:
+   * Vaccine Due Today → Vaccination Overdue → Vaccination Completed. This
+   * lookup spans all three sub-types so the scheduler, the sync methods and
+   * the completion flow can never create a second notification for the same
+   * vaccination; they update the existing row instead.
+   */
+  private async findVaccinationNotifications(
+    farmerId: number,
+    vaccinationId: number,
+  ): Promise<Notification[]> {
+    return this.notificationRepository.find({
+      where: {
+        farmerId,
+        referenceId: vaccinationId,
+        type: In([
+          NotificationType.VACCINE_DUE_TODAY,
+          NotificationType.VACCINATION_OVERDUE,
+          NotificationType.VACCINATION_COMPLETED,
+        ]),
+      },
+      order: { notification_id: 'ASC' },
+    });
+  }
+
+  /**
+   * Collapse pre-existing duplicate notifications that were created for the
+   * same vaccination (left over from earlier duplicate-creation bugs). The
+   * first notification is kept and every later duplicate is removed so the
+   * history stays clean.
+   */
+  private async mergeDuplicateVaccinationNotifications(
+    farmerId: number,
+    vaccinationId: number,
+  ): Promise<Notification | null> {
+    const existing = await this.findVaccinationNotifications(
+      farmerId,
+      vaccinationId,
+    );
+    if (existing.length === 0) return null;
+
+    const primary = existing[0];
+    if (existing.length > 1) {
+      await this.notificationRepository.remove(existing.slice(1));
+      this.logger.log(
+        `Merged ${existing.length - 1} duplicate notification(s) into notification ${primary.notification_id} for vaccination ${vaccinationId}`,
+      );
+    }
+    return primary;
+  }
+
   async findByFarmer(farmerId: number): Promise<Notification[]> {
-    // Proactively sync overdue vaccination notifications so the farmer
-    // always sees up-to-date overdue alerts in their notification list.
+    // Sync actionable vaccination notifications on demand. Both methods are
+    // idempotent, so opening the screen cannot create duplicates.
     await this.syncOverdueNotifications(farmerId);
+    await this.syncDueTodayNotifications(farmerId);
 
     return this.notificationRepository.find({
       where: { farmerId },
@@ -45,9 +99,10 @@ export class NotificationsService {
   }
 
   /**
-   * Create a notification record for a vaccination that is overdue.
-   * The method is idempotent – it will not create a duplicate notification
-   * for the same vaccination.
+   * Create or update the single notification for a vaccination that is
+   * overdue. The method is idempotent: if the vaccination already has a
+   * notification (due today, overdue, or completed) the SAME row is updated
+   * so the original createdAt is preserved and no duplicate is created.
    */
   async createOverdueVaccinationNotification(
     vaccination: Vaccination,
@@ -62,18 +117,10 @@ export class NotificationsService {
     }
 
     const farmerId = vaccination.flock.farmer.user_id;
-
-    // Avoid duplicate notifications for the same vaccination
-    const existing = await this.notificationRepository.findOne({
-      where: {
-        farmerId,
-        type: NotificationType.VACCINATION_OVERDUE,
-        referenceId: vaccination.vaccination_id,
-      },
-    });
-    if (existing) {
-      return existing;
-    }
+    const existing = await this.mergeDuplicateVaccinationNotifications(
+      farmerId,
+      vaccination.vaccination_id,
+    );
 
     const dueDate = new Date(vaccination.next_due_date);
     const today = new Date();
@@ -91,27 +138,161 @@ export class NotificationsService {
       reminderVaccine.name_km || reminderVaccine.name_en || 'Unknown vaccine';
     const flockName = vaccination.flock.batch_name || 'Unknown flock';
 
+    const data = {
+      vaccination_id: vaccination.vaccination_id,
+      vaccine_name: vaccineNameEn,
+      vaccine_name_km: vaccineNameKm,
+      flock_name: flockName,
+      due_date: dueDate.toISOString().split('T')[0],
+      flock_id: vaccination.flock.flock_id,
+      vaccine_id: reminderVaccine.vaccine_id,
+      status: 'overdue',
+    };
+
+    if (existing) {
+      // A due-today or overdue reminder for this vaccination already exists:
+      // update it in place (same notification_id, same createdAt, no new row).
+      if (existing.type === NotificationType.VACCINATION_COMPLETED) {
+        return existing;
+      }
+      existing.title = 'Vaccination Overdue';
+      existing.message = `${vaccineNameEn} vaccination is overdue for ${flockName}.`;
+      existing.type = NotificationType.VACCINATION_OVERDUE;
+      existing.isRead = false;
+      existing.data = { ...(existing.data ?? {}), ...data };
+      this.logger.log(
+        `Updated vaccination notification ${existing.notification_id} to overdue (${absDays} days overdue) for vaccination ${vaccination.vaccination_id}`,
+      );
+      return this.notificationRepository.save(existing);
+    }
+
     const notification = this.notificationRepository.create({
       farmerId,
       title: 'Vaccination Overdue',
       message: `${vaccineNameEn} vaccination is overdue for ${flockName}.`,
       type: NotificationType.VACCINATION_OVERDUE,
       referenceId: vaccination.vaccination_id,
-      data: {
-        vaccination_id: vaccination.vaccination_id,
-        vaccine_name: vaccineNameEn,
-        vaccine_name_km: vaccineNameKm,
-        flock_name: flockName,
-        due_date: dueDate.toISOString().split('T')[0],
-        flock_id: vaccination.flock.flock_id,
-        vaccine_id: reminderVaccine.vaccine_id,
-      },
+      data,
     });
 
     this.logger.log(
       `Created overdue vaccination notification (${absDays} days overdue) for vaccination ${vaccination.vaccination_id}`,
     );
     return this.notificationRepository.save(notification);
+  }
+
+  /**
+   * Create or update the single notification for a vaccination due today.
+   * Idempotent: if the vaccination already has a notification (due today,
+   * overdue, or completed) the SAME row is updated so the original createdAt
+   * is preserved and no duplicate is created.
+   */
+  async createDueTodayVaccinationNotification(
+    vaccination: Vaccination,
+  ): Promise<Notification | null> {
+    if (
+      !vaccination.next_due_date ||
+      !vaccination.flock?.farmer?.user_id ||
+      !vaccination.flock?.flock_id ||
+      !vaccination.vaccine ||
+      vaccination.status === VaccinationStatus.COMPLETED
+    ) {
+      return null;
+    }
+
+    const farmerId = vaccination.flock.farmer.user_id;
+    const existing = await this.mergeDuplicateVaccinationNotifications(
+      farmerId,
+      vaccination.vaccination_id,
+    );
+
+    const reminderVaccine = vaccination.next_vaccine ?? vaccination.vaccine;
+    const vaccineNameEn =
+      reminderVaccine.name_en || reminderVaccine.name_km || 'Vaccine';
+    const vaccineNameKm =
+      reminderVaccine.name_km || reminderVaccine.name_en || 'វ៉ាក់សាំង';
+    const flockName = vaccination.flock.batch_name || 'your flock';
+
+    const data = {
+      vaccination_id: vaccination.vaccination_id,
+      vaccine_name: vaccineNameEn,
+      vaccine_name_km: vaccineNameKm,
+      flock_name: flockName,
+      due_date: vaccination.next_due_date.toISOString().split('T')[0],
+      flock_id: vaccination.flock.flock_id,
+      vaccine_id: reminderVaccine.vaccine_id,
+      status: 'due_today',
+    };
+
+    if (existing) {
+      // Same vaccination already has a notification → update it in place
+      // (same notification_id, same createdAt, no duplicate row).
+      if (existing.type === NotificationType.VACCINATION_COMPLETED) {
+        return existing;
+      }
+      existing.title = 'Vaccine Due Today';
+      existing.message = 'Your vaccination is due today.';
+      existing.type = NotificationType.VACCINE_DUE_TODAY;
+      existing.isRead = false;
+      existing.data = { ...(existing.data ?? {}), ...data };
+      return this.notificationRepository.save(existing);
+    }
+
+    return this.notificationRepository.save(
+      this.notificationRepository.create({
+        farmerId: farmerId,
+        title: 'Vaccine Due Today',
+        message: 'Your vaccination is due today.',
+        type: NotificationType.VACCINE_DUE_TODAY,
+        referenceId: vaccination.vaccination_id,
+        data,
+      }),
+    );
+  }
+
+  /**
+   * Mark the vaccination's single notification as completed.
+   *
+   * Called when the farmer records the vaccination. The SAME notification row
+   * is updated (so createdAt is preserved and the entry stays in history) to a
+   * green "Vaccination Completed" state. It is marked read so the red "action
+   * needed" badge decreases and the completed time is stored for display.
+   */
+  async markVaccinationCompleted(params: {
+    farmerId: number;
+    vaccinationId: number;
+    completedAt?: Date;
+  }): Promise<void> {
+    const notifications = await this.findVaccinationNotifications(
+      params.farmerId,
+      params.vaccinationId,
+    );
+    if (notifications.length === 0) return;
+
+    const notification = notifications[0];
+    if (notifications.length > 1) {
+      await this.notificationRepository.remove(notifications.slice(1));
+      this.logger.log(
+        `Merged ${notifications.length - 1} duplicate notification(s) into notification ${notification.notification_id} for vaccination ${params.vaccinationId}`,
+      );
+    }
+
+    const completedAt = params.completedAt ?? new Date();
+    notification.title = 'Vaccination Completed';
+    notification.message = `Vaccination completed on ${completedAt.toISOString()}.`;
+    notification.type = NotificationType.VACCINATION_COMPLETED;
+    notification.isRead = true;
+    notification.data = {
+      ...(notification.data ?? {}),
+      vaccination_id: params.vaccinationId,
+      status: 'completed',
+      completed_at: completedAt.toISOString(),
+    };
+
+    this.logger.log(
+      `Marked vaccination notification ${notification.notification_id} as completed for vaccination ${params.vaccinationId}`,
+    );
+    await this.notificationRepository.save(notification);
   }
 
   /**
@@ -139,6 +320,29 @@ export class NotificationsService {
 
     for (const vaccination of overdueVaccinations) {
       await this.createOverdueVaccinationNotification(vaccination);
+    }
+  }
+
+  async syncDueTodayNotifications(farmerId: number): Promise<void> {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todayStr = today.toISOString().split('T')[0];
+
+    const dueTodayVaccinations = await this.vaccinationRepository
+      .createQueryBuilder('vaccination')
+      .leftJoinAndSelect('vaccination.flock', 'flock')
+      .leftJoinAndSelect('flock.farmer', 'farmer')
+      .leftJoinAndSelect('vaccination.vaccine', 'vaccine')
+      .leftJoinAndSelect('vaccination.next_vaccine', 'next_vaccine')
+      .where('farmer.user_id = :farmerId', { farmerId })
+      .andWhere('vaccination.next_due_date = :today', { today: todayStr })
+      .andWhere('vaccination.status != :completed', {
+        completed: VaccinationStatus.COMPLETED,
+      })
+      .getMany();
+
+    for (const vaccination of dueTodayVaccinations) {
+      await this.createDueTodayVaccinationNotification(vaccination);
     }
   }
 

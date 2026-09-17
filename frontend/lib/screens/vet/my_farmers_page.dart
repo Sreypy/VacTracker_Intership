@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../services/auth_service.dart';
 import '../../services/vet_dashboard_service.dart';
+import '../../widgets/notification_header_button.dart';
 
 class MyFarmersPage extends StatefulWidget {
   final String languageCode;
@@ -320,6 +321,14 @@ class _MyFarmersPageState extends State<MyFarmersPage> {
             ),
           ],
         ),
+        actions: [
+          NotificationHeaderButton(
+            languageCode: widget.languageCode,
+            color: darkGreen,
+            notificationsRoute: '/vet-notifications',
+          ),
+          const SizedBox(width: 6),
+        ],
       ),
       body: SafeArea(
         child: Column(

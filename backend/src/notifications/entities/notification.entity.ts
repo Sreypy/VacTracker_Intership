@@ -12,6 +12,9 @@ export enum NotificationType {
   VET_RESPONSE = 'vet_response',
   SYSTEM = 'system',
   VACCINATION_OVERDUE = 'vaccination_overdue',
+  VACCINE_DUE_TODAY = 'vaccine_due_today',
+  /** The vaccination's reminder was completed. Keeps the same notification row. */
+  VACCINATION_COMPLETED = 'vaccination_completed',
   /** A connected farmer submitted a new sick report (recipient: vet). */
   SICK_REPORT = 'sick_report',
   /** A farmer requested a connection using the vet code (recipient: vet). */

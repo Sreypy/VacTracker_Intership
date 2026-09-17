@@ -46,7 +46,7 @@ class _NotificationScreenState extends State<NotificationScreen>
   List<_NotificationItem> _notifications = [];
   int _overdueCount = 0;
   int _dueTodayCount = 0;
-  int _dueSoonCount = 0;
+  // int _dueSoonCount = 0;
   String _profileName = 'User';
   String _profileImageUrl = '';
 
@@ -74,12 +74,17 @@ class _NotificationScreenState extends State<NotificationScreen>
       'unknown_vaccine': 'Unknown vaccine',
       'overdue_title': 'Vaccination overdue',
       'due_today_title': 'Vaccination due today',
+      'due_today_notification_title': 'Vaccine Due Today',
+      'due_today_notification_message': 'Your vaccination is due today.',
       'due_soon_title': 'Vaccination due soon',
       'action_required_header': 'Action Required',
       'view_details_btn': 'View Details',
       'vet_response_label': 'VET RESPONSE',
       'vet_response_title': 'Veterinarian Response',
       'view_report_btn': 'View Report',
+      'vaccination_completed_title': 'Vaccination Completed',
+      'completed_label': 'VACCINATION COMPLETED',
+      'completed_detail': 'Completed',
     },
     'km': {
       'title': 'ការជូនដំណឹង',
@@ -104,12 +109,18 @@ class _NotificationScreenState extends State<NotificationScreen>
       'unknown_vaccine': 'មិនស្គាល់វ៉ាក់សាំង',
       'overdue_title': 'ការចាក់វ៉ាក់សាំងហួសកំណត់',
       'due_today_title': 'ការចាក់វ៉ាក់សាំងដល់កំណត់ថ្ងៃនេះ',
+      'due_today_notification_title': 'វ៉ាក់សាំងត្រូវចាក់ថ្ងៃនេះ',
+      'due_today_notification_message':
+          'ការចាក់វ៉ាក់សាំងរបស់អ្នកត្រូវធ្វើនៅថ្ងៃនេះ',
       'due_soon_title': 'ការចាក់វ៉ាក់សាំងជិតដល់កំណត់',
       'action_required_header': 'ត្រូវការសកម្មភាព',
       'view_details_btn': 'មើលព័ត៌មានលម្អិត',
       'vet_response_label': 'ការឆ្លើយតបពីពេទ្យសត្វ',
       'vet_response_title': 'ការឆ្លើយតបពីពេទ្យសត្វ',
       'view_report_btn': 'មើលរបាយការណ៍',
+      'vaccination_completed_title': 'ការចាក់វ៉ាក់សាំងបានបញ្ចប់',
+      'completed_label': 'ការចាក់វ៉ាក់សាំងបានបញ្ចប់',
+      'completed_detail': 'បានបញ្ចប់',
     },
   };
 
@@ -235,11 +246,39 @@ class _NotificationScreenState extends State<NotificationScreen>
       final notifications = results[1];
 
       final items = <_NotificationItem>[];
+      final remindedVaccinationIds = <int>{};
+      final completedVaccinationIds = vaccinations
+          .where(VaccinationScheduleService.isCompleted)
+          .map(
+            (vaccination) => _NotificationItem.asInt(
+              vaccination is Map ? vaccination['vaccination_id'] : null,
+            ),
+          )
+          .whereType<int>()
+          .toSet();
       int overdueCount = 0;
       int dueTodayCount = 0;
-      int dueSoonCount = 0;
+      // int dueSoonCount = 0;
 
-      // Build vaccination notifications from the canonical vaccination data.
+      // Vaccinations that already have a server reminder notification
+      // (due-today or overdue). Those cards are rendered from the server
+      // notification below so the original createdAt is respected and the feed
+      // can never show two entries for the same vaccination (refresh-safe).
+      for (final notification in notifications) {
+        if (notification is! Map) continue;
+        final type = notification['type']?.toString();
+        if (type == 'vaccine_due_today' || type == 'vaccination_overdue') {
+          final referenceId = _NotificationItem.asInt(
+            notification['referenceId'] ?? notification['reference_id'],
+          );
+          if (referenceId != null) remindedVaccinationIds.add(referenceId);
+        }
+      }
+
+      // Build vaccination cards from the canonical vaccination data. Entries
+      // that already have a matching server reminder are added in the server
+      // loop below instead, so the server notification (with its preserved
+      // createdAt) becomes the single card for that vaccination.
       for (final vaccination in vaccinations) {
         if (VaccinationScheduleService.dueDateFor(vaccination) == null ||
             VaccinationScheduleService.isCompleted(vaccination)) {
@@ -253,21 +292,25 @@ class _NotificationScreenState extends State<NotificationScreen>
 
         if (item == null) continue;
 
-        // Only show reminders that need attention: Overdue, Due Today, or Due
-        // Soon (within the next 7 days). Anything further away is excluded.
         if (item.isOverdue) {
+          if (item.vaccinationId != null &&
+              remindedVaccinationIds.contains(item.vaccinationId)) {
+            continue;
+          }
           items.add(item);
           overdueCount++;
         } else if (item.isDueToday) {
+          if (item.vaccinationId != null &&
+              remindedVaccinationIds.contains(item.vaccinationId)) {
+            continue;
+          }
           items.add(item);
           dueTodayCount++;
-        } else if (item.isDueSoon) {
-          items.add(item);
-          dueSoonCount++;
         }
       }
 
-      // Add server notifications such as veterinarian responses.
+      // Add server notifications: vet responses, vaccination reminders and
+      // completed vaccination history entries.
       for (final notification in notifications) {
         if (notification is! Map) continue;
         final type = notification['type']?.toString();
@@ -277,21 +320,55 @@ class _NotificationScreenState extends State<NotificationScreen>
             notification,
             widget.languageCode,
           );
+        } else if (type == 'vaccine_due_today') {
+          final referenceId = _NotificationItem.asInt(
+            notification['referenceId'] ?? notification['reference_id'],
+          );
+          if (referenceId != null &&
+              completedVaccinationIds.contains(referenceId)) {
+            continue;
+          }
+          item = _NotificationItem.fromVaccinationReminder(
+            notification,
+            widget.languageCode,
+            sourceVaccination: _findVaccinationById(vaccinations, referenceId),
+            overdue: false,
+          );
+          if (item != null) dueTodayCount++;
+        } else if (type == 'vaccination_overdue') {
+          final referenceId = _NotificationItem.asInt(
+            notification['referenceId'] ?? notification['reference_id'],
+          );
+          if (referenceId != null &&
+              completedVaccinationIds.contains(referenceId)) {
+            continue;
+          }
+          item = _NotificationItem.fromVaccinationReminder(
+            notification,
+            widget.languageCode,
+            sourceVaccination: _findVaccinationById(vaccinations, referenceId),
+            overdue: true,
+          );
+          if (item != null) overdueCount++;
+        } else if (type == 'vaccination_completed') {
+          item = _NotificationItem.fromCompletedNotification(
+            notification,
+            widget.languageCode,
+          );
         }
         if (item == null) continue;
 
         items.add(item);
       }
 
-      items.sort((first, second) {
-        if (first.isVetResponse != second.isVetResponse) {
-          return first.isVetResponse ? -1 : 1;
-        }
-        if (first.isOverdue != second.isOverdue) {
-          return first.isOverdue ? -1 : 1;
-        }
-        return first.dueDate.compareTo(second.dueDate);
-      });
+      // Unified time order: every notification type is sorted by createdAt,
+      // newest first, so vet responses interleave with vaccination reminders.
+      items.sort(
+        (first, second) => NotificationService.compareCreatedAtDesc(
+          first.createdAt,
+          second.createdAt,
+        ),
+      );
 
       // Calculate summaries
       if (!mounted) return;
@@ -299,7 +376,7 @@ class _NotificationScreenState extends State<NotificationScreen>
         _notifications = items;
         _overdueCount = overdueCount;
         _dueTodayCount = dueTodayCount;
-        _dueSoonCount = dueSoonCount;
+        // _dueSoonCount = dueSoonCount;
         _isLoading = false;
       });
     } catch (_) {
@@ -311,7 +388,81 @@ class _NotificationScreenState extends State<NotificationScreen>
     }
   }
 
+  // Future<void> _openNotification(_NotificationItem item) async {
+  //   if (item.isCompleted) {
+  //     // A completed vaccination is part of the history: open the flock so the
+  //     // farmer can review it, never the "vaccinate now" flow.
+  //     if (item.flockId != null) {
+  //       await context.push(
+  //         '/flock-detail/${item.flockId}/${widget.languageCode}',
+  //       );
+  //       if (mounted) {
+  //         _loadNotifications();
+  //       }
+  //     }
+  //     return;
+  //   }
+  //   if (item.isVetResponse) {
+  //     if (item.notificationId != null) {
+  //       await NotificationService().markAsRead(item.notificationId!);
+  //     }
+  //     if (!mounted) return;
+
+  //     debugPrint(
+  //       'reportId: ${item.reportId}, languageCode: ${widget.languageCode}',
+  //     );
+
+  //     if (item.reportId != null) {
+  //       context.push(
+  //         '/my-sick-reports/${item.reportId}?lang=${widget.languageCode}',
+  //       );
+  //     } else {
+  //       debugPrint('reportId is null — navigation skipped');
+  //     }
+  //     return;
+  //   }
+  //   if (item.flockId == null) return;
+  //   // Mark an overdue-vaccination notification as read when the farmer taps it.
+  //   if (item.notificationId != null) {
+  //     await NotificationService().markAsRead(item.notificationId!);
+  //     if (!mounted) return;
+  //   }
+  //   if (item.isOverdue || item.isDueToday) {
+  //     if (item.vaccineId == null) return;
+  //     final scheduledVaccinationQuery = item.vaccinationId == null
+  //         ? ''
+  //         : '&vaccinationId=${item.vaccinationId}';
+  //     final result = await context.push<bool>(
+  //       '/log-vaccination-step1/${widget.languageCode}'
+  //       '?flockId=${item.flockId}&batchTitle=${Uri.encodeComponent(item.flockName)}'
+  //       '&vaccineId=${item.vaccineId}$scheduledVaccinationQuery',
+  //     );
+  //     if (result == true && mounted) {
+  //       await _loadNotifications();
+  //       await NotificationHeaderButton.refreshDueTodayCount();
+  //     }
+  //     return;
+  //   }
+  //   await context.push('/flock-detail/${item.flockId}/${widget.languageCode}');
+  //   if (mounted) {
+  //     _loadNotifications();
+  //   }
+  // }
+
   Future<void> _openNotification(_NotificationItem item) async {
+    if (item.isCompleted) {
+      // A completed vaccination is part of the history: open the flock so the
+      // farmer can review it, never the "vaccinate now" flow.
+      if (item.flockId != null) {
+        await context.push(
+          '/flock-detail/${item.flockId}/${widget.languageCode}',
+        );
+        if (mounted) {
+          _loadNotifications();
+        }
+      }
+      return;
+    }
     if (item.isVetResponse) {
       if (item.notificationId != null) {
         await NotificationService().markAsRead(item.notificationId!);
@@ -337,22 +488,27 @@ class _NotificationScreenState extends State<NotificationScreen>
       await NotificationService().markAsRead(item.notificationId!);
       if (!mounted) return;
     }
-    if (item.isOverdue || item.isDueToday) {
-      if (item.vaccineId == null) return;
-      final result = await context.push<bool>(
-        '/log-vaccination-step2/${widget.languageCode}'
-        '?flockId=${item.flockId}&batchTitle=${Uri.encodeComponent(item.flockName)}'
-        '&vaccineId=${item.vaccineId}&vaccinationId=${item.vaccinationId}',
-      );
-      if (result == true && mounted) {
-        await _loadNotifications();
-      }
-      return;
-    }
+    // Overdue / due-today notifications now also just open the flock detail,
+    // same as the default case below.
     await context.push('/flock-detail/${item.flockId}/${widget.languageCode}');
     if (mounted) {
       _loadNotifications();
     }
+  }
+
+  Map<String, dynamic>? _findVaccinationById(
+    List<dynamic> vaccinations,
+    int? vaccinationId,
+  ) {
+    if (vaccinationId == null) return null;
+    for (final vaccination in vaccinations) {
+      if (vaccination is Map &&
+          _NotificationItem.asInt(vaccination['vaccination_id']) ==
+              vaccinationId) {
+        return Map<String, dynamic>.from(vaccination);
+      }
+    }
+    return null;
   }
 
   // --- Simplified Date Format ---
@@ -572,7 +728,7 @@ class _NotificationScreenState extends State<NotificationScreen>
 
           const SizedBox(height: 14),
 
-          _summaryRow(colorDueSoon, _getText('due_soon'), _dueSoonCount),
+          // _summaryRow(colorDueSoon, _getText('due_soon'), _dueSoonCount),
         ],
       ),
     );
@@ -699,10 +855,11 @@ class _NotificationScreenState extends State<NotificationScreen>
                               fontSize: 12,
                             ),
                           ),
-                          Text(
-                            ' • $countText',
-                            style: TextStyle(color: colorMuted, fontSize: 12),
-                          ),
+                          if (countText.isNotEmpty)
+                            Text(
+                              ' • $countText',
+                              style: TextStyle(color: colorMuted, fontSize: 12),
+                            ),
                         ],
                       ),
                       const SizedBox(height: 3),
@@ -728,8 +885,13 @@ class _NotificationScreenState extends State<NotificationScreen>
               _detailRow(Icons.vaccines_outlined, item.vaccineName),
               const SizedBox(height: 10),
               _detailRow(
-                Icons.calendar_today_outlined,
-                'Due ${_formatDate(item.dueDate)}',
+                item.isCompleted
+                    ? Icons.check_circle_outline
+                    : Icons.calendar_today_outlined,
+                item.isCompleted
+                    ? '${_getText('completed_detail')} '
+                          '${_formatDate(item.completedAt ?? item.dueDate)}'
+                    : 'Due ${_formatDate(item.dueDate)}',
               ),
             ],
             const SizedBox(height: 24),
@@ -790,6 +952,10 @@ class _NotificationItem {
   final String? vetMessage;
   final int? notificationId;
   final int? reportId;
+  final DateTime? createdAt;
+  final bool isDueTodayNotification;
+  final bool isCompleted;
+  final DateTime? completedAt;
 
   const _NotificationItem({
     required this.flockName,
@@ -803,17 +969,22 @@ class _NotificationItem {
     this.vetMessage,
     this.notificationId,
     this.reportId,
+    this.createdAt,
+    this.isDueTodayNotification = false,
+    this.isCompleted = false,
+    this.completedAt,
   });
 
-  bool get isOverdue => days < 0;
-  bool get isDueToday => days == 0;
+  bool get isOverdue => !isCompleted && days < 0;
+  bool get isDueToday => !isCompleted && days == 0;
   // Define "due soon" as within 7 days, excluding today.
-  bool get isDueSoon => days > 0 && days <= 7;
+  bool get isDueSoon => !isCompleted && days > 0 && days <= 7;
 
   // Visual Styling Properties
 
   Color get mainColor {
     if (isVetResponse) return _NotificationScreenState.colorApp;
+    if (isCompleted) return _NotificationScreenState.colorScheduled;
     if (isOverdue) return _NotificationScreenState.colorOverdue;
     if (isDueToday) return _NotificationScreenState.colorDueToday;
     return _NotificationScreenState.colorDueSoon;
@@ -821,6 +992,7 @@ class _NotificationItem {
 
   Color get lightColor {
     if (isVetResponse) return _NotificationScreenState.colorLightGreen;
+    if (isCompleted) return _NotificationScreenState.colorLightGreen;
     if (isOverdue) return _NotificationScreenState.colorLightRed;
     if (isDueToday) return _NotificationScreenState.colorLightOrange;
     return _NotificationScreenState.colorLightAmber;
@@ -828,20 +1000,22 @@ class _NotificationItem {
 
   IconData get cardIconData {
     if (isVetResponse) return Icons.medical_services_outlined;
-    if (isOverdue) return Icons.report_problem_outlined;
+    if (isCompleted) return Icons.check_circle;
+    if (isDueToday) return Icons.report_problem_outlined;
     return Icons.schedule_rounded; // Works well for upcoming too
   }
 
   // Label specific to design requirements
   String labelPrefix(String Function(String) text) {
     if (isVetResponse) return text('vet_response_label');
+    if (isCompleted) return text('completed_label');
     if (isOverdue || isDueToday) return text('action_needed_label');
     return text('upcoming_label');
   }
 
   // Card text relative to design
   String timeCountText(String Function(String) text) {
-    if (isVetResponse) return '';
+    if (isVetResponse || isCompleted) return '';
     if (isOverdue) {
       final absDays = days.abs();
       return '$absDays ${absDays == 1 ? text('day_overdue') : text('days_overdue')}';
@@ -854,6 +1028,8 @@ class _NotificationItem {
   // Specific titles used in design
   String cardTitle(String Function(String) text) {
     if (isVetResponse) return text('vet_response_title');
+    if (isCompleted) return text('vaccination_completed_title');
+    if (isDueTodayNotification) return text('due_today_notification_title');
     if (isOverdue) return text('overdue_title');
     if (isDueToday) return text('due_today_title');
     return text('due_soon_title');
@@ -862,6 +1038,7 @@ class _NotificationItem {
   // Action Button Configuration
   String actionButtonText(String Function(String) text) {
     if (isVetResponse) return text('view_report_btn');
+    if (isCompleted) return text('view_flock_btn');
     if (isOverdue || isDueToday) return text('vaccinate_now_btn');
     if (isDueSoon) return text('view_flock_btn');
     return text('view_details_btn');
@@ -869,8 +1046,9 @@ class _NotificationItem {
 
   Color get actionButtonColor {
     if (isVetResponse) return _NotificationScreenState.colorApp;
+    if (isCompleted) return _NotificationScreenState.colorScheduled;
+    if (isDueSoon) return _NotificationScreenState.colorDueSoon;
     if (isOverdue || isDueToday) return _NotificationScreenState.colorOverdue;
-    if (isDueSoon) return Colors.transparent; // Outline button style
     return _NotificationScreenState.colorMuted.withValues(
       alpha: 0.1,
     ); // Greyscale action
@@ -878,6 +1056,7 @@ class _NotificationItem {
 
   Color get actionButtonForegroundColor {
     if (isVetResponse) return Colors.white;
+    if (isCompleted) return Colors.white;
     if (isDueSoon) return _NotificationScreenState.colorScheduled;
     if (isOverdue || isDueToday) return Colors.white;
     return _NotificationScreenState.colorText;
@@ -887,15 +1066,14 @@ class _NotificationItem {
   static _NotificationItem? fromVetResponse(dynamic raw, String languageCode) {
     if (raw is! Map) return null;
     final notification = Map<String, dynamic>.from(raw);
-    final createdRaw = notification['created_at']?.toString();
-    final createdDate = DateTime.tryParse(createdRaw ?? '');
-    if (createdDate == null) return null;
+    final createdDate = NotificationService.parseCreatedAt(notification);
 
     final today = DateTime.now();
+    final safeCreatedDate = createdDate ?? today;
     final createdDay = DateTime(
-      createdDate.year,
-      createdDate.month,
-      createdDate.day,
+      safeCreatedDate.year,
+      safeCreatedDate.month,
+      safeCreatedDate.day,
     );
     final todayDay = DateTime(today.year, today.month, today.day);
 
@@ -909,8 +1087,120 @@ class _NotificationItem {
       days: createdDay.difference(todayDay).inDays,
       isVetResponse: true,
       vetMessage: notification['message']?.toString() ?? '',
-      notificationId: _asInt(notification['notification_id']),
-      reportId: _asInt(notification['referenceId']),
+      notificationId: asInt(notification['notification_id']),
+      reportId: asInt(
+        notification['referenceId'] ?? notification['reference_id'],
+      ),
+      createdAt: createdDate,
+    );
+  }
+
+  // Mapper for server vaccination reminder notifications
+  // (type = vaccine_due_today or vaccination_overdue). The server notification
+  // is the single card for its vaccination – its createdAt is preserved across
+  // the due-today → overdue → completed lifecycle, so the feed keeps one
+  // entry and a consistent time order.
+  static _NotificationItem? fromVaccinationReminder(
+    dynamic raw,
+    String languageCode, {
+    Map<String, dynamic>? sourceVaccination,
+    bool overdue = false,
+  }) {
+    if (raw is! Map) return null;
+    final notification = Map<String, dynamic>.from(raw);
+    final data = notification['data'] is Map
+        ? Map<String, dynamic>.from(notification['data'] as Map)
+        : <String, dynamic>{};
+    final createdAt = NotificationService.parseCreatedAt(notification);
+    final dueDate =
+        DateTime.tryParse(data['due_date']?.toString() ?? '') ??
+        createdAt ??
+        DateTime.now();
+    final today = VaccinationScheduleService.calendarDate(DateTime.now());
+    final dueDay = VaccinationScheduleService.calendarDate(dueDate);
+    final flockName = (data['flock_name'] ?? 'Unknown flock').toString();
+    final vaccineName =
+        (languageCode == 'km'
+                ? data['vaccine_name_km'] ??
+                      data['vaccine_name'] ??
+                      'Unknown vaccine'
+                : data['vaccine_name'] ??
+                      data['vaccine_name_km'] ??
+                      'Unknown vaccine')
+            .toString();
+    final sourceVaccine = vaccinationMap(
+      sourceVaccination?['next_vaccine'] ?? sourceVaccination?['vaccine'],
+    );
+
+    return _NotificationItem(
+      flockName: flockName,
+      vaccineName: vaccineName,
+      dueDate: dueDay,
+      flockId: asInt(sourceVaccination?['flock_id']) ?? asInt(data['flock_id']),
+      vaccineId:
+          asInt(sourceVaccine['vaccine_id']) ?? asInt(data['vaccine_id']),
+      vaccinationId: asInt(
+        data['vaccination_id'] ??
+            notification['referenceId'] ??
+            notification['reference_id'],
+      ),
+      days: dueDay.difference(today).inDays,
+      notificationId: asInt(notification['notification_id']),
+      createdAt: createdAt,
+      isDueTodayNotification: !overdue,
+    );
+  }
+
+  // Mapper for completed vaccination history entries
+  // (type = vaccination_completed). These stay in the notification history and
+  // are rendered in green with the date/time the vaccination was recorded.
+  static _NotificationItem? fromCompletedNotification(
+    dynamic raw,
+    String languageCode,
+  ) {
+    if (raw is! Map) return null;
+    final notification = Map<String, dynamic>.from(raw);
+    final data = notification['data'] is Map
+        ? Map<String, dynamic>.from(notification['data'] as Map)
+        : <String, dynamic>{};
+    final completedAt = DateTime.tryParse(
+      data['completed_at']?.toString() ?? '',
+    );
+    final createdAt = NotificationService.parseCreatedAt(notification);
+    final dueDate =
+        DateTime.tryParse(data['due_date']?.toString() ?? '') ??
+        completedAt ??
+        createdAt ??
+        DateTime.now();
+    final today = VaccinationScheduleService.calendarDate(DateTime.now());
+    final dueDay = VaccinationScheduleService.calendarDate(dueDate);
+    final flockName = (data['flock_name'] ?? 'Unknown flock').toString();
+    final vaccineName =
+        (languageCode == 'km'
+                ? data['vaccine_name_km'] ??
+                      data['vaccine_name'] ??
+                      'Unknown vaccine'
+                : data['vaccine_name'] ??
+                      data['vaccine_name_km'] ??
+                      'Unknown vaccine')
+            .toString();
+
+    return _NotificationItem(
+      flockName: flockName,
+      vaccineName: vaccineName,
+      dueDate: dueDay,
+      flockId: asInt(data['flock_id']),
+      vaccineId: asInt(data['vaccine_id']),
+      vaccinationId: asInt(
+        data['vaccination_id'] ??
+            notification['referenceId'] ??
+            notification['reference_id'],
+      ),
+      days: dueDay.difference(today).inDays,
+      notificationId: asInt(notification['notification_id']),
+      createdAt: createdAt,
+      isCompleted: true,
+      completedAt: completedAt,
     );
   }
 
@@ -941,15 +1231,16 @@ class _NotificationItem {
               .toString(),
       dueDate: dueDay,
       flockId: VaccinationScheduleService.flockIdFor(vaccination),
-      vaccineId: _asInt(vaccine['vaccine_id'] ?? vaccination['vaccine_id']),
-      vaccinationId: _asInt(vaccination['vaccination_id']),
+      vaccineId: asInt(vaccine['vaccine_id'] ?? vaccination['vaccine_id']),
+      vaccinationId: asInt(vaccination['vaccination_id']),
       days: dueDay.difference(today).inDays,
+      createdAt: NotificationService.parseCreatedAt(vaccination),
     );
   }
 
   static Map<String, dynamic> vaccinationMap(dynamic value) =>
       value is Map ? Map<String, dynamic>.from(value) : <String, dynamic>{};
 
-  static int? _asInt(dynamic value) =>
+  static int? asInt(dynamic value) =>
       value is num ? value.toInt() : int.tryParse(value?.toString() ?? '');
 }

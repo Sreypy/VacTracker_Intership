@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:frontend/services/storage_service.dart';
 import 'package:frontend/services/auth_service.dart';
+import 'package:frontend/widgets/notification_header_button.dart';
 
 class VetProfileScreen extends StatefulWidget {
   final String currentLanguage; // 'en' or 'km'
@@ -342,14 +343,14 @@ class _VetProfileScreenState extends State<VetProfileScreen> {
             fontWeight: FontWeight.bold,
           ),
         ),
-        // actions: [
-        //   IconButton(
-        //     icon: const Icon(Icons.language, color: primaryGreen),
-        //     onPressed: () {
-        //       _toggleLanguage(_selectedLanguage == 'en' ? 'km' : 'en');
-        //     },
-        //   ),
-        // ],
+        actions: [
+          NotificationHeaderButton(
+            languageCode: _selectedLanguage,
+            color: primaryGreen,
+            notificationsRoute: '/vet-notifications',
+          ),
+          const SizedBox(width: 6),
+        ],
       ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -864,10 +865,7 @@ class _VetProfileScreenState extends State<VetProfileScreen> {
             const SizedBox(height: 8),
             Container(
               width: double.infinity,
-              padding: const EdgeInsets.symmetric(
-                horizontal: 14,
-                vertical: 14,
-              ),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
               decoration: BoxDecoration(
                 color: const Color(0xFFF1F5F9),
                 borderRadius: BorderRadius.circular(10),

@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 
 import 'package:frontend/config/api_config.dart';
 import 'package:frontend/services/storage_service.dart';
+import 'package:frontend/widgets/notification_header_button.dart';
 
 class VetSickReportDetailScreen extends StatefulWidget {
   final String reportId;
@@ -472,6 +473,12 @@ class _VetSickReportDetailScreenState extends State<VetSickReportDetailScreen> {
             ],
           ),
         ),
+        NotificationHeaderButton(
+          languageCode: widget.languageCode,
+          color: primaryGreen,
+          notificationsRoute: '/vet-notifications',
+        ),
+        const SizedBox(width: 6),
       ],
     );
   }

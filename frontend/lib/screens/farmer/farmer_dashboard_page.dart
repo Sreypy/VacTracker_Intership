@@ -40,6 +40,7 @@ class _FarmerDashboardPageState extends State<FarmerDashboardPage>
   int _totalFlocks = 0;
   int _totalBirds = 0;
   int _flockHealthPercentage = 0;
+  int _dueTodayVaccinations = 0;
   int _upcomingVaccinations = 0;
   int _overdueVaccinations = 0;
   List<Map<String, dynamic>> _recentVaccinations = [];
@@ -77,6 +78,7 @@ class _FarmerDashboardPageState extends State<FarmerDashboardPage>
       'section_title': 'Your Flocks',
       'view_history': 'View History',
       'up_to_date': 'Up to date',
+      'due_today': 'Due Today',
       'due_tomorrow': 'Due Soon',
       'overdue_status': 'Overdue',
       'broilers': 'Broilers',
@@ -114,6 +116,7 @@ class _FarmerDashboardPageState extends State<FarmerDashboardPage>
       'section_title': 'ហ្វូងបក្សីរបស់អ្នក',
       'view_history': 'មើលប្រវត្តិ',
       'up_to_date': 'ទាន់ពេល',
+      'due_today': 'ថ្ងៃនេះ',
       'due_tomorrow': 'ជិតដល់',
       'overdue_status': 'ហួសកំណត់',
       'broilers': 'មាន់សាច់',
@@ -269,6 +272,7 @@ class _FarmerDashboardPageState extends State<FarmerDashboardPage>
         _flockHealthPercentage = flockHealthPercentage;
         _upcomingVaccinations = vaccinationSchedule.dueSoonCount;
         _overdueVaccinations = vaccinationSchedule.overdueCount;
+        _dueTodayVaccinations = vaccinationSchedule.dueTodayCount;
         _recentVaccinations = recentVaccinations;
         _isLoading = false;
       });
@@ -575,26 +579,26 @@ class _FarmerDashboardPageState extends State<FarmerDashboardPage>
             Expanded(
               child: _buildMetricCard(
                 title: _getText('vaccination_status'),
-                value: _upcomingVaccinations.toString(),
-                subtitle: _getText('upcoming_vaccinations'),
-                subtitleValue: '$_upcomingVaccinations',
-                icon: Icons.calendar_today_outlined,
-                color: statusYellow,
-                bgColor: statusYellowBg,
+                value: _dueTodayVaccinations.toString(),
+                subtitle: _getText('due_today'),
+                subtitleValue: '$_dueTodayVaccinations',
+                icon: Icons.today_outlined,
+                color: statusRed,
+                bgColor: statusRedBg,
               ),
             ),
+
             const SizedBox(width: 12),
+
             Expanded(
               child: _buildMetricCard(
                 title: _getText('vaccination_status'),
-                value: _overdueVaccinations.toString(),
-                subtitle: _getText('overdue_vaccinations'),
-                subtitleValue: '$_overdueVaccinations',
-                icon: Icons.warning_amber_outlined,
-                color: _overdueVaccinations > 0 ? statusRed : textGrey,
-                bgColor: _overdueVaccinations > 0
-                    ? statusRedBg
-                    : const Color(0xFFF1F5F9),
+                value: _upcomingVaccinations.toString(),
+                subtitle: _getText('upcoming_vaccinations'),
+                subtitleValue: '$_upcomingVaccinations',
+                icon: Icons.calendar_month_outlined,
+                color: statusYellow,
+                bgColor: statusYellowBg,
               ),
             ),
           ],

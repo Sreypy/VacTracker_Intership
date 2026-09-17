@@ -259,7 +259,7 @@ class _VetDashboardPageState extends State<VetDashboardPage> {
         NotificationHeaderButton(
           languageCode: widget.languageCode,
           color: textPrimary,
-          showCount: true,
+          // showCount: true,
           notificationsRoute: '/vet-notifications',
         ),
         const SizedBox(width: 6),
@@ -388,10 +388,10 @@ class _VetDashboardPageState extends State<VetDashboardPage> {
           ),
           const SizedBox(height: 16),
           Text(
-            '$_vetName 👋',
+            'Dr. $_vetName 👋',
             style: const TextStyle(
               color: Colors.white,
-              fontSize: 24,
+              fontSize: 28,
               fontWeight: FontWeight.bold,
               letterSpacing: -0.5,
             ),

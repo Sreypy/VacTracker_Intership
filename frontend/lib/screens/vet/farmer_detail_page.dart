@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../services/auth_service.dart';
 import '../../services/farmer_detail_service.dart';
+import '../../widgets/notification_header_button.dart';
 
 class FarmerDetailPage extends StatefulWidget {
   final int farmerId;
@@ -274,14 +275,14 @@ class _FarmerDetailPageState extends State<FarmerDetailPage>
           ),
         ],
       ),
-      // actions: [
-      //   IconButton(
-      //     icon: const Icon(Icons.notifications_none_rounded, color: textMain),
-      //     onPressed: () =>
-      //         context.push('/notifications/${widget.languageCode}'),
-      //   ),
-      //   const SizedBox(width: 8),
-      // ],
+      actions: [
+        NotificationHeaderButton(
+          languageCode: widget.languageCode,
+          color: textMain,
+          notificationsRoute: '/vet-notifications',
+        ),
+        const SizedBox(width: 6),
+      ],
     );
   }
 

@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:http/http.dart' as http;
 import 'package:frontend/config/api_config.dart';
 import 'package:frontend/services/storage_service.dart';
+import 'package:frontend/widgets/notification_header_button.dart';
 
 class VetSickReportsScreen extends StatefulWidget {
   final String languageCode;
@@ -253,6 +254,14 @@ class _VetSickReportsScreenState extends State<VetSickReportsScreen> {
             fontWeight: FontWeight.bold,
           ),
         ),
+        actions: [
+          NotificationHeaderButton(
+            languageCode: widget.languageCode,
+            color: primaryGreen,
+            notificationsRoute: '/vet-notifications',
+          ),
+          const SizedBox(width: 6),
+        ],
       ),
       body: _isLoading
           ? Center(child: Text(_getText('loading')))

@@ -81,6 +81,31 @@ export class ReminderScheduler {
     }
   }
 
+  @Cron('* * * * *')
+  async generateDueTodayNotifications() {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todayStr = today.toISOString().split('T')[0];
+
+    const dueTodayVaccinations = await this.vaccinationRepository
+      .createQueryBuilder('vaccination')
+      .leftJoinAndSelect('vaccination.flock', 'flock')
+      .leftJoinAndSelect('flock.farmer', 'farmer')
+      .leftJoinAndSelect('vaccination.vaccine', 'vaccine')
+      .leftJoinAndSelect('vaccination.next_vaccine', 'next_vaccine')
+      .where('vaccination.next_due_date = :today', { today: todayStr })
+      .andWhere('vaccination.status != :completed', {
+        completed: VaccinationStatus.COMPLETED,
+      })
+      .getMany();
+
+    for (const vaccination of dueTodayVaccinations) {
+      await this.notificationsService.createDueTodayVaccinationNotification(
+        vaccination,
+      );
+    }
+  }
+
   private async createReminderIfNotExists(vaccination: Vaccination): Promise<void> {
     if (
       !vaccination.reminder_enabled ||

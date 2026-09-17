@@ -18,13 +18,12 @@ class _VetNotificationScreenState extends State<VetNotificationScreen> {
   static const Color surfaceWhite = Colors.white;
   static const Color textMain = Color(0xFF0F172A);
   static const Color textMuted = Color(0xFF64748B);
-  static const Color borderLight = Color(0xFFE2E8F0);
+  // static const Color borderLight = Color(0xFFE2E8F0);
   static const Color primaryGreen = Color(0xFF0D6E28);
 
   // Status colors: 🟢 connected / 🟠 pending / 🔴 urgent-rejected / 🔵 info
   static const Color urgentRed = Color(0xFFDC2626);
   // static const Color urgentRedBg = Color(0xFFFEF2F2);
-  static const Color pendingAmber = Color(0xFFD97706);
   // static const Color pendingAmberBg = Color(0xFFFFFBEB);
   static const Color infoBlue = Color(0xFF2563EB);
   // static const Color infoBlueBg = Color(0xFFEFF6FF);
@@ -417,7 +416,7 @@ class _VetNotificationScreenState extends State<VetNotificationScreen> {
         DateTime.now();
 
     return _buildCardShell(
-      accentColor: isRead ? textMuted : infoBlue,
+      accentColor: isRead ? textMuted : const Color(0xFF2563EB),
       backgroundColor: isRead
           ? surfaceWhite
           : const Color.fromARGB(255, 255, 255, 255),
@@ -435,9 +434,13 @@ class _VetNotificationScreenState extends State<VetNotificationScreen> {
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
                   color: Colors.transparent,
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(6),
                 ),
-                child: const Text('🔵', style: TextStyle(fontSize: 18)),
+                child: const Icon(
+                  Icons.person,
+                  size: 22,
+                  color: Color(0xFF2563EB),
+                ),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -494,7 +497,7 @@ class _VetNotificationScreenState extends State<VetNotificationScreen> {
         DateTime.now();
 
     return _buildCardShell(
-      accentColor: isRead ? textMuted : urgentRed,
+      accentColor: isRead ? textMuted : const Color(0xFFDC2626),
       backgroundColor: isRead
           ? surfaceWhite
           : const Color.fromARGB(255, 255, 255, 255),
@@ -512,9 +515,13 @@ class _VetNotificationScreenState extends State<VetNotificationScreen> {
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
                   color: Colors.transparent,
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(6),
                 ),
-                child: const Text('🐔', style: TextStyle(fontSize: 20)),
+                child: const Icon(
+                  Icons.pets,
+                  size: 22,
+                  color: Color(0xFFDC2626),
+                ),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -583,7 +590,7 @@ class _VetNotificationScreenState extends State<VetNotificationScreen> {
                       ? _getText('one_chicken_affected')
                       : '$affectedCount ${_getText('chickens_affected')}',
                   style: const TextStyle(
-                    color: urgentRed,
+                    color: Color.fromARGB(255, 222, 120, 120),
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
                   ),
@@ -663,7 +670,7 @@ class _VetNotificationScreenState extends State<VetNotificationScreen> {
         DateTime.now();
 
     return _buildCardShell(
-      accentColor: isRead ? infoBlue : pendingAmber,
+      accentColor: isRead ? infoBlue : const Color(0xFFD97706),
       backgroundColor: isRead
           ? surfaceWhite
           : const Color.fromARGB(255, 255, 255, 255),
@@ -683,7 +690,11 @@ class _VetNotificationScreenState extends State<VetNotificationScreen> {
                   color: Colors.transparent,
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Text('👨‍🌾', style: TextStyle(fontSize: 18)),
+                child: const Icon(
+                  Icons.person,
+                  size: 22,
+                  color: Color(0xFFD97706),
+                ),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -815,9 +826,9 @@ class _VetNotificationScreenState extends State<VetNotificationScreen> {
       decoration: BoxDecoration(
         color: backgroundColor,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: isUnread ? accentColor.withValues(alpha: 0.35) : borderLight,
-        ),
+        // border: Border.all(
+        //   color: isUnread ? accentColor.withValues(alpha: 0.35) : borderLight,
+        // ),
         boxShadow: [
           BoxShadow(
             color: const Color(0xFF0F172A).withValues(alpha: 0.03),
