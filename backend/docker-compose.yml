@@ -5,12 +5,12 @@ services:
     restart: always
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: password
+      POSTGRES_PASSWORD: py7837
       POSTGRES_DB: vactracker
     ports:
-      - "5432:5432"
+      - "5433:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - vactracker_postgres_data:/var/lib/postgresql/data
 
   backend:
     build: .
@@ -23,5 +23,21 @@ services:
     env_file:
       - .env
 
+  frontend:
+    build:
+      context: ../frontend
+      args:
+        API_URL: ${API_URL:-http://localhost:3100}
+
+    container_name: vactracker-frontend
+
+    restart: unless-stopped
+
+    ports:
+      - "8090:80"
+
+    depends_on:
+      - backend
+
 volumes:
-  postgres_data:
+  vactracker_postgres_data:

@@ -35,7 +35,23 @@ dependencies:
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
 
+  dio: ^5.10.0
+
+  flutter_secure_storage: ^9.2.2
+
+  provider: ^6.1.2
+
+  go_router: ^17.3.0
+  shared_preferences: ^2.5.5
+  http: ^1.6.0
+  image_picker: ^1.2.3
+  share_plus: ^12.0.2
+  path_provider: ^2.1.6
+
 dev_dependencies:
+
+  flutter_launcher_icons: ^0.13.1
+  
   flutter_test:
     sdk: flutter
 
@@ -49,6 +65,11 @@ dev_dependencies:
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
 
+flutter_icons:
+  android: true
+  ios: true
+  image_path: "assets/logo.png"
+
 # The following section is specific to Flutter packages.
 flutter:
 
@@ -56,6 +77,14 @@ flutter:
   # included with your application, so that you can use the icons in
   # the material Icons class.
   uses-material-design: true
+
+  # Add your assets here:
+  assets:
+    - assets/logo.png
+    - assets/welcome/welcome pic.png
+    - assets/welcome/role pic.png
+    - assets/welcome/Banner Section.png
+
 
   # To add assets to your application, add an assets section, like this:
   # assets:

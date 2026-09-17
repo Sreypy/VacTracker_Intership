@@ -1,18 +1,18 @@
-import { IsEnum, IsOptional, IsPhoneNumber, IsString } from 'class-validator';
+import { IsEnum, IsOptional, IsString } from 'class-validator';
 import { Language, UserRole } from '../entities/user.entity';
 
 export class CreateUserDto {
   @IsString()
-  name: string;
+  name!: string;
 
   @IsString()
-  phone: string;
+  phone!: string;
 
   @IsString()
-  password_hash: string;
+  password!: string;
 
   @IsEnum(UserRole)
-  role: UserRole;
+  role!: UserRole;
 
   @IsOptional()
   @IsString()
@@ -25,4 +25,8 @@ export class CreateUserDto {
   @IsOptional()
   @IsEnum(Language)
   language_pref?: Language;
+
+  @IsOptional()
+  @IsString()
+  profile_image_url?: string;
 }

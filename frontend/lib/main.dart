@@ -1,122 +1,335 @@
 import 'package:flutter/material.dart';
+import 'package:frontend/screens/auth/auth_choice_page.dart';
+import 'package:frontend/screens/auth/login_otp_screen.dart';
+import 'package:frontend/screens/auth/login_screen.dart';
+import 'package:frontend/models/flock.dart';
+import 'package:frontend/screens/farmer/add_flock_page.dart';
+import 'package:frontend/screens/farmer/farmer_dashboard_page.dart';
+import 'package:frontend/screens/farmer/farmer_profile_page.dart';
+import 'package:frontend/screens/farmer/farmer_register_page.dart';
+import 'package:frontend/screens/farmer/flock_detail_page.dart';
+import 'package:frontend/screens/farmer/log_vaccination_step1_page.dart';
+import 'package:frontend/screens/farmer/log_vaccination_step2_page.dart';
+import 'package:frontend/screens/farmer/log_vaccination_step3_page.dart';
+import 'package:frontend/screens/farmer/notification_screen.dart';
+import 'package:frontend/screens/farmer/sick_report.dart';
+import 'package:frontend/screens/farmer/my_sick_reports_screen.dart';
+import 'package:frontend/screens/farmer/sick_report_detail_screen.dart';
+import 'package:frontend/screens/farmer/vaccination_history.dart';
+import 'package:frontend/screens/farmer/vaccine_library_page.dart';
+import 'package:frontend/screens/farmer/vaccine_library_detail_page.dart';
+import 'package:frontend/screens/language_page.dart';
+import 'package:frontend/screens/role.dart';
+import 'package:frontend/screens/vet/vet_dashboard_page.dart';
+import 'package:frontend/screens/vet/vet_profile_page.dart';
+import 'package:frontend/screens/vet/vet_register_page.dart';
+import 'package:frontend/screens/vet/my_farmers_page.dart';
+import 'package:frontend/screens/vet/farmer_detail_page.dart';
+import 'package:frontend/screens/vet/sick_reports_screen.dart';
+import 'package:frontend/screens/vet/sick_report_detail_screen.dart';
+import 'package:frontend/screens/vet/vet_notification_screen.dart';
+import 'package:frontend/screens/vet/vet_response_sent_screen.dart';
+import 'package:frontend/screens/welcome_page.dart';
+import 'package:go_router/go_router.dart';
+
+// Define the clear, explicit web-like URL paths
+final GoRouter _router = GoRouter(
+  initialLocation: '/',
+  routes: [
+    GoRoute(path: '/', builder: (context, state) => const WelcomePage()),
+    GoRoute(
+      path: '/language',
+      builder: (context, state) => const LanguagePage(),
+    ),
+    GoRoute(
+      path: '/role/:lang', // ':lang' dynamically holds 'en' or 'kh'
+      builder: (context, state) {
+        final language = state.pathParameters['lang'] ?? 'en';
+        return RoleSelectionPage(languageCode: language);
+      },
+    ),
+    GoRoute(
+      path: '/auth-choice/:role/:lang',
+
+      builder: (context, state) {
+        final role = state.pathParameters['role'] ?? 'farmer';
+
+        final language = state.pathParameters['lang'] ?? 'en';
+
+        return AuthChoicePage(role: role, languageCode: language);
+      },
+    ),
+    GoRoute(
+      path: '/login/:role/:lang',
+      builder: (context, state) {
+        final role = state.pathParameters['role'] ?? 'farmer';
+        final language = state.pathParameters['lang'] ?? 'en';
+
+        return LoginScreen(role: role, languageCode: language);
+      },
+    ),
+    GoRoute(
+      path: '/login-otp',
+      builder: (context, state) {
+        final extra = state.extra;
+        var phone = '';
+        var language = 'en';
+
+        if (extra is Map<String, String>) {
+          phone = extra['phone'] ?? '';
+          language = extra['lang'] ?? 'en';
+        } else if (extra is String) {
+          phone = extra;
+        }
+
+        return LoginOtpScreen(phone: phone, languageCode: language);
+      },
+    ),
+    GoRoute(
+      path: '/farmer-dashboard',
+      builder: (context, state) {
+        final language = state.uri.queryParameters['lang'] ?? 'en';
+        final showSaved = state.uri.queryParameters['saved'] == 'true';
+        return FarmerDashboardPage(
+          languageCode: language,
+          showSavedMessage: showSaved,
+        );
+      },
+    ),
+    GoRoute(
+      path: '/vet-dashboard',
+      builder: (context, state) {
+        final language = state.uri.queryParameters['lang'] ?? 'en';
+        return VetDashboardPage(languageCode: language);
+      },
+    ),
+    GoRoute(
+      path: '/vet-reports',
+      builder: (context, state) {
+        final language = state.uri.queryParameters['lang'] ?? 'en';
+        return VetSickReportsScreen(languageCode: language);
+      },
+    ),
+    GoRoute(
+      path: '/vet-reports/:reportId',
+      builder: (context, state) {
+        final reportId = state.pathParameters['reportId'] ?? '';
+        final language = state.uri.queryParameters['lang'] ?? 'en';
+        return VetSickReportDetailScreen(
+          reportId: reportId,
+          languageCode: language,
+        );
+      },
+    ),
+    GoRoute(
+      path: '/vet-response-sent/:reportId',
+      builder: (context, state) {
+        final reportId = state.pathParameters['reportId'] ?? '';
+        final language = state.uri.queryParameters['lang'] ?? 'en';
+        return VetResponseSentScreen(
+          reportId: reportId,
+          languageCode: language,
+        );
+      },
+    ),
+    GoRoute(
+      path: '/my-farmers/:lang',
+      builder: (context, state) {
+        final language = state.pathParameters['lang'] ?? 'en';
+        return MyFarmersPage(languageCode: language);
+      },
+    ),
+    GoRoute(
+      path: '/farmer-detail/:farmerId/:lang',
+      builder: (context, state) {
+        final farmerId = int.parse(state.pathParameters['farmerId'] ?? '0');
+        final language = state.pathParameters['lang'] ?? 'en';
+        return FarmerDetailPage(farmerId: farmerId, languageCode: language);
+      },
+    ),
+    GoRoute(
+      path: '/vet-profile/:lang',
+      builder: (context, state) {
+        final language = state.pathParameters['lang'] ?? 'en';
+        return VetProfileScreen(currentLanguage: language);
+      },
+    ),
+    GoRoute(
+      path: '/add-flock/:lang',
+      builder: (context, state) {
+        final language = state.pathParameters['lang'] ?? 'en';
+        final editingFlock = state.extra is Flock ? state.extra as Flock : null;
+        return AddFlockPage(languageCode: language, editingFlock: editingFlock);
+      },
+    ),
+
+    // --- Log Vaccination Step 1 ---
+    GoRoute(
+      path: '/log-vaccination-step1/:lang',
+      builder: (context, state) {
+        final language = state.pathParameters['lang'] ?? 'km';
+        return LogVaccinationStep1Page(languageCode: language);
+      },
+    ),
+    GoRoute(
+      path: '/log-vaccination-step2/:lang',
+      builder: (context, state) {
+        final language = state.pathParameters['lang'] ?? 'km';
+        final flockName =
+            state.uri.queryParameters['batchTitle'] ?? 'Flock B-42';
+        final flockId = state.uri.queryParameters['flockId'] ?? '';
+        final vaccineId = state.uri.queryParameters['vaccineId'] ?? '';
+        final vaccinationId = state.uri.queryParameters['vaccinationId'];
+
+        return LogVaccinationStep2Page(
+          selectedFlockName: flockName,
+          flockId: flockId,
+          languageCode: language,
+          selectedVaccineId: vaccineId,
+          scheduledVaccinationId: vaccinationId,
+        );
+      },
+    ),
+    GoRoute(
+      path: '/log-vaccination-step3/:vaccineId/:lang',
+      builder: (context, state) {
+        final vaccineId = state.pathParameters['vaccineId'] ?? '';
+        final language = state.pathParameters['lang'] ?? 'km';
+        final flockId = state.uri.queryParameters['flockId'] ?? '';
+        final flockName = state.uri.queryParameters['batchTitle'] ?? '';
+        final summaryData = state.extra is Map<String, dynamic>
+            ? state.extra as Map<String, dynamic>
+            : null;
+
+        return LogVaccinationStep3Page(
+          flockId: flockId,
+          vaccineId: vaccineId,
+          languageCode: language,
+          flockName: flockName,
+          summaryData: summaryData,
+        );
+      },
+    ),
+    GoRoute(
+      path: '/farmer-profile/:lang',
+      builder: (context, state) {
+        final language = state.pathParameters['lang'] ?? 'en';
+        return FarmerProfilePage(languageCode: language);
+      },
+    ),
+    GoRoute(
+      path: '/notifications/:lang',
+      builder: (context, state) {
+        final language = state.pathParameters['lang'] ?? 'en';
+        return NotificationScreen(languageCode: language);
+      },
+    ),
+    GoRoute(
+      path: '/vet-notifications/:lang',
+      builder: (context, state) {
+        final language = state.pathParameters['lang'] ?? 'en';
+        return VetNotificationScreen(languageCode: language);
+      },
+    ),
+
+    // --- Flock Detail Route ---
+    // 1. Specific route MUST come first
+    GoRoute(
+      path: '/flock-detail/:flockId/vaccine-history',
+      builder: (context, state) {
+        final flockId = state.pathParameters['flockId'] ?? '';
+        final languageCode = state.uri.queryParameters['lang'] ?? 'km';
+
+        return VaccinationHistoryScreen(
+          flockId: flockId,
+          languageCode: languageCode,
+        );
+      },
+    ),
+
+    GoRoute(
+      path: '/sick-report',
+      builder: (context, state) {
+        final languageCode = state.uri.queryParameters['lang'] ?? 'en';
+        return SickReportScreen(languageCode: languageCode);
+      },
+    ),
+    GoRoute(
+      path: '/my-sick-reports',
+      builder: (context, state) => MySickReportsScreen(
+        languageCode: state.uri.queryParameters['lang'] ?? 'en',
+      ),
+    ),
+    GoRoute(
+      path: '/my-sick-reports/:reportId',
+      builder: (context, state) => FarmerSickReportDetailScreen(
+        reportId: int.tryParse(state.pathParameters['reportId'] ?? '') ?? 0,
+        languageCode: state.uri.queryParameters['lang'] ?? 'en',
+      ),
+    ),
+    // 2. Generic wildcard route comes second
+    GoRoute(
+      path: '/flock-detail/:flockId/:lang',
+      builder: (context, state) {
+        final flockId =
+            int.tryParse(state.pathParameters['flockId'] ?? '') ?? 0;
+        final language = state.pathParameters['lang'] ?? 'en';
+
+        return FlockDetailPage(flockId: flockId, languageCode: language);
+      },
+    ),
+    // Route for Farmer Registration
+    GoRoute(
+      path: '/register/farmer/:lang',
+      builder: (context, state) {
+        final language = state.pathParameters['lang'] ?? 'en';
+        return FarmerRegisterPage(languageCode: language);
+      },
+    ),
+    // Route for Vet Registration
+    GoRoute(
+      path: '/register/vet/:lang',
+      builder: (context, state) {
+        final language = state.pathParameters['lang'] ?? 'en';
+        return VetRegisterPage(languageCode: language);
+      },
+    ),
+    // Inside GoRouter routes list:
+    GoRoute(
+      path: '/vaccine-library/:lang',
+      builder: (context, state) {
+        final language = state.pathParameters['lang'] ?? 'km';
+        return VaccineLibraryPage(languageCode: language);
+      },
+    ),
+    GoRoute(
+      path: '/vaccine-library-detail/:articleId/:lang',
+      builder: (context, state) {
+        final articleId = state.pathParameters['articleId'] ?? '';
+        final language = state.pathParameters['lang'] ?? 'km';
+        return VaccineLibraryDetailPage(
+          articleId: articleId,
+          languageCode: language,
+        );
+      },
+    ),
+  ],
+);
 
 void main() {
-  runApp(const MyApp());
+  runApp(const VacTrackerApp());
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
-
-  // This widget is the root of your application.
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Flutter Demo',
-      theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // TRY THIS: Try running your application with "flutter run". You'll see
-        // the application has a purple toolbar. Then, without quitting the app,
-        // try changing the seedColor in the colorScheme below to Colors.green
-        // and then invoke "hot reload" (save your changes or press the "hot
-        // reload" button in a Flutter-supported IDE, or press "r" if you used
-        // the command line to start the app).
-        //
-        // Notice that the counter didn't reset back to zero; the application
-        // state is not lost during the reload. To reset the state, use hot
-        // restart instead.
-        //
-        // This works for code too, not just values: Most code changes can be
-        // tested with just a hot reload.
-        colorScheme: .fromSeed(seedColor: Colors.deepPurple),
-      ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
-    );
-  }
-}
-
-class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key, required this.title});
-
-  // This widget is the home page of your application. It is stateful, meaning
-  // that it has a State object (defined below) that contains fields that affect
-  // how it looks.
-
-  // This class is the configuration for the state. It holds the values (in this
-  // case the title) provided by the parent (in this case the App widget) and
-  // used by the build method of the State. Fields in a Widget subclass are
-  // always marked "final".
-
-  final String title;
-
-  @override
-  State<MyHomePage> createState() => _MyHomePageState();
-}
-
-class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
-
-  void _incrementCounter() {
-    setState(() {
-      // This call to setState tells the Flutter framework that something has
-      // changed in this State, which causes it to rerun the build method below
-      // so that the display can reflect the updated values. If we changed
-      // _counter without calling setState(), then the build method would not be
-      // called again, and so nothing would appear to happen.
-      _counter++;
-    });
-  }
+class VacTrackerApp extends StatelessWidget {
+  const VacTrackerApp({super.key});
 
   @override
   Widget build(BuildContext context) {
-    // This method is rerun every time setState is called, for instance as done
-    // by the _incrementCounter method above.
-    //
-    // The Flutter framework has been optimized to make rerunning build methods
-    // fast, so that you can just rebuild anything that needs updating rather
-    // than having to individually change instances of widgets.
-    return Scaffold(
-      appBar: AppBar(
-        // TRY THIS: Try changing the color here to a specific color (to
-        // Colors.amber, perhaps?) and trigger a hot reload to see the AppBar
-        // change color while the other colors stay the same.
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        // Here we take the value from the MyHomePage object that was created by
-        // the App.build method, and use it to set our appbar title.
-        title: Text(widget.title),
-      ),
-      body: Center(
-        // Center is a layout widget. It takes a single child and positions it
-        // in the middle of the parent.
-        child: Column(
-          // Column is also a layout widget. It takes a list of children and
-          // arranges them vertically. By default, it sizes itself to fit its
-          // children horizontally, and tries to be as tall as its parent.
-          //
-          // Column has various properties to control how it sizes itself and
-          // how it positions its children. Here we use mainAxisAlignment to
-          // center the children vertically; the main axis here is the vertical
-          // axis because Columns are vertical (the cross axis would be
-          // horizontal).
-          //
-          // TRY THIS: Invoke "debug painting" (choose the "Toggle Debug Paint"
-          // action in the IDE, or press "p" in the console), to see the
-          // wireframe for each widget.
-          mainAxisAlignment: .center,
-          children: [
-            const Text('You have pushed the button this many times:'),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headlineMedium,
-            ),
-          ],
-        ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: const Icon(Icons.add),
-      ),
+    return MaterialApp.router(
+      debugShowCheckedModeBanner: false,
+      title: 'VacTracker',
+      theme: ThemeData(fontFamily: 'Sans-Serif'),
+      routerConfig: _router, // Connect GoRouter engine here
     );
   }
 }

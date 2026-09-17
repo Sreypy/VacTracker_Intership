@@ -1,0 +1,127 @@
+import 'dart:convert';
+import 'package:flutter/foundation.dart';
+
+import 'package:frontend/config/api_config.dart';
+import 'package:frontend/models/sick_report.dart';
+import 'package:frontend/services/storage_service.dart';
+import 'package:http/http.dart' as http;
+
+class SickReportService {
+  /// The backend scopes this endpoint to the authenticated farmer.
+  Future<List<SickReport>> fetchMyReports() async {
+    final token = await StorageService.getToken();
+    if (token == null || token.isEmpty) {
+      throw Exception('Authentication token is missing. Are you logged in?');
+    }
+
+    final url = Uri.parse('${ApiConfig.baseUrl}/sick-reports');
+    http.Response response;
+    try {
+      response = await http
+          .get(
+            url,
+            headers: {
+              'Authorization': 'Bearer $token',
+              'Accept': 'application/json',
+            },
+          )
+          .timeout(const Duration(seconds: 8));
+    } catch (error) {
+      throw Exception('Network error when calling $url: $error');
+    }
+
+    if (response.statusCode != 200) {
+      throw Exception('Failed to load sick reports: ${response.statusCode}');
+    }
+
+    final decoded = jsonDecode(response.body);
+    if (decoded is! List) {
+      throw Exception(
+        'Unexpected response format from server: ${response.body}',
+      );
+    }
+
+    return decoded
+        .whereType<Map>()
+        .map((report) => SickReport.fromJson(Map<String, dynamic>.from(report)))
+        .toList();
+  }
+
+  /// Loads the latest report data, including a veterinarian response when one
+  /// has been submitted. The backend verifies that it belongs to the farmer.
+  Future<SickReport> fetchReport(int reportId) async {
+    final token = await StorageService.getToken();
+    if (token == null || token.isEmpty) {
+      throw Exception('Authentication token is missing. Are you logged in?');
+    }
+
+    final url = Uri.parse('${ApiConfig.baseUrl}/sick-reports/$reportId');
+    final response = await http
+        .get(
+          url,
+          headers: {
+            'Authorization': 'Bearer $token',
+            'Accept': 'application/json',
+          },
+        )
+        .timeout(const Duration(seconds: 8));
+    if (response.statusCode != 200) {
+      throw Exception('Failed to load sick report: ${response.statusCode}');
+    }
+
+    final decoded = jsonDecode(response.body);
+    if (decoded is! Map) {
+      throw Exception('Unexpected response format from server.');
+    }
+    return SickReport.fromJson(Map<String, dynamic>.from(decoded));
+  }
+
+  Future<SickReport> markResolved(int reportId) async {
+    final token = await StorageService.getToken();
+    if (token == null || token.isEmpty) {
+      throw Exception('Authentication token is missing. Are you logged in?');
+    }
+
+    final url = Uri.parse('${ApiConfig.baseUrl}/sick-reports/$reportId');
+    final requestBody = {'status': 'resolved'};
+    debugPrint('PATCH $url body: ${jsonEncode(requestBody)}');
+
+    final response = await http
+        .patch(
+          url,
+          headers: {
+            'Authorization': 'Bearer $token',
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+          },
+          body: jsonEncode(requestBody),
+        )
+        .timeout(const Duration(seconds: 8));
+
+    if (response.statusCode != 200 && response.statusCode != 204) {
+      debugPrint('PATCH $url error ${response.statusCode}: ${response.body}');
+      String message = response.body;
+      try {
+        final decoded = jsonDecode(response.body);
+        if (decoded is Map && decoded['message'] != null) {
+          final serverMessage = decoded['message'];
+          message = serverMessage is List
+              ? serverMessage.join(', ')
+              : serverMessage.toString();
+        }
+      } catch (_) {
+        // Keep the raw response when the server does not return JSON.
+      }
+      throw Exception(
+        'Failed to mark report as resolved: ${response.statusCode} $message',
+      );
+    }
+
+    final decoded = jsonDecode(response.body.isEmpty ? '{}' : response.body);
+    if (decoded is Map) {
+      return SickReport.fromJson(Map<String, dynamic>.from(decoded));
+    }
+
+    return fetchReport(reportId);
+  }
+}

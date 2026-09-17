@@ -1,0 +1,220 @@
+name: VacTracker CI/CD
+
+
+on:
+  push:
+    branches:
+      - develop
+
+  pull_request:
+    branches:
+      - develop
+
+
+jobs:
+
+#################################################
+# BUILD JOB
+#################################################
+
+  build:
+
+    name: Build Application
+
+    runs-on: ubuntu-latest
+
+
+    steps:
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+
+      #################################
+      # Backend Build
+      #################################
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+
+      - name: Install Backend Dependencies
+        working-directory: backend
+        run: npm ci
+
+
+      - name: Build Backend
+        working-directory: backend
+        run: npm run build
+
+
+
+      #################################
+      # Flutter Build
+      #################################
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+
+      - name: Install Flutter Dependencies
+        working-directory: frontend
+        run: flutter pub get
+
+
+      - name: Build Flutter Web
+        working-directory: frontend
+        run: |
+          flutter build web --release \
+            --dart-define=API_URL=http://129.212.230.134:3100
+
+
+
+      #################################
+      # Docker Build
+      #################################
+
+      - name: Build Docker Images
+        working-directory: backend
+        run: docker compose build
+
+
+
+#################################################
+# TEST JOB
+#################################################
+
+  test:
+
+    name: Run Tests
+
+    runs-on: ubuntu-latest
+
+    needs: build
+
+
+    steps:
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+
+
+      #################################
+      # Backend Test
+      #################################
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+
+      - name: Install Backend Dependencies
+        working-directory: backend
+        run: npm ci
+
+
+      - name: Run Backend Tests
+        working-directory: backend
+        run: npm test -- --passWithNoTests
+
+
+
+      #################################
+      # Flutter Test
+      #################################
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+
+      - name: Flutter Dependencies
+        working-directory: frontend
+        run: flutter pub get
+
+
+      - name: Flutter Analyze
+        working-directory: frontend
+        run: flutter analyze
+
+
+
+      #################################
+      # Docker Compose Test
+      #################################
+
+      - name: Create .env for CI
+        working-directory: backend
+        run: |
+          echo "PORT=3100" >> .env
+          echo "DB_HOST=postgres" >> .env
+          echo "DB_PORT=5433" >> .env
+          echo "DB_USERNAME=${{ secrets.DB_USERNAME }}" >> .env
+          echo "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" >> .env
+          echo "DB_DATABASE=${{ secrets.DB_DATABASE }}" >> .env
+
+      - name: Start Containers
+        working-directory: backend
+        run: docker compose up -d
+
+      - name: Stop Containers
+        if: always()
+        working-directory: backend
+        run: docker compose down -v
+
+    
+    #################################################
+    # DEPLOY JOB
+    #################################################
+
+  deploy:
+      name: Deploy
+
+      runs-on: ubuntu-latest
+
+      needs: test
+
+      if: github.ref == 'refs/heads/develop'
+
+      steps:
+
+        - name: Deploy
+          uses: appleboy/ssh-action@v1.2.2
+
+          with:
+            host: ${{ secrets.DROPLET_HOST }}
+            username: ${{ secrets.DROPLET_USERNAME }}
+            key: ${{ secrets.DROPLET_SSH_KEY }}
+
+            script: |
+              cd ~/projects/VacTracker_Intership
+
+              git pull origin develop
+
+              cd ~/projects/VacTracker_Intership/backend
+
+              echo "PORT=3100" > .env
+              echo "DB_HOST=postgres" >> .env
+              echo "DB_PORT=5433" >> .env
+              echo "DB_USERNAME=${{ secrets.DB_USERNAME }}" >> .env
+              echo "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" >> .env
+              echo "DB_DATABASE=${{ secrets.DB_DATABASE }}" >> .env
+
+              export API_URL=http://129.212.230.134:3100
+
+              docker compose down
+
+              docker compose up -d --build
+
+              docker image prune -f

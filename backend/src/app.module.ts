@@ -3,6 +3,17 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
 import { UsersModule } from './users/users.module';
+import { AuthModule } from './auth/auth.module';
+import { SmsModule } from './sms/sms.module';
+import { FlocksModule } from './flocks/flocks.module';
+import { VaccinesModule } from './vaccines/vaccines.module';
+import { VaccinationsModule } from './vaccinations/vaccinations.module';
+import { RemindersModule } from './reminders/reminders.module';
+import { VetModule } from './vet/vet.module';
+import { ScheduleModule } from '@nestjs/schedule';
+import { SickReportsModule } from './sick-reports/sick-reports.module';
+import { VaccineLibraryModule } from './vaccine-library/vaccine-library.module';
+import { NotificationsModule } from './notifications/notifications.module';
 
 @Module({
   imports: [
@@ -29,8 +40,29 @@ import { UsersModule } from './users/users.module';
 
       }),
     }),
+    ScheduleModule.forRoot(),
 
     UsersModule,
+
+    AuthModule,
+
+    SmsModule,
+
+    FlocksModule,
+
+    VaccinesModule,
+
+    VaccinationsModule,
+
+    RemindersModule,
+
+    VetModule,
+
+    SickReportsModule,
+
+    VaccineLibraryModule,
+
+    NotificationsModule,
   ],
 })
 export class AppModule {}
