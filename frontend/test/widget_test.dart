@@ -23,7 +23,9 @@ void main() {
           languageCode: 'en',
           otpCode: '123456',
           onVerify: (otp) async {},
-          onResend: () async {},
+          onResend: () async {
+            return '123456';
+          },
         ),
       ),
     );

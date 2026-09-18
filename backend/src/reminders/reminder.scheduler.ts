@@ -4,7 +4,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 
 import { Reminder, ReminderSender, ReminderStatus } from './entities/reminder.entity';
-import { Vaccination, VaccinationStatus } from '../vaccinations/entities/vaccination.entity';
+import { Vaccination } from '../vaccinations/entities/vaccination.entity';
 import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
@@ -65,9 +65,6 @@ export class ReminderScheduler {
       .leftJoinAndSelect('vaccination.next_vaccine', 'next_vaccine')
       .where('vaccination.next_due_date < :today', { today: todayStr })
       .andWhere('vaccination.reminder_enabled = :enabled', { enabled: true })
-      .andWhere('vaccination.status != :completed', {
-        completed: VaccinationStatus.COMPLETED,
-      })
       .getMany();
 
     this.logger.log(
@@ -94,9 +91,6 @@ export class ReminderScheduler {
       .leftJoinAndSelect('vaccination.vaccine', 'vaccine')
       .leftJoinAndSelect('vaccination.next_vaccine', 'next_vaccine')
       .where('vaccination.next_due_date = :today', { today: todayStr })
-      .andWhere('vaccination.status != :completed', {
-        completed: VaccinationStatus.COMPLETED,
-      })
       .getMany();
 
     for (const vaccination of dueTodayVaccinations) {

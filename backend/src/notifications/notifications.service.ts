@@ -111,7 +111,9 @@ export class NotificationsService {
       !vaccination.next_due_date ||
       !vaccination.flock?.farmer?.user_id ||
       !vaccination.flock?.flock_id ||
-      !vaccination.vaccine
+      !vaccination.vaccine ||
+      (vaccination.status === VaccinationStatus.COMPLETED &&
+        !vaccination.next_vaccine)
     ) {
       return null;
     }
@@ -195,7 +197,8 @@ export class NotificationsService {
       !vaccination.flock?.farmer?.user_id ||
       !vaccination.flock?.flock_id ||
       !vaccination.vaccine ||
-      vaccination.status === VaccinationStatus.COMPLETED
+      (vaccination.status === VaccinationStatus.COMPLETED &&
+        !vaccination.next_vaccine)
     ) {
       return null;
     }

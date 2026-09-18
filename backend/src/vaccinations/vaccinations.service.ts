@@ -166,8 +166,6 @@ export class VaccinationsService {
       );
     }
 
-    const status = this.calculateVaccinationStatus(nextDueDate);
-
     // Upload photo to Cloudinary if provided
     let photoUrl: string | undefined = createVaccinationDto.photo_url;
     if (photo) {
@@ -187,7 +185,7 @@ export class VaccinationsService {
       date_given: administrationDate,
       next_due_date: nextDueDate,
       reminder_enabled: createVaccinationDto.create_reminder !== false,
-      status,
+      status: VaccinationStatus.COMPLETED,
       photo_url: photoUrl,
     });
 
@@ -245,11 +243,71 @@ export class VaccinationsService {
     }
 
     if (vaccination.status === VaccinationStatus.COMPLETED) {
+      const administrationDate = new Date(dto.date_given);
+      const existingVaccination = await this.vaccinationRepository.findOne({
+        where: {
+          flock: { flock_id: dto.flock_id },
+          vaccine: { vaccine_id: scheduledVaccine.vaccine_id },
+          date_given: administrationDate,
+        },
+      });
+
+      if (existingVaccination) {
+        return existingVaccination;
+      }
+
+      const nextVaccine = dto.next_vaccine_id != null
+        ? await this.vaccineRepository.findOne({
+            where: { vaccine_id: dto.next_vaccine_id },
+          })
+        : null;
+      if (dto.next_vaccine_id != null && !nextVaccine) {
+        throw new NotFoundException('Next vaccine not found');
+      }
+
+      const nextDueDate = dto.next_due_date
+        ? new Date(dto.next_due_date)
+        : null;
+      if (nextDueDate && nextDueDate < administrationDate) {
+        throw new BadRequestException(
+          'Next vaccination date cannot be before the administration date',
+        );
+      }
+
+      let photoUrl: string | undefined = dto.photo_url;
+      if (photo) {
+        const result = await this.cloudinaryService.uploadImage(
+          photo,
+          'vactracker/vaccinations',
+        );
+        photoUrl = result.secure_url;
+      }
+
+      const followUpVaccination = this.vaccinationRepository.create({
+        flock: vaccination.flock,
+        vaccine: scheduledVaccine,
+        next_vaccine: nextVaccine,
+        administered_by: user,
+        date_given: administrationDate,
+        next_due_date: nextDueDate,
+        reminder_enabled: dto.create_reminder !== false,
+        status: VaccinationStatus.COMPLETED,
+        photo_url: photoUrl,
+      });
+      const savedVaccination = await this.vaccinationRepository.save(
+        followUpVaccination,
+      );
+
       await this.remindersService.markReminderCompleted(
         user.user_id,
         vaccination.vaccination_id,
       );
-      return vaccination;
+      await this.notificationsService.markVaccinationCompleted({
+        farmerId: user.user_id,
+        vaccinationId: vaccination.vaccination_id,
+      });
+      await this.remindersService.syncRemindersForFarmer(user.user_id);
+      return savedVaccination;
     }
 
     const nextVaccine = dto.next_vaccine_id != null

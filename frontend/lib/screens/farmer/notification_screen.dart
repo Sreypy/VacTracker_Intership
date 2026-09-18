@@ -247,15 +247,6 @@ class _NotificationScreenState extends State<NotificationScreen>
 
       final items = <_NotificationItem>[];
       final remindedVaccinationIds = <int>{};
-      final completedVaccinationIds = vaccinations
-          .where(VaccinationScheduleService.isCompleted)
-          .map(
-            (vaccination) => _NotificationItem.asInt(
-              vaccination is Map ? vaccination['vaccination_id'] : null,
-            ),
-          )
-          .whereType<int>()
-          .toSet();
       int overdueCount = 0;
       int dueTodayCount = 0;
       // int dueSoonCount = 0;
@@ -324,10 +315,6 @@ class _NotificationScreenState extends State<NotificationScreen>
           final referenceId = _NotificationItem.asInt(
             notification['referenceId'] ?? notification['reference_id'],
           );
-          if (referenceId != null &&
-              completedVaccinationIds.contains(referenceId)) {
-            continue;
-          }
           item = _NotificationItem.fromVaccinationReminder(
             notification,
             widget.languageCode,
@@ -339,10 +326,6 @@ class _NotificationScreenState extends State<NotificationScreen>
           final referenceId = _NotificationItem.asInt(
             notification['referenceId'] ?? notification['reference_id'],
           );
-          if (referenceId != null &&
-              completedVaccinationIds.contains(referenceId)) {
-            continue;
-          }
           item = _NotificationItem.fromVaccinationReminder(
             notification,
             widget.languageCode,
@@ -388,67 +371,6 @@ class _NotificationScreenState extends State<NotificationScreen>
     }
   }
 
-  // Future<void> _openNotification(_NotificationItem item) async {
-  //   if (item.isCompleted) {
-  //     // A completed vaccination is part of the history: open the flock so the
-  //     // farmer can review it, never the "vaccinate now" flow.
-  //     if (item.flockId != null) {
-  //       await context.push(
-  //         '/flock-detail/${item.flockId}/${widget.languageCode}',
-  //       );
-  //       if (mounted) {
-  //         _loadNotifications();
-  //       }
-  //     }
-  //     return;
-  //   }
-  //   if (item.isVetResponse) {
-  //     if (item.notificationId != null) {
-  //       await NotificationService().markAsRead(item.notificationId!);
-  //     }
-  //     if (!mounted) return;
-
-  //     debugPrint(
-  //       'reportId: ${item.reportId}, languageCode: ${widget.languageCode}',
-  //     );
-
-  //     if (item.reportId != null) {
-  //       context.push(
-  //         '/my-sick-reports/${item.reportId}?lang=${widget.languageCode}',
-  //       );
-  //     } else {
-  //       debugPrint('reportId is null — navigation skipped');
-  //     }
-  //     return;
-  //   }
-  //   if (item.flockId == null) return;
-  //   // Mark an overdue-vaccination notification as read when the farmer taps it.
-  //   if (item.notificationId != null) {
-  //     await NotificationService().markAsRead(item.notificationId!);
-  //     if (!mounted) return;
-  //   }
-  //   if (item.isOverdue || item.isDueToday) {
-  //     if (item.vaccineId == null) return;
-  //     final scheduledVaccinationQuery = item.vaccinationId == null
-  //         ? ''
-  //         : '&vaccinationId=${item.vaccinationId}';
-  //     final result = await context.push<bool>(
-  //       '/log-vaccination-step1/${widget.languageCode}'
-  //       '?flockId=${item.flockId}&batchTitle=${Uri.encodeComponent(item.flockName)}'
-  //       '&vaccineId=${item.vaccineId}$scheduledVaccinationQuery',
-  //     );
-  //     if (result == true && mounted) {
-  //       await _loadNotifications();
-  //       await NotificationHeaderButton.refreshDueTodayCount();
-  //     }
-  //     return;
-  //   }
-  //   await context.push('/flock-detail/${item.flockId}/${widget.languageCode}');
-  //   if (mounted) {
-  //     _loadNotifications();
-  //   }
-  // }
-
   Future<void> _openNotification(_NotificationItem item) async {
     if (item.isCompleted) {
       // A completed vaccination is part of the history: open the flock so the
@@ -488,8 +410,22 @@ class _NotificationScreenState extends State<NotificationScreen>
       await NotificationService().markAsRead(item.notificationId!);
       if (!mounted) return;
     }
-    // Overdue / due-today notifications now also just open the flock detail,
-    // same as the default case below.
+    if (item.isOverdue || item.isDueToday) {
+      if (item.vaccineId == null) return;
+      final scheduledVaccinationQuery = item.vaccinationId == null
+          ? ''
+          : '&vaccinationId=${item.vaccinationId}';
+      final result = await context.push<bool>(
+        '/log-vaccination-step2/${widget.languageCode}'
+        '?flockId=${item.flockId}&batchTitle=${Uri.encodeComponent(item.flockName)}'
+        '&vaccineId=${item.vaccineId}$scheduledVaccinationQuery',
+      );
+      if (result == true && mounted) {
+        await _loadNotifications();
+        await NotificationHeaderButton.refreshDueTodayCount();
+      }
+      return;
+    }
     await context.push('/flock-detail/${item.flockId}/${widget.languageCode}');
     if (mounted) {
       _loadNotifications();
