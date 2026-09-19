@@ -270,7 +270,9 @@ class _FarmerDashboardPageState extends State<FarmerDashboardPage>
         _totalFlocks = totalFlocks;
         _totalBirds = totalBirds;
         _flockHealthPercentage = flockHealthPercentage;
-        _upcomingVaccinations = vaccinationSchedule.dueSoonCount;
+        _upcomingVaccinations =
+            vaccinationSchedule.dueSoonCount +
+            vaccinationSchedule.upcomingCount;
         _overdueVaccinations = vaccinationSchedule.overdueCount;
         _dueTodayVaccinations = vaccinationSchedule.dueTodayCount;
         _recentVaccinations = recentVaccinations;

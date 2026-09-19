@@ -26,23 +26,4 @@ export class Vaccine {
   @Column()
   disease_km!: string;
 
-
-  @Column({
-    type: 'integer',
-    nullable: true,
-  })
-  interval_days!: number | null;
-
-
-  @Column({
-    nullable:true,
-  })
-  notes_en?: string;
-
-
-  @Column({
-    nullable:true,
-  })
-  notes_km?: string;
-
 }

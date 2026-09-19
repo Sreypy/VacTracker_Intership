@@ -4,11 +4,11 @@ name: VacTracker CI/CD
 on:
   push:
     branches:
-      - develop
+      - main
 
   pull_request:
     branches:
-      - develop
+      - main
 
 
 jobs:
@@ -185,7 +185,7 @@ jobs:
 
       needs: test
 
-      if: github.ref == 'refs/heads/develop'
+      if: github.ref == 'refs/heads/main'
 
       steps:
 
@@ -200,7 +200,7 @@ jobs:
             script: |
               cd ~/projects/VacTracker_Intership
 
-              git pull origin develop
+              git pull origin main
 
               cd ~/projects/VacTracker_Intership/backend
 

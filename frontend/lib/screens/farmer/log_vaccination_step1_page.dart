@@ -59,8 +59,6 @@ class _LogVaccinationStep1PageState extends State<LogVaccinationStep1Page> {
 
   final FlockService _flockService = FlockService();
 
-  final TextEditingController _searchController = TextEditingController();
-
   // Design System Colors
   static const Color backgroundLight = Color(0xFFF8FAFC);
   static const Color brandDarkGreen = Color(0xFF034418);
@@ -261,20 +259,6 @@ class _LogVaccinationStep1PageState extends State<LogVaccinationStep1Page> {
     }
   }
 
-  void _filterFlocks(String query) {
-    setState(() {
-      if (query.isEmpty) {
-        _filteredFlocks = _allFlocks;
-      } else {
-        _filteredFlocks = _allFlocks
-            .where(
-              (flock) => flock.name.toLowerCase().contains(query.toLowerCase()),
-            )
-            .toList();
-      }
-    });
-  }
-
   String _getText(String key) {
     return _localizedValues[_currentLang]?[key] ??
         _localizedValues['km']![key]!;
@@ -376,29 +360,6 @@ class _LogVaccinationStep1PageState extends State<LogVaccinationStep1Page> {
               ),
 
               const SizedBox(height: 18),
-
-              // Search Bar
-              TextField(
-                controller: _searchController,
-                onChanged: _filterFlocks,
-                style: const TextStyle(fontSize: 14),
-                decoration: InputDecoration(
-                  hintText: _getText('search_hint'),
-                  hintStyle: const TextStyle(color: textGrey, fontSize: 13),
-                  prefixIcon: const Icon(
-                    Icons.search,
-                    color: textGrey,
-                    size: 22,
-                  ),
-                  filled: true,
-                  fillColor: const Color(0xFFF1F5F9),
-                  contentPadding: const EdgeInsets.symmetric(vertical: 12),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide.none,
-                  ),
-                ),
-              ),
 
               const SizedBox(height: 16),
 
@@ -571,7 +532,7 @@ class _LogVaccinationStep1PageState extends State<LogVaccinationStep1Page> {
                           ),
                           const SizedBox(width: 8),
                           Text(
-                            'មាន់ ${flock.count} ${_getText('birds_unit')}   អាយុ ${flock.ageWeeks} ${_getText('age_unit')}',
+                            'មាន់ ${flock.count} ${_getText('birds_unit')}',
                             style: const TextStyle(
                               color: textGrey,
                               fontSize: 12,

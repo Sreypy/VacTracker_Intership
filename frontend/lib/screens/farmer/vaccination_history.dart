@@ -70,13 +70,11 @@ class _VaccinationHistoryScreenState extends State<VaccinationHistoryScreen> {
       'next_due': 'Next Due',
       'recent_records': 'Recent Records',
       'filter': 'Filter',
-      'download_pdf': 'Download PDF History',
-      'done': 'Done',
       'missed': 'Missed',
       'loading': 'Loading vaccination history...',
       'retry': 'Retry',
       'no_records': 'No vaccination records found yet.',
-      'no_data': 'No upcoming date',
+      'no_data': 'No upcoming',
     },
     'km': {
       'app_title': 'VacTracker',
@@ -87,13 +85,11 @@ class _VaccinationHistoryScreenState extends State<VaccinationHistoryScreen> {
       'next_due': 'កំណត់បន្ទាប់',
       'recent_records': 'កំណត់ត្រាថ្មីៗ',
       'filter': 'តម្រង',
-      'download_pdf': 'ទាញយកប្រវត្តិជា PDF',
-      'done': 'រួចរាល់',
       'missed': 'ខកខាន',
       'loading': 'កំពុងទាញយកប្រវត្តិការចាក់វ៉ាក់សាំង...',
       'retry': 'ព្យាយាមម្តងទៀត',
       'no_records': 'មិនទាន់មានកំណត់ត្រាការចាក់វ៉ាក់សាំងទេ។',
-      'no_data': 'គ្មានកាលបរិច្ឆេទជិតដល់',
+      'no_data': 'គ្មានកាលបរិច្ឆេទ',
     },
   };
 
@@ -261,17 +257,29 @@ class _VaccinationHistoryScreenState extends State<VaccinationHistoryScreen> {
         return secondDate.compareTo(firstDate);
       });
 
+      // DateTime? nextDueDate;
+      // String? nextVaccineName;
+      // for (final record in records) {
+      //   if (record['raw_status'] == 'completed') continue;
+      //   final rawDate = record['next_due']?.toString();
+      //   final candidateDate = DateTime.tryParse(rawDate ?? '');
+      //   if (candidateDate != null) {
+      //     if (nextDueDate == null || candidateDate.isBefore(nextDueDate)) {
+      //       nextDueDate = candidateDate;
+      //       nextVaccineName = record['next_vaccine_name']?.toString();
+      //     }
+      //   }
+      // }
+
       DateTime? nextDueDate;
       String? nextVaccineName;
-      for (final record in records) {
-        if (record['raw_status'] == 'completed') continue;
-        final rawDate = record['next_due']?.toString();
+      if (records.isNotEmpty) {
+        final latest = records.first;
+        final rawDate = latest['next_due']?.toString();
         final candidateDate = DateTime.tryParse(rawDate ?? '');
         if (candidateDate != null) {
-          if (nextDueDate == null || candidateDate.isBefore(nextDueDate)) {
-            nextDueDate = candidateDate;
-            nextVaccineName = record['next_vaccine_name']?.toString();
-          }
+          nextDueDate = candidateDate;
+          nextVaccineName = latest['next_vaccine_name']?.toString();
         }
       }
 
@@ -626,7 +634,7 @@ class _VaccinationHistoryScreenState extends State<VaccinationHistoryScreen> {
                   value,
                   style: const TextStyle(
                     color: textDark,
-                    fontSize: 18,
+                    fontSize: 12,
                     fontWeight: FontWeight.bold,
                   ),
                 ),

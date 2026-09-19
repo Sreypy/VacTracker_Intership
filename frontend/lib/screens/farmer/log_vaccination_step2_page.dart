@@ -161,8 +161,8 @@ class _LogVaccinationStep2PageState extends State<LogVaccinationStep2Page> {
       'custom_subtitle': 'បង្កើតវ៉ាក់សាំងថ្មីសម្រាប់កន្លែងចិញ្ចឹមរបស់អ្នក',
       'custom_name_en': 'ឈ្មោះវ៉ាក់សាំង (EN)',
       'custom_name_km': 'ឈ្មោះវ៉ាក់សាំង (KM)',
-      'custom_disease_en': 'ជំងឺ (EN)',
-      'custom_disease_km': 'ជំងឺ (KM)',
+      'custom_disease_en': 'ជំងឺ (EN)​(Optional)',
+      'custom_disease_km': 'ជំងឺ (KM)​ (ជាជម្រើស)',
       'custom_interval': 'ចន្លោះពេលចាក់ (ថ្ងៃ)',
       'custom_notes': 'ចំណាំ (ជាជម្រើស)',
       'custom_sec_name': 'ឈ្មោះវ៉ាក់សាំង',
@@ -211,8 +211,8 @@ class _LogVaccinationStep2PageState extends State<LogVaccinationStep2Page> {
       'custom_subtitle': 'Create a new vaccine for your flock',
       'custom_name_en': 'Vaccine name (EN)',
       'custom_name_km': 'Vaccine name (KM)',
-      'custom_disease_en': 'Disease (EN)',
-      'custom_disease_km': 'Disease (KM)',
+      'custom_disease_en': 'Disease (EN)​​​(Optional)',
+      'custom_disease_km': 'Disease (KM)​ (ជាជម្រើស)',
       'custom_interval': 'Repeat interval (days)',
       'custom_notes': 'Notes (optional)',
       'custom_sec_name': 'Vaccine name',
@@ -371,8 +371,8 @@ class _LogVaccinationStep2PageState extends State<LogVaccinationStep2Page> {
     final diseaseEnController = TextEditingController();
     final diseaseKmController = TextEditingController();
     final intervalController = TextEditingController(text: '0');
-    final notesEnController = TextEditingController();
-    final notesKmController = TextEditingController();
+    // final notesEnController = TextEditingController();
+    // final notesKmController = TextEditingController();
 
     final result = await showDialog<Map<String, dynamic>>(
       context: context,
@@ -473,37 +473,38 @@ class _LogVaccinationStep2PageState extends State<LogVaccinationStep2Page> {
                         hint: _getText('custom_disease_km'),
                       ),
                       const SizedBox(height: 18),
-                      Text(
-                        _getText('custom_sec_interval'),
-                        style: _dialogSectionStyle,
-                      ),
-                      const SizedBox(height: 10),
-                      _buildCustomVacField(
-                        controller: intervalController,
-                        icon: Icons.event_repeat,
-                        hint: _getText('custom_interval'),
-                        keyboardType: TextInputType.number,
-                        suffixText: _getText('custom_interval_unit'),
-                      ),
-                      const SizedBox(height: 18),
-                      Text(
-                        _getText('custom_sec_notes'),
-                        style: _dialogSectionStyle,
-                      ),
-                      const SizedBox(height: 10),
-                      _buildCustomVacField(
-                        controller: notesEnController,
-                        icon: Icons.notes_outlined,
-                        hint: _getText('custom_notes'),
-                        maxLines: 2,
-                      ),
-                      const SizedBox(height: 12),
-                      _buildCustomVacField(
-                        controller: notesKmController,
-                        icon: Icons.notes_outlined,
-                        hint: _getText('custom_notes'),
-                        maxLines: 2,
-                      ),
+
+                      // Text(
+                      //   _getText('custom_sec_interval'),
+                      //   style: _dialogSectionStyle,
+                      // ),
+                      // const SizedBox(height: 10),
+                      // _buildCustomVacField(
+                      //   controller: intervalController,
+                      //   icon: Icons.event_repeat,
+                      //   hint: _getText('custom_interval'),
+                      //   keyboardType: TextInputType.number,
+                      //   suffixText: _getText('custom_interval_unit'),
+                      // ),
+                      // const SizedBox(height: 18),
+                      // Text(
+                      //   _getText('custom_sec_notes'),
+                      //   style: _dialogSectionStyle,
+                      // ),
+                      // const SizedBox(height: 10),
+                      // _buildCustomVacField(
+                      //   controller: notesEnController,
+                      //   icon: Icons.notes_outlined,
+                      //   hint: _getText('custom_notes'),
+                      //   maxLines: 2,
+                      // ),
+                      // const SizedBox(height: 12),
+                      // _buildCustomVacField(
+                      //   controller: notesKmController,
+                      //   icon: Icons.notes_outlined,
+                      //   hint: _getText('custom_notes'),
+                      //   maxLines: 2,
+                      // ),
                     ],
                   ),
                 ),
@@ -557,13 +558,13 @@ class _LogVaccinationStep2PageState extends State<LogVaccinationStep2Page> {
                               'name_km': nameKm,
                               'disease_en': diseaseEn,
                               'disease_km': diseaseKm,
-                              'interval_days': intervalValue,
-                              'notes_en': notesEnController.text.trim().isEmpty
-                                  ? null
-                                  : notesEnController.text.trim(),
-                              'notes_km': notesKmController.text.trim().isEmpty
-                                  ? null
-                                  : notesKmController.text.trim(),
+                              // 'interval_days': intervalValue,
+                              // 'notes_en': notesEnController.text.trim().isEmpty
+                              //     ? null
+                              //     : notesEnController.text.trim(),
+                              // 'notes_km': notesKmController.text.trim().isEmpty
+                              //     ? null
+                              //     : notesKmController.text.trim(),
                             });
                           },
                           style: ElevatedButton.styleFrom(
