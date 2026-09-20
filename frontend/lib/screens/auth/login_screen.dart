@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:frontend/services/storage_service.dart';
 import 'package:go_router/go_router.dart';
 import '../../services/auth_service.dart';
-import 'login_otp_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   final String role;
@@ -20,8 +19,10 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   final phoneController = TextEditingController();
+  final passwordController = TextEditingController();
   final authService = AuthService();
   bool loading = false;
+  bool obscurePassword = true;
 
   // Design Theme Constants
   static const Color backgroundLight = Color(0xFFF8FAFC);
@@ -33,25 +34,30 @@ class _LoginScreenState extends State<LoginScreen> {
   // Localization Map matching your setup
   final Map<String, Map<String, String>> _localizedValues = {
     'en': {
-      'subtitle':
-          'Enter your contact number to receive a secure login verification key.',
+      'subtitle': 'Enter your phone number and password to log in.',
       'label_phone': 'Phone Number',
       'hint_phone': '85512345678',
-      'btn_send': 'Send OTP',
+      'label_password': 'Password',
+      'hint_password': 'Enter your password',
+      'btn_login': 'Log In',
       'footer_text': "Don't have an account? ",
       'footer_link': 'Register',
       'err_phone': 'Please enter phone number',
+      'err_password': 'Please enter password',
       'err_failed': 'Failed: ',
     },
     'km': {
       'subtitle':
-          'សូមបញ្ចូលលេខទូរស័ព្ទរបស់អ្នក ដើម្បីទទួលលេខកូដផ្ទៀងផ្ទាត់ចូលប្រព័ន្ធដែលមានសុវត្ថិភាព។',
+          'សូមបញ្ចូលលេខទូរស័ព្ទ និងពាក្យសម្ងាត់របស់អ្នក ដើម្បីចូលប្រើប្រាស់។',
       'label_phone': 'លេខទូរស័ព្ទ',
       'hint_phone': '85512345678',
-      'btn_send': 'ផ្ញើលេខកូដ OTP',
+      'label_password': 'ពាក្យសម្ងាត់',
+      'hint_password': 'បញ្ចូលពាក្យសម្ងាត់របស់អ្នក',
+      'btn_login': 'ចូលប្រើប្រាស់',
       'footer_text': 'មិនទាន់មានគណនីមែនទេ? ',
       'footer_link': 'ចុះឈ្មោះ',
       'err_phone': 'សូមបញ្ចូលលេខទូរស័ព្ទរបស់អ្នក',
+      'err_password': 'សូមបញ្ចូលពាក្យសម្ងាត់',
       'err_failed': 'បរាជ័យ: ',
     },
   };
@@ -61,13 +67,24 @@ class _LoginScreenState extends State<LoginScreen> {
         _localizedValues['en']![key]!;
   }
 
-  Future<void> sendOtp() async {
+  Future<void> handleLogin() async {
     final phone = phoneController.text.trim();
+    final password = passwordController.text;
 
     if (phone.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(_getText('err_phone')),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
+    if (password.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(_getText('err_password')),
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -82,64 +99,35 @@ class _LoginScreenState extends State<LoginScreen> {
         loading = true;
       });
 
-      final exists = await authService.checkPhone(phone);
+      // NOTE: AuthService needs a `login(phone, password)` method that
+      // hits your backend's password-login endpoint and returns a map
+      // shaped like { "access_token": ..., "user": {...} } — same
+      // shape your old verifyOtp() returned, so the rest of this
+      // function lines up with what you already had.
+      final loginResult = await authService.login(phone, password);
+      debugPrint('Login result: $loginResult');
+
       if (!mounted) return;
-      if (!exists) {
-        scaffoldMessenger?.showSnackBar(
-          SnackBar(
-            content: Text(
-              widget.role == 'farmer'
-                  ? 'Phone number not registered. Please register first.'
-                  : 'Phone number not registered. Please register first.',
-            ),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-        return;
+
+      await StorageService.saveToken(loginResult["access_token"]);
+      await StorageService.saveUser(loginResult["user"]);
+
+      final user = loginResult["user"];
+      if (user == null) {
+        throw Exception("User data not found");
       }
 
-      final result = await authService.sendOtp(phone);
-      debugPrint('OTP send result: $result');
+      final role = user["role"];
 
-      if (!mounted) return;
-
-        final otpCode = result['development_otp']?.toString();
-
-      await LoginOtpScreen.showOtpDialog(
-        context: context,
-        phone: phone,
-        languageCode: widget.languageCode,
-        otpCode: otpCode,
-        onVerify: (otp) async {
-          final verificationResult = await authService.verifyOtp(phone, otp);
-          debugPrint('OTP verify result: $verificationResult');
-
-          await StorageService.saveToken(verificationResult["access_token"]);
-          await StorageService.saveUser(verificationResult["user"]);
-
-          final user = verificationResult["user"];
-          if (user == null) {
-            throw Exception("User data not found");
-          }
-
-          final role = user["role"];
-
-          if (role == "farmer") {
-            if (!mounted) return;
-            appRouter.go("/farmer-dashboard?lang=${widget.languageCode}");
-          } else if (role == "veterinarian") {
-            if (!mounted) return;
-            appRouter.go("/vet-dashboard?lang=${widget.languageCode}");
-          } else {
-            throw Exception("Unknown user role");
-          }
-        },
-        onResend: () async {
-          final resendResult = await authService.sendOtp(phone);
-          debugPrint('OTP resend result: $resendResult');
-          return resendResult['development_otp']?.toString();
-        },
-      );
+      if (role == "farmer") {
+        if (!mounted) return;
+        appRouter.go("/farmer-dashboard?lang=${widget.languageCode}");
+      } else if (role == "veterinarian") {
+        if (!mounted) return;
+        appRouter.go("/vet-dashboard?lang=${widget.languageCode}");
+      } else {
+        throw Exception("Unknown user role");
+      }
     } catch (e) {
       scaffoldMessenger?.showSnackBar(
         SnackBar(
@@ -214,7 +202,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 const SizedBox(height: 36),
 
-                // Premium Input Matrix Field
+                // Phone Field
                 Padding(
                   padding: const EdgeInsets.only(left: 4.0, bottom: 8.0),
                   child: Text(
@@ -271,6 +259,78 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                   ),
                 ),
+                const SizedBox(height: 20),
+
+                // Password Field
+                Padding(
+                  padding: const EdgeInsets.only(left: 4.0, bottom: 8.0),
+                  child: Text(
+                    _getText('label_password'),
+                    style: const TextStyle(
+                      color: textDarkBlue,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                TextField(
+                  controller: passwordController,
+                  obscureText: obscurePassword,
+                  style: const TextStyle(color: textDarkBlue, fontSize: 16),
+                  enabled: !loading,
+                  onSubmitted: (_) => loading ? null : handleLogin(),
+                  decoration: InputDecoration(
+                    hintText: _getText('hint_password'),
+                    hintStyle: TextStyle(
+                      color: textGrey.withValues(alpha: 0.4),
+                      fontSize: 15,
+                    ),
+                    prefixIcon: Icon(
+                      Icons.lock_outline,
+                      color: textGrey.withValues(alpha: 0.7),
+                      size: 22,
+                    ),
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        obscurePassword
+                            ? Icons.visibility_off_outlined
+                            : Icons.visibility_outlined,
+                        color: textGrey.withValues(alpha: 0.7),
+                        size: 22,
+                      ),
+                      onPressed: () {
+                        setState(() => obscurePassword = !obscurePassword);
+                      },
+                    ),
+                    filled: true,
+                    fillColor: Colors.white,
+                    contentPadding: const EdgeInsets.symmetric(
+                      vertical: 18,
+                      horizontal: 20,
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      borderSide: BorderSide(
+                        color: Colors.grey.shade200,
+                        width: 1.5,
+                      ),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      borderSide: BorderSide(
+                        color: Colors.grey.shade200,
+                        width: 1.5,
+                      ),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      borderSide: const BorderSide(
+                        color: brandHeaderGreen,
+                        width: 1.8,
+                      ),
+                    ),
+                  ),
+                ),
                 const SizedBox(height: 24),
 
                 // Brand Graphic Banner Card Accent
@@ -294,12 +354,12 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 const SizedBox(height: 36),
 
-                // Secure OTP Submission Action Button
+                // Login Action Button
                 SizedBox(
                   width: double.infinity,
                   height: 56,
                   child: ElevatedButton(
-                    onPressed: loading ? null : sendOtp,
+                    onPressed: loading ? null : handleLogin,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: brandDarkGreen,
                       foregroundColor: Colors.white,
@@ -324,7 +384,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               Text(
-                                _getText('btn_send'),
+                                _getText('btn_login'),
                                 style: const TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.bold,
@@ -378,6 +438,7 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   void dispose() {
     phoneController.dispose();
+    passwordController.dispose();
     super.dispose();
   }
 }

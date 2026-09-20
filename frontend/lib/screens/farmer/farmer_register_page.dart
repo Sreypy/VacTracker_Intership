@@ -15,6 +15,8 @@ class FarmerRegisterPage extends StatefulWidget {
 class _FarmerRegisterPageState extends State<FarmerRegisterPage> {
   final _formKey = GlobalKey<FormState>();
 
+  bool _isPasswordVisible = false;
+
   // TypeORM Entity Controllers
   final _nameController = TextEditingController();
   final _phoneController = TextEditingController();
@@ -34,7 +36,7 @@ class _FarmerRegisterPageState extends State<FarmerRegisterPage> {
       'label_phone': 'Phone Number',
       'hint_phone': '012 345 678',
       'label_password': 'Password',
-      'hint_password': '••••••••',
+      'hint_password': '••••••',
       'label_village': 'Village',
       'hint_village': 'Enter your village name',
       'label_province': 'Province',
@@ -55,7 +57,7 @@ class _FarmerRegisterPageState extends State<FarmerRegisterPage> {
       'label_phone': 'លេខទូរស័ព្ទ',
       'hint_phone': '012 345 678',
       'label_password': 'ពាក្យសម្ងាត់',
-      'hint_password': '••••••••',
+      'hint_password': '••••••',
       'label_village': 'ភូមិ',
       'hint_village': 'បញ្ចូលឈ្មោះភូមិរបស់អ្នក',
       'label_province': 'ខេត្ត / ក្រុង',
@@ -90,7 +92,7 @@ class _FarmerRegisterPageState extends State<FarmerRegisterPage> {
     required String hint,
     required IconData icon,
     required TextEditingController controller,
-    bool obscureText = false,
+    bool isPassword = false,
     TextInputType keyboardType = TextInputType.text,
     String? Function(String?)? validator,
   }) {
@@ -113,47 +115,73 @@ class _FarmerRegisterPageState extends State<FarmerRegisterPage> {
         ),
         TextFormField(
           controller: controller,
-          obscureText: obscureText,
+          obscureText: isPassword && !_isPasswordVisible,
           keyboardType: keyboardType,
+
           style: const TextStyle(color: textDarkBlue, fontSize: 16),
+
           decoration: InputDecoration(
             hintText: hint,
+
             hintStyle: TextStyle(
               color: textGrey.withValues(alpha: 0.6),
               fontSize: 15,
             ),
+
             prefixIcon: Icon(
               icon,
               color: textGrey.withValues(alpha: 0.8),
               size: 22,
             ),
+
+            suffixIcon: isPassword
+                ? IconButton(
+                    onPressed: () {
+                      setState(() {
+                        _isPasswordVisible = !_isPasswordVisible;
+                      });
+                    },
+                    icon: Icon(
+                      _isPasswordVisible
+                          ? Icons.visibility_outlined
+                          : Icons.visibility_off_outlined,
+                      color: textGrey.withValues(alpha: 0.8),
+                      size: 22,
+                    ),
+                  )
+                : null,
+
             filled: true,
             fillColor: Colors.white,
+
             contentPadding: const EdgeInsets.symmetric(
               vertical: 16,
               horizontal: 20,
             ),
+
             errorStyle: const TextStyle(fontSize: 13),
+
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(14),
               borderSide: BorderSide(color: Colors.grey.shade300),
             ),
+
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(14),
               borderSide: BorderSide(color: Colors.grey.shade300),
             ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(14),
-              borderSide: const BorderSide(
-                color: Color(0xFF0D6E28),
-                width: 1.5,
-              ),
+
+            focusedBorder: const OutlineInputBorder(
+              borderRadius: BorderRadius.all(Radius.circular(14)),
+              borderSide: BorderSide(color: Color(0xFF0D6E28), width: 1.5),
             ),
-            errorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(14),
-              borderSide: const BorderSide(color: Colors.redAccent, width: 1),
+
+            errorBorder: const OutlineInputBorder(
+              borderRadius: BorderRadius.all(Radius.circular(14)),
+              borderSide: BorderSide(color: Colors.redAccent, width: 1),
             ),
           ),
+
           validator: validator,
         ),
         const SizedBox(height: 18),
@@ -267,10 +295,13 @@ class _FarmerRegisterPageState extends State<FarmerRegisterPage> {
                   hint: _getText('hint_password'),
                   icon: Icons.lock_outline,
                   controller: _passwordController,
-                  obscureText: true,
-                  validator: (value) => value == null || value.length < 6
-                      ? _getText('err_pass')
-                      : null,
+                  isPassword: true,
+                  validator: (value) {
+                    if (value == null || value.length < 6) {
+                      return _getText('err_pass');
+                    }
+                    return null;
+                  },
                 ),
 
                 // 4. Village Input
@@ -347,6 +378,7 @@ class _FarmerRegisterPageState extends State<FarmerRegisterPage> {
 
                           if (!mounted) return;
                           router.go('/login/farmer/${widget.languageCode}');
+                          // router.go('/farmer-dashboard/${widget.languageCode}');
                         } catch (e) {
                           debugPrint("Register failed: $e");
                         }

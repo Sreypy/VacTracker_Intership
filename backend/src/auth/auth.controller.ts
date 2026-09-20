@@ -15,6 +15,19 @@ export class AuthController {
     return this.authService.checkPhone(body.phone);
   }
 
+  @Post('login')
+  login(
+    @Body() body: {
+      phone: string;
+      password: string;
+    },
+  ) {
+    return this.authService.login(
+      body.phone,
+      body.password,
+    );
+  }
+
   @Post('send-otp')
   sendOtp(
     @Body() body: { phone: string },

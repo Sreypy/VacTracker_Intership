@@ -21,6 +21,7 @@ class _VetRegisterPageState extends State<VetRegisterPage> {
   final _passwordController = TextEditingController();
   final _villageController = TextEditingController();
   final _provinceController = TextEditingController();
+  bool _isPasswordVisible = false;
   final authService = AuthService();
 
   // Premium Localized Context Maps
@@ -34,7 +35,7 @@ class _VetRegisterPageState extends State<VetRegisterPage> {
       'label_phone': 'Phone Number',
       'hint_phone': '012 345 678',
       'label_password': 'Password',
-      'hint_password': '••••••••',
+      'hint_password': '••••••',
       'label_village': 'Clinic Village',
       'hint_village': 'Enter clinic village operational zone',
       'label_province': 'Province / City',
@@ -55,7 +56,7 @@ class _VetRegisterPageState extends State<VetRegisterPage> {
       'label_phone': 'លេខទូរស័ព្ទ',
       'hint_phone': '012 345 678',
       'label_password': 'ពាក្យសម្ងាត់',
-      'hint_password': '••••••••',
+      'hint_password': '••••••',
       'label_village': 'ភូមិប្រកបរបរ',
       'hint_village': 'បញ្ចូលឈ្មោះភូមិដែលគ្លីនិករបស់អ្នកស្ថិតនៅ',
       'label_province': 'ខេត្ត / ក្រុង',
@@ -91,6 +92,7 @@ class _VetRegisterPageState extends State<VetRegisterPage> {
     required IconData icon,
     required TextEditingController controller,
     bool obscureText = false,
+    bool isPassword = false,
     TextInputType keyboardType = TextInputType.text,
     String? Function(String?)? validator,
   }) {
@@ -113,7 +115,7 @@ class _VetRegisterPageState extends State<VetRegisterPage> {
         ),
         TextFormField(
           controller: controller,
-          obscureText: obscureText,
+          obscureText: isPassword ? !_isPasswordVisible : false,
           keyboardType: keyboardType,
           style: const TextStyle(color: textDarkBlue, fontSize: 16),
           decoration: InputDecoration(
@@ -122,36 +124,56 @@ class _VetRegisterPageState extends State<VetRegisterPage> {
               color: textGrey.withValues(alpha: 0.5),
               fontSize: 15,
             ),
+
             prefixIcon: Icon(
               icon,
               color: textGrey.withValues(alpha: 0.8),
               size: 22,
             ),
+
+            suffixIcon: isPassword
+                ? IconButton(
+                    icon: Icon(
+                      _isPasswordVisible
+                          ? Icons.visibility_outlined
+                          : Icons.visibility_off_outlined,
+                      color: textGrey.withValues(alpha: 0.8),
+                    ),
+                    onPressed: () {
+                      setState(() {
+                        _isPasswordVisible = !_isPasswordVisible;
+                      });
+                    },
+                  )
+                : null,
+
             filled: true,
             fillColor: Colors.white,
             contentPadding: const EdgeInsets.symmetric(
               vertical: 16,
               horizontal: 20,
             ),
+
             errorStyle: const TextStyle(fontSize: 13),
+
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(14),
               borderSide: BorderSide(color: Colors.grey.shade300),
             ),
+
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(14),
               borderSide: BorderSide(color: Colors.grey.shade300),
             ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(14),
-              borderSide: const BorderSide(
-                color: Color(0xFF0D6E28),
-                width: 1.5,
-              ),
+
+            focusedBorder: const OutlineInputBorder(
+              borderRadius: BorderRadius.all(Radius.circular(14)),
+              borderSide: BorderSide(color: Color(0xFF0D6E28), width: 1.5),
             ),
-            errorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(14),
-              borderSide: const BorderSide(color: Colors.redAccent, width: 1),
+
+            errorBorder: const OutlineInputBorder(
+              borderRadius: BorderRadius.all(Radius.circular(14)),
+              borderSide: BorderSide(color: Colors.redAccent, width: 1),
             ),
           ),
           validator: validator,
@@ -268,7 +290,8 @@ class _VetRegisterPageState extends State<VetRegisterPage> {
                   hint: _getText('hint_password'),
                   icon: Icons.lock_outline,
                   controller: _passwordController,
-                  obscureText: true,
+                  obscureText: !_isPasswordVisible,
+                  isPassword: true,
                   validator: (value) => value == null || value.length < 6
                       ? _getText('err_pass')
                       : null,
@@ -350,6 +373,7 @@ class _VetRegisterPageState extends State<VetRegisterPage> {
                           router.go(
                             '/login/veterinarian/${widget.languageCode}',
                           );
+                          // router.go('/vet-dashboard/${widget.languageCode}');
                         } catch (error) {
                           debugPrint("Registration failed: $error");
                         }

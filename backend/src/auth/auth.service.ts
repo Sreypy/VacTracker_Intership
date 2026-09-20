@@ -62,6 +62,70 @@ export class AuthService {
     };
   }
 
+    // ==========================================
+  // LOGIN (phone + password)
+  // ==========================================
+ 
+  async login(phone: string, password: string) {
+ 
+    phone = phone.trim();
+ 
+    const user = await this.userRepository.findOne({
+      where: { phone },
+    });
+ 
+    // Same error for "no user" and "wrong password" so we don't leak
+    // which phone numbers are registered.
+    if (!user || !user.password_hash) {
+ 
+      throw new BadRequestException(
+        'Invalid phone number or password.',
+      );
+ 
+    }
+ 
+    const valid =
+      await bcrypt.compare(
+        password,
+        user.password_hash,
+      );
+ 
+    if (!valid) {
+ 
+      throw new BadRequestException(
+        'Invalid phone number or password.',
+      );
+ 
+    }
+ 
+    const token =
+      this.jwtService.sign({
+ 
+        user_id: user.user_id,
+ 
+        phone: user.phone,
+ 
+        role: user.role,
+ 
+      });
+ 
+    // Don't return the password hash to the client.
+    const { password_hash, ...safeUser } = user;
+ 
+    return {
+ 
+      message:
+        'Login successful',
+ 
+      access_token:
+        token,
+ 
+      user: safeUser,
+ 
+    };
+ 
+  }
+
 
   // ==========================================
   // SEND OTP
