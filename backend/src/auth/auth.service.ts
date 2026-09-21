@@ -474,6 +474,201 @@ export class AuthService {
 
   }
 
+  // ==========================================
+  // RESET PASSWORD (forgot password)
+  // ==========================================
+  //
+  // Client flow: call sendOtp(phone) first (existing endpoint above),
+  // then call this with the OTP + new password. On success the
+  // password is updated but no JWT is issued — the user logs in
+  // normally afterward via login().
+ 
+  async resetPassword(
+    phone: string,
+    otp: string,
+    newPassword: string,
+  ) {
+ 
+    phone = phone.trim();
+ 
+    otp = otp.trim();
+ 
+ 
+    // ------------------------------------------
+    // Validate OTP format
+    // ------------------------------------------
+ 
+    if (!/^\d{6}$/.test(otp)) {
+ 
+      throw new BadRequestException(
+        'OTP must be a 6-digit number.',
+      );
+ 
+    }
+ 
+    if (!newPassword || newPassword.length < 6) {
+ 
+      throw new BadRequestException(
+        'Password must be at least 6 characters.',
+      );
+ 
+    }
+ 
+ 
+    // ------------------------------------------
+    // Find latest unused OTP
+    // ------------------------------------------
+ 
+    const otpRecord =
+      await this.otpRepository.findOne({
+ 
+        where: {
+          phone,
+          used: false,
+        },
+ 
+        order: {
+          created_at: 'DESC',
+        },
+ 
+      });
+ 
+ 
+    if (!otpRecord) {
+ 
+      throw new BadRequestException(
+        'OTP not found or already used.',
+      );
+ 
+    }
+ 
+ 
+    // ------------------------------------------
+    // Check expiration
+    // ------------------------------------------
+ 
+    if (
+      new Date() >
+      otpRecord.expires_at
+    ) {
+ 
+      otpRecord.used = true;
+ 
+      await this.otpRepository.save(
+        otpRecord,
+      );
+ 
+      throw new BadRequestException(
+        'OTP has expired.',
+      );
+ 
+    }
+ 
+ 
+    // ------------------------------------------
+    // Check attempts
+    // ------------------------------------------
+ 
+    if (
+      otpRecord.attempts >=
+      MAX_OTP_ATTEMPTS
+    ) {
+ 
+      otpRecord.used = true;
+ 
+      await this.otpRepository.save(
+        otpRecord,
+      );
+ 
+      throw new BadRequestException(
+        'Too many incorrect attempts. Please request a new OTP.',
+      );
+ 
+    }
+ 
+ 
+    // ------------------------------------------
+    // Compare OTP
+    // ------------------------------------------
+ 
+    const valid =
+      await bcrypt.compare(
+        otp,
+        otpRecord.code_hash,
+      );
+ 
+ 
+    if (!valid) {
+ 
+      otpRecord.attempts += 1;
+ 
+ 
+      if (
+        otpRecord.attempts >=
+        MAX_OTP_ATTEMPTS
+      ) {
+ 
+        otpRecord.used = true;
+ 
+      }
+ 
+ 
+      await this.otpRepository.save(
+        otpRecord,
+      );
+ 
+ 
+      throw new BadRequestException(
+        'Invalid OTP.',
+      );
+ 
+    }
+ 
+ 
+    // ------------------------------------------
+    // OTP is correct - consume it
+    // ------------------------------------------
+ 
+    otpRecord.used = true;
+ 
+    await this.otpRepository.save(
+      otpRecord,
+    );
+ 
+ 
+    // ------------------------------------------
+    // Find user and update password
+    // ------------------------------------------
+ 
+    const user =
+      await this.userRepository.findOne({
+        where: { phone },
+      });
+ 
+ 
+    if (!user) {
+ 
+      throw new BadRequestException(
+        'User not found.',
+      );
+ 
+    }
+ 
+    user.password_hash =
+      await bcrypt.hash(newPassword, 10);
+ 
+    await this.userRepository.save(user);
+ 
+ 
+    return {
+ 
+      message:
+        'Password reset successfully. Please log in with your new password.',
+ 
+    };
+ 
+  }
+
 
   // ==========================================
   // GET PROFILE

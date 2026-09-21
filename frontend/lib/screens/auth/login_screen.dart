@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:frontend/services/storage_service.dart';
 import 'package:go_router/go_router.dart';
 import '../../services/auth_service.dart';
+import 'forgot_password_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   final String role;
@@ -40,6 +41,7 @@ class _LoginScreenState extends State<LoginScreen> {
       'label_password': 'Password',
       'hint_password': 'Enter your password',
       'btn_login': 'Log In',
+      'forgot_password': 'Forgot Password?',
       'footer_text': "Don't have an account? ",
       'footer_link': 'Register',
       'err_phone': 'Please enter phone number',
@@ -54,6 +56,7 @@ class _LoginScreenState extends State<LoginScreen> {
       'label_password': 'ពាក្យសម្ងាត់',
       'hint_password': 'បញ្ចូលពាក្យសម្ងាត់របស់អ្នក',
       'btn_login': 'ចូលប្រើប្រាស់',
+      'forgot_password': 'ភ្លេចពាក្យសម្ងាត់?',
       'footer_text': 'មិនទាន់មានគណនីមែនទេ? ',
       'footer_link': 'ចុះឈ្មោះ',
       'err_phone': 'សូមបញ្ចូលលេខទូរស័ព្ទរបស់អ្នក',
@@ -332,6 +335,34 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
                 const SizedBox(height: 24),
+
+                // Forgot Password Link
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: GestureDetector(
+                    onTap: () {
+                      if (!loading) {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => ForgotPasswordScreen(
+                              languageCode: widget.languageCode,
+                            ),
+                          ),
+                        );
+                      }
+                    },
+                    child: Text(
+                      _getText('forgot_password'),
+                      style: const TextStyle(
+                        color: brandHeaderGreen,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 12),
 
                 // Brand Graphic Banner Card Accent
                 Container(

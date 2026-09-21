@@ -920,14 +920,14 @@ class _MyFarmersPageState extends State<MyFarmersPage> {
                         const Icon(
                           Icons.location_on_rounded,
                           color: textMuted,
-                          size: 16,
+                          size: 12,
                         ),
                         const SizedBox(width: 4),
                         Text(
                           farmer.location,
                           style: const TextStyle(
                             color: textMuted,
-                            fontSize: 12,
+                            fontSize: 10,
                             fontWeight: FontWeight.w500,
                           ),
                         ),
@@ -938,14 +938,14 @@ class _MyFarmersPageState extends State<MyFarmersPage> {
                         const Icon(
                           Icons.pets_rounded,
                           color: primaryGreen,
-                          size: 16,
+                          size: 12,
                         ),
                         const SizedBox(width: 4),
                         Text(
                           '${farmer.flockCount} ${_getText('unit_flocks')} · ${farmer.totalBirds} ${_getText('unit_birds')}',
                           style: const TextStyle(
                             color: textMain,
-                            fontSize: 12,
+                            fontSize: 10,
                             fontWeight: FontWeight.bold,
                           ),
                         ),

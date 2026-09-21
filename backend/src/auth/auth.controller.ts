@@ -28,6 +28,21 @@ export class AuthController {
     );
   }
 
+  @Post('reset-password')
+  resetPassword(
+    @Body() body: {
+      phone: string;
+      otp: string;
+      newPassword: string;
+    },
+  ) {
+    return this.authService.resetPassword(
+      body.phone,
+      body.otp,
+      body.newPassword,
+    );
+  }
+
   @Post('send-otp')
   sendOtp(
     @Body() body: { phone: string },
