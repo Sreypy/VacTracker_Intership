@@ -137,6 +137,9 @@ class _FarmerProfilePageState extends State<FarmerProfilePage> {
   static const Color dialogInputBorder = Color(0xFFE0E7E2);
   static const Color dialogTextMain = Color(0xFF10251A);
 
+  // Subscription state (display-only for now — no payment wiring yet)
+  // bool _isPremium = false;
+
   // Localized Dictionary
   final Map<String, Map<String, String>> _localizedValues = const {
     'en': {
@@ -152,6 +155,10 @@ class _FarmerProfilePageState extends State<FarmerProfilePage> {
       'sub_vac_reminders': 'Alerts for upcoming shots',
       'lbl_sick_reports': 'Sick Report Updates',
       'sub_sick_reports': 'Status of reported cases',
+
+      // Subscription Section
+      'sec_subscription': 'SUBSCRIPTION',
+      'sec_subscription_row': 'Subscription Plans',
 
       // App Info Section
       'sec_app_info': 'APP INFO',
@@ -202,6 +209,10 @@ class _FarmerProfilePageState extends State<FarmerProfilePage> {
       'sub_vac_reminders': 'ការជូនដំណឹងសម្រាប់កាលវិភាគចាក់',
       'lbl_sick_reports': 'បច្ចុប្បន្នភាពរបាយការណ៍ជំងឺ',
       'sub_sick_reports': 'ស្ថានភាពនៃករណីដែលបានរាយការណ៍',
+
+      // Subscription Section
+      'sec_subscription': 'គម្រោងសមាជិកភាព',
+      'sec_subscription_row': 'ការជាវ',
 
       // App Info Section
       'sec_app_info': 'ព័ត៌មានកម្មវិធី',
@@ -955,6 +966,50 @@ class _FarmerProfilePageState extends State<FarmerProfilePage> {
                       ),
                     ),
                   ],
+                ),
+              ),
+
+              const SizedBox(height: 16),
+
+              // Subscription Section Card — simple link row, styled like
+              // the App Info rows below. No plan details duplicated here;
+              // everything (current plan, pricing, features) lives on the
+              // full SubscriptionPage instead.
+              _buildSectionWrapper(
+                title: _getText('sec_subscription'),
+                child: InkWell(
+                  onTap: () => context.push('/subscription/$_currentLang'),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 14,
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.workspace_premium_outlined,
+                          color: brandDarkGreen,
+                          size: 22,
+                        ),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Text(
+                            _getText('sec_subscription_row'),
+                            style: const TextStyle(
+                              color: textDarkBlue,
+                              fontSize: 15,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                        const Icon(
+                          Icons.chevron_right_rounded,
+                          color: textGrey,
+                          size: 22,
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               ),
 

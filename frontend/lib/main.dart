@@ -15,6 +15,7 @@ import 'package:frontend/screens/farmer/notification_screen.dart';
 import 'package:frontend/screens/farmer/sick_report.dart';
 import 'package:frontend/screens/farmer/my_sick_reports_screen.dart';
 import 'package:frontend/screens/farmer/sick_report_detail_screen.dart';
+import 'package:frontend/screens/farmer/subscription_page.dart';
 import 'package:frontend/screens/farmer/vaccination_history.dart';
 import 'package:frontend/screens/farmer/vaccine_library_page.dart';
 import 'package:frontend/screens/farmer/vaccine_library_detail_page.dart';
@@ -215,6 +216,13 @@ final GoRouter _router = GoRouter(
       builder: (context, state) {
         final language = state.pathParameters['lang'] ?? 'en';
         return FarmerProfilePage(languageCode: language);
+      },
+    ),
+    GoRoute(
+      path: '/subscription/:lang',
+      builder: (context, state) {
+        final language = state.pathParameters['lang'] ?? 'en';
+        return SubscriptionPage(languageCode: language);
       },
     ),
     GoRoute(
