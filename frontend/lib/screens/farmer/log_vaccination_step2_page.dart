@@ -473,38 +473,6 @@ class _LogVaccinationStep2PageState extends State<LogVaccinationStep2Page> {
                         hint: _getText('custom_disease_km'),
                       ),
                       const SizedBox(height: 18),
-
-                      // Text(
-                      //   _getText('custom_sec_interval'),
-                      //   style: _dialogSectionStyle,
-                      // ),
-                      // const SizedBox(height: 10),
-                      // _buildCustomVacField(
-                      //   controller: intervalController,
-                      //   icon: Icons.event_repeat,
-                      //   hint: _getText('custom_interval'),
-                      //   keyboardType: TextInputType.number,
-                      //   suffixText: _getText('custom_interval_unit'),
-                      // ),
-                      // const SizedBox(height: 18),
-                      // Text(
-                      //   _getText('custom_sec_notes'),
-                      //   style: _dialogSectionStyle,
-                      // ),
-                      // const SizedBox(height: 10),
-                      // _buildCustomVacField(
-                      //   controller: notesEnController,
-                      //   icon: Icons.notes_outlined,
-                      //   hint: _getText('custom_notes'),
-                      //   maxLines: 2,
-                      // ),
-                      // const SizedBox(height: 12),
-                      // _buildCustomVacField(
-                      //   controller: notesKmController,
-                      //   icon: Icons.notes_outlined,
-                      //   hint: _getText('custom_notes'),
-                      //   maxLines: 2,
-                      // ),
                     ],
                   ),
                 ),
@@ -558,13 +526,6 @@ class _LogVaccinationStep2PageState extends State<LogVaccinationStep2Page> {
                               'name_km': nameKm,
                               'disease_en': diseaseEn,
                               'disease_km': diseaseKm,
-                              // 'interval_days': intervalValue,
-                              // 'notes_en': notesEnController.text.trim().isEmpty
-                              //     ? null
-                              //     : notesEnController.text.trim(),
-                              // 'notes_km': notesKmController.text.trim().isEmpty
-                              //     ? null
-                              //     : notesKmController.text.trim(),
                             });
                           },
                           style: ElevatedButton.styleFrom(
@@ -842,7 +803,7 @@ class _LogVaccinationStep2PageState extends State<LogVaccinationStep2Page> {
                 _getText('section_today'),
                 style: const TextStyle(
                   color: brandDarkGreen,
-                  fontSize: 18,
+                  fontSize: 16,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -875,6 +836,7 @@ class _LogVaccinationStep2PageState extends State<LogVaccinationStep2Page> {
                       const SizedBox(height: 8),
                       DropdownButtonFormField<String>(
                         initialValue: _selectedTodayVaccineId,
+                        isExpanded: true,
                         decoration: InputDecoration(
                           filled: true,
                           fillColor: const Color(0xFFF8FAFC),
@@ -895,7 +857,10 @@ class _LogVaccinationStep2PageState extends State<LogVaccinationStep2Page> {
                                   : vaccine.nameEn;
                               return DropdownMenuItem(
                                 value: vaccine.id,
-                                child: Text(title),
+                                child: Text(
+                                  title,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
                               );
                             }),
                         ],
@@ -1023,6 +988,7 @@ class _LogVaccinationStep2PageState extends State<LogVaccinationStep2Page> {
                       const SizedBox(height: 8),
                       DropdownButtonFormField<String>(
                         initialValue: _selectedNextVaccineId ?? '',
+                        isExpanded: true,
                         decoration: InputDecoration(
                           filled: true,
                           fillColor: const Color(0xFFF8FAFC),
@@ -1047,7 +1013,10 @@ class _LogVaccinationStep2PageState extends State<LogVaccinationStep2Page> {
                                   : vaccine.nameEn;
                               return DropdownMenuItem(
                                 value: vaccine.id,
-                                child: Text(title),
+                                child: Text(
+                                  title,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
                               );
                             }),
                         ],
@@ -1118,7 +1087,7 @@ class _LogVaccinationStep2PageState extends State<LogVaccinationStep2Page> {
                                 const Icon(
                                   Icons.calendar_today_outlined,
                                   color: textGrey,
-                                  size: 18,
+                                  size: 16,
                                 ),
                                 const SizedBox(width: 10),
                                 Text(

@@ -9,11 +9,15 @@ class SubscriptionPage extends StatefulWidget {
   State<SubscriptionPage> createState() => _SubscriptionPageState();
 }
 
+enum PlanTier { basic, premium }
+
 class _SubscriptionPageState extends State<SubscriptionPage> {
   late String _currentLang;
 
   // Display-only for now — no payment flow wired up yet.
-  bool _isPremium = false;
+  // Every new subscriber starts on a free first month regardless of
+  // which tier they pick; after that they're billed at the tier price.
+  PlanTier _currentPlan = PlanTier.basic;
 
   // Design System Colors (matching FarmerProfilePage)
   static const Color backgroundLight = Color(0xFFF8FAFC);
@@ -27,43 +31,49 @@ class _SubscriptionPageState extends State<SubscriptionPage> {
     'en': {
       'title': 'Subscription',
       'subtitle': 'Choose the plan that fits your farm.',
-      'plan_free_name': 'Free',
-      'plan_free_price': '\$0/month',
+      'trial_banner': 'Your first month is free on any plan.',
+      'plan_basic_name': 'Basic',
+      'plan_basic_price': '\$1.99/month',
+      'plan_basic_trial_note': 'First month free',
       'plan_premium_name': 'Premium',
       'plan_premium_price': '\$4.99/month',
+      'plan_premium_trial_note': 'First month free',
       'plan_current_badge': 'Current Plan',
-      'plan_free_feature_1': 'Flock tracking',
-      'plan_free_feature_2': 'Vaccination reminders',
-      'plan_free_feature_3': 'Basic sick reporting',
-      'plan_premium_feature_1': 'Everything in Free',
+      'plan_basic_feature_1': 'Flock tracking',
+      'plan_basic_feature_2': 'Vaccination reminders',
+      'plan_basic_feature_3': 'Vet Response (limited)',
+      'plan_premium_feature_1': 'Everything in Basic',
       'plan_premium_feature_2': 'Unlimited vet connections',
       'plan_premium_feature_3': 'Priority vet response',
       'plan_premium_feature_4': 'Vaccine library access',
-      'plan_premium_feature_5': 'SMS reminders',
+      'plan_premium_feature_5': 'In-app reminders',
+      'btn_choose_basic': 'Switch to Basic',
       'btn_upgrade': 'Upgrade to Premium',
-      'btn_downgrade': 'Switch to Free',
-      'lbl_current_plan_free': "You're on the Free plan",
+      'lbl_current_plan_basic': "You're on the Basic plan",
       'lbl_current_plan_premium': "You're on the Premium plan",
     },
     'km': {
       'title': 'គម្រោងសមាជិកភាព',
       'subtitle': 'ជ្រើសរើសគម្រោងដែលសមស្របនឹងកសិដ្ឋានរបស់អ្នក។',
-      'plan_free_name': 'ឥតគិតថ្លៃ',
-      'plan_free_price': '\$0/ខែ',
+      'trial_banner': 'ខែដំបូងឥតគិតថ្លៃលើគម្រោងណាមួយ។',
+      'plan_basic_name': 'មូលដ្ឋាន',
+      'plan_basic_price': '\$1.99/ខែ',
+      'plan_basic_trial_note': 'ខែដំបូងឥតគិតថ្លៃ',
       'plan_premium_name': 'Premium',
       'plan_premium_price': '\$4.99/ខែ',
+      'plan_premium_trial_note': 'ខែដំបូងឥតគិតថ្លៃ',
       'plan_current_badge': 'គម្រោងបច្ចុប្បន្ន',
-      'plan_free_feature_1': 'តាមដានហ្វូង',
-      'plan_free_feature_2': 'ការរំលឹកការចាក់វ៉ាក់សាំង',
-      'plan_free_feature_3': 'របាយការណ៍ជំងឺមូលដ្ឋាន',
-      'plan_premium_feature_1': 'អ្វីៗទាំងអស់ក្នុងគម្រោងឥតគិតថ្លៃ',
+      'plan_basic_feature_1': 'តាមដានហ្វូង',
+      'plan_basic_feature_2': 'ការរំលឹកការចាក់វ៉ាក់សាំង',
+      'plan_basic_feature_3': 'ជជែកជាមួយវេជ្ជបណ្ឌិត (មានកំណត់)',
+      'plan_premium_feature_1': 'អ្វីៗទាំងអស់ក្នុងគម្រោងមូលដ្ឋាន',
       'plan_premium_feature_2': 'ការភ្ជាប់វេជ្ជបណ្ឌិតសត្វគ្មានកំណត់',
       'plan_premium_feature_3': 'ការឆ្លើយតបពីវេជ្ជបណ្ឌិតជាអាទិភាព',
       'plan_premium_feature_4': 'ចូលប្រើបណ្ណាល័យវ៉ាក់សាំង',
       'plan_premium_feature_5': 'ការរំលឹកតាម SMS',
+      'btn_choose_basic': 'ប្តូរទៅមូលដ្ឋាន',
       'btn_upgrade': 'ដំឡើងទៅ Premium',
-      'btn_downgrade': 'ប្តូរទៅឥតគិតថ្លៃ',
-      'lbl_current_plan_free': 'អ្នកកំពុងប្រើគម្រោងឥតគិតថ្លៃ',
+      'lbl_current_plan_basic': 'អ្នកកំពុងប្រើគម្រោងមូលដ្ឋាន',
       'lbl_current_plan_premium': 'អ្នកកំពុងប្រើគម្រោង Premium',
     },
   };
@@ -77,6 +87,15 @@ class _SubscriptionPageState extends State<SubscriptionPage> {
   String _getText(String key) {
     return _localizedValues[_currentLang]?[key] ??
         _localizedValues['en']![key]!;
+  }
+
+  String _currentPlanLabel() {
+    switch (_currentPlan) {
+      case PlanTier.basic:
+        return _getText('lbl_current_plan_basic');
+      case PlanTier.premium:
+        return _getText('lbl_current_plan_premium');
+    }
   }
 
   @override
@@ -114,31 +133,65 @@ class _SubscriptionPageState extends State<SubscriptionPage> {
               ),
               const SizedBox(height: 6),
               Text(
-                _isPremium
-                    ? _getText('lbl_current_plan_premium')
-                    : _getText('lbl_current_plan_free'),
+                _currentPlanLabel(),
                 style: const TextStyle(
                   color: textDarkBlue,
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
                 ),
               ),
+              const SizedBox(height: 12),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 10,
+                ),
+                decoration: BoxDecoration(
+                  color: dialogLightGreen,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.celebration_outlined,
+                      color: brandDarkGreen,
+                      size: 18,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        _getText('trial_banner'),
+                        style: const TextStyle(
+                          color: brandDarkGreen,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
               const SizedBox(height: 20),
               _buildPlanCard(
-                name: _getText('plan_free_name'),
-                price: _getText('plan_free_price'),
+                name: _getText('plan_basic_name'),
+                price: _getText('plan_basic_price'),
+                trialNote: _getText('plan_basic_trial_note'),
                 features: [
-                  _getText('plan_free_feature_1'),
-                  _getText('plan_free_feature_2'),
-                  _getText('plan_free_feature_3'),
+                  _getText('plan_basic_feature_1'),
+                  _getText('plan_basic_feature_2'),
+                  _getText('plan_basic_feature_3'),
                 ],
-                isCurrent: !_isPremium,
+                isCurrent: _currentPlan == PlanTier.basic,
                 isPremium: false,
+                buttonLabel: _getText('btn_choose_basic'),
+                onSelect: () => setState(() => _currentPlan = PlanTier.basic),
               ),
               const SizedBox(height: 16),
               _buildPlanCard(
                 name: _getText('plan_premium_name'),
                 price: _getText('plan_premium_price'),
+                trialNote: _getText('plan_premium_trial_note'),
                 features: [
                   _getText('plan_premium_feature_1'),
                   _getText('plan_premium_feature_2'),
@@ -146,8 +199,10 @@ class _SubscriptionPageState extends State<SubscriptionPage> {
                   _getText('plan_premium_feature_4'),
                   _getText('plan_premium_feature_5'),
                 ],
-                isCurrent: _isPremium,
+                isCurrent: _currentPlan == PlanTier.premium,
                 isPremium: true,
+                buttonLabel: _getText('btn_upgrade'),
+                onSelect: () => setState(() => _currentPlan = PlanTier.premium),
               ),
             ],
           ),
@@ -165,6 +220,9 @@ class _SubscriptionPageState extends State<SubscriptionPage> {
     required List<String> features,
     required bool isCurrent,
     required bool isPremium,
+    required String buttonLabel,
+    required VoidCallback onSelect,
+    String? trialNote,
   }) {
     final accentColor = isPremium ? brandDarkGreen : textGrey;
 
@@ -193,15 +251,16 @@ class _SubscriptionPageState extends State<SubscriptionPage> {
                     size: 20,
                   ),
                 ),
-              Text(
-                name,
-                style: const TextStyle(
-                  color: textDarkBlue,
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
+              Expanded(
+                child: Text(
+                  name,
+                  style: const TextStyle(
+                    color: textDarkBlue,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
-              const Spacer(),
               if (isCurrent)
                 Container(
                   padding: const EdgeInsets.symmetric(
@@ -232,6 +291,18 @@ class _SubscriptionPageState extends State<SubscriptionPage> {
               fontWeight: FontWeight.w600,
             ),
           ),
+          if (trialNote != null) ...[
+            const SizedBox(height: 2),
+            Text(
+              trialNote,
+              style: TextStyle(
+                color: accentColor,
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+          ],
           const SizedBox(height: 14),
           ...features.map(
             (feature) => Padding(
@@ -258,7 +329,7 @@ class _SubscriptionPageState extends State<SubscriptionPage> {
               height: 48,
               child: isPremium
                   ? ElevatedButton(
-                      onPressed: () => setState(() => _isPremium = true),
+                      onPressed: onSelect,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: brandDarkGreen,
                         foregroundColor: Colors.white,
@@ -268,7 +339,7 @@ class _SubscriptionPageState extends State<SubscriptionPage> {
                         ),
                       ),
                       child: Text(
-                        _getText('btn_upgrade'),
+                        buttonLabel,
                         style: const TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.bold,
@@ -276,7 +347,7 @@ class _SubscriptionPageState extends State<SubscriptionPage> {
                       ),
                     )
                   : OutlinedButton(
-                      onPressed: () => setState(() => _isPremium = false),
+                      onPressed: onSelect,
                       style: OutlinedButton.styleFrom(
                         foregroundColor: textDarkBlue,
                         side: const BorderSide(color: textGreyLight),
@@ -285,7 +356,7 @@ class _SubscriptionPageState extends State<SubscriptionPage> {
                         ),
                       ),
                       child: Text(
-                        _getText('btn_downgrade'),
+                        buttonLabel,
                         style: const TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.bold,

@@ -76,7 +76,6 @@ class _FarmerDashboardPageState extends State<FarmerDashboardPage>
       'vet_warning': 'Not linked to a vet yet',
       'vet_tap': 'Tap to connect',
       'section_title': 'Your Flocks',
-      'view_history': 'View History',
       'up_to_date': 'Up to date',
       'due_today': 'Due Today',
       'due_tomorrow': 'Due Soon',
@@ -97,7 +96,6 @@ class _FarmerDashboardPageState extends State<FarmerDashboardPage>
       'overdue_flocks': 'Overdue',
       'upcoming_vaccinations': 'Upcoming',
       'overdue_vaccinations': 'Overdue',
-      'view_all': 'View All',
       'days': 'days',
       'weeks': 'weeks',
       'months': 'months',
@@ -114,7 +112,6 @@ class _FarmerDashboardPageState extends State<FarmerDashboardPage>
       'vet_warning': 'មិនទាន់ភ្ជាប់ទៅបសុពេទ្យទេ',
       'vet_tap': 'ប៉ះដើម្បីភ្ជាប់ទំនាក់ទំនង',
       'section_title': 'ហ្វូងបក្សីរបស់អ្នក',
-      'view_history': 'មើលប្រវត្តិ',
       'up_to_date': 'ទាន់ពេល',
       'due_today': 'ថ្ងៃនេះ',
       'due_tomorrow': 'ជិតដល់',
@@ -135,7 +132,6 @@ class _FarmerDashboardPageState extends State<FarmerDashboardPage>
       'overdue_flocks': 'ហួសកំណត់',
       'upcoming_vaccinations': 'ជិតដល់',
       'overdue_vaccinations': 'ហួសកំណត់',
-      'view_all': 'មើលទាំងអស់',
       'days': 'ថ្ងៃ',
       'weeks': 'សប្តាហ៍',
       'months': 'ខែ',
@@ -502,20 +498,14 @@ class _FarmerDashboardPageState extends State<FarmerDashboardPage>
 
                   // Recent Activity Section
                   if (_recentVaccinations.isNotEmpty) ...[
-                    _buildSectionHeader(
-                      _getText('recent_activity'),
-                      _getText('view_all'),
-                    ),
+                    _buildSectionHeader(_getText('recent_activity')),
                     const SizedBox(height: 10),
                     _buildRecentActivityList(),
                     const SizedBox(height: 16),
                   ],
 
                   // Flocks Section
-                  _buildSectionHeader(
-                    _getText('section_title'),
-                    _getText('view_history'),
-                  ),
+                  _buildSectionHeader(_getText('section_title')),
                   const SizedBox(height: 10),
                   if (_flocks.isEmpty) ...[
                     _buildEmptyState(),
@@ -857,81 +847,7 @@ class _FarmerDashboardPageState extends State<FarmerDashboardPage>
     );
   }
 
-  // Widget _buildVaccinationAlertCard() {
-  //   final hasOverdue = _overdueVaccinations > 0;
-
-  //   return Container(
-  //     width: double.infinity,
-  //     padding: const EdgeInsets.all(16),
-  //     decoration: BoxDecoration(
-  //       color: hasOverdue ? const Color(0xFFFEECEB) : const Color(0xFFFFF7E5),
-  //       borderRadius: BorderRadius.circular(16),
-  //       border: Border.all(
-  //         color: hasOverdue ? const Color(0xFFEF4444) : const Color(0xFFB78209),
-  //         width: 1.5,
-  //       ),
-  //     ),
-  //     // child: Row(
-  //     //   children: [
-  //     //     Container(
-  //     //       padding: const EdgeInsets.all(10),
-  //     //       decoration: BoxDecoration(
-  //     //         color: hasOverdue
-  //     //             ? const Color(0xFFDC2626)
-  //     //             : const Color(0xFFB78209),
-  //     //         shape: BoxShape.circle,
-  //     //       ),
-  //     //       child: Icon(
-  //     //         hasOverdue ? Icons.warning_rounded : Icons.schedule_rounded,
-  //     //         color: Colors.white,
-  //     //         size: 20,
-  //     //       ),
-  //     //     ),
-  //     //     const SizedBox(width: 16),
-  //     //     Expanded(
-  //     //       child: Column(
-  //     //         crossAxisAlignment: CrossAxisAlignment.start,
-  //     //         children: [
-  //     //           Text(
-  //     //             hasOverdue
-  //     //                 ? '${_getText('overdue_vaccinations')}: $_overdueVaccinations'
-  //     //                 : '${_getText('upcoming_vaccinations')}: $_upcomingVaccinations',
-  //     //             style: TextStyle(
-  //     //               color: hasOverdue
-  //     //                   ? const Color(0xFF7F1D1D)
-  //     //                   : const Color(0xFF78350F),
-  //     //               fontSize: 16,
-  //     //               fontWeight: FontWeight.bold,
-  //     //             ),
-  //     //           ),
-  //     //           const SizedBox(height: 4),
-  //     //           Text(
-  //     //             hasOverdue
-  //     //                 ? 'Action required: Some vaccinations are overdue'
-  //     //                 : 'Vaccinations due within the next 7 days',
-  //     //             style: TextStyle(
-  //     //               color: hasOverdue
-  //     //                   ? const Color(0xFFDC2626)
-  //     //                   : const Color(0xFFB78209),
-  //     //               fontSize: 13,
-  //     //             ),
-  //     //           ),
-  //     //         ],
-  //     //       ),
-  //     //     ),
-  //     //     Icon(
-  //     //       Icons.arrow_forward_ios,
-  //     //       color: hasOverdue
-  //     //           ? const Color(0xFFDC2626)
-  //     //           : const Color(0xFFB78209),
-  //     //       size: 16,
-  //     //     ),
-  //     //   ],
-  //     // ),
-  //   );
-  // }
-
-  Widget _buildSectionHeader(String title, String actionText) {
+  Widget _buildSectionHeader(String title) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -941,17 +857,6 @@ class _FarmerDashboardPageState extends State<FarmerDashboardPage>
             color: textDarkBlue,
             fontSize: 18,
             fontWeight: FontWeight.bold,
-          ),
-        ),
-        TextButton(
-          onPressed: () {},
-          child: Text(
-            actionText,
-            style: const TextStyle(
-              color: brandHeaderGreen,
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
-            ),
           ),
         ),
       ],
