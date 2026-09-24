@@ -65,7 +65,6 @@ class _LogVaccinationStep3PageState extends State<LogVaccinationStep3Page> {
   static const Color textDarkBlue = Color(0xFF0A1C33);
   static const Color textGrey = Color(0xFF5A6B82);
   static const Color textGreyLight = Color(0xFFE2E8F0);
-  static const Color bannerGreenBg = Color(0xFF135D29);
   static const Color statusBadgeBg = Color(0xFFE2ECE4);
 
   // Khmer & English Translations
@@ -88,8 +87,6 @@ class _LogVaccinationStep3PageState extends State<LogVaccinationStep3Page> {
       'reminder_on': 'បានបើក',
       'reminder_off': 'មិនបានបើក',
       'lbl_status_on_time': 'ទាន់ពេលវេលា',
-      'banner_text':
-          'ប័ណ្ណបញ្ជាក់សុខភាព\nមាន់របស់អ្នកនឹងទទួលបានវិញ្ញាបនបត្រសុខភាពឌីជីថលភ្លាមៗ។',
       'btn_confirm': 'បញ្ជាក់ និងរក្សាទុក',
       'btn_cancel': 'បោះបង់',
       'msg_success': 'បានកត់ត្រាការចាក់វ៉ាក់សាំងជោគជ័យ!',
@@ -113,8 +110,6 @@ class _LogVaccinationStep3PageState extends State<LogVaccinationStep3Page> {
       'reminder_on': 'Enabled',
       'reminder_off': 'Disabled',
       'lbl_status_on_time': 'On Time',
-      'banner_text':
-          'Health Certificate\nYour flock will receive a digital health certificate immediately.',
       'btn_confirm': 'Confirm & Save',
       'btn_cancel': 'Cancel',
       'msg_success': 'Vaccination record saved successfully!',
@@ -478,11 +473,6 @@ class _LogVaccinationStep3PageState extends State<LogVaccinationStep3Page> {
 
               const SizedBox(height: 16),
 
-              // Digital Health Certificate Banner Card
-              _buildHealthCertificateBanner(),
-
-              const SizedBox(height: 16),
-
               // Tablet Preview / Attached Photo Card
               _buildPhotoPreviewCard(),
 
@@ -824,44 +814,6 @@ class _LogVaccinationStep3PageState extends State<LogVaccinationStep3Page> {
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  // Green Health Certificate Badge Banner
-  Widget _buildHealthCertificateBanner() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: bannerGreenBg,
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.2),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(
-              Icons.verified_user_outlined,
-              color: Colors.white,
-              size: 24,
-            ),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Text(
-              _getText('banner_text'),
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 13,
-                height: 1.4,
-              ),
-            ),
-          ),
-        ],
       ),
     );
   }
