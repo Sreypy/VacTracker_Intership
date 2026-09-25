@@ -4,10 +4,9 @@ import 'package:go_router/go_router.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:frontend/services/storage_service.dart';
 import 'package:frontend/services/auth_service.dart';
-import 'package:frontend/widgets/notification_header_button.dart';
 
 class VetProfileScreen extends StatefulWidget {
-  final String currentLanguage; // 'en' or 'km'
+  final String currentLanguage;
   final ValueChanged<String>? onLanguageChanged;
 
   const VetProfileScreen({
@@ -21,28 +20,22 @@ class VetProfileScreen extends StatefulWidget {
 }
 
 class _VetProfileScreenState extends State<VetProfileScreen> {
-  // Theme Colors
   static const Color primaryGreen = Color(0xFF034418);
   static const Color backgroundLight = Color(0xFFF8FAFC);
   static const Color cardBg = Colors.white;
   static const Color cardHeaderBg = Color(0xFFF1F5F9);
-
   static const Color textDark = Color(0xFF0A1C33);
   static const Color textMuted = Color(0xFF64748B);
-
   static const Color badgeVerifiedBg = Color(0xFFDCFCE7);
   static const Color badgeVerifiedText = Color(0xFF15803D);
-
   static const Color logoutBg = Color(0xFFFEE2E2);
   static const Color logoutText = Color(0xFFDC2626);
 
-  // State Variables
   late String _selectedLanguage;
   bool _newSickReportsEnabled = true;
   bool _clientOverdueAlertsEnabled = true;
   String? _vetCode;
 
-  // Profile Data
   Map<String, dynamic>? _profileData;
   bool _isLoadingProfile = true;
   String? _errorMessage;
@@ -66,8 +59,6 @@ class _VetProfileScreenState extends State<VetProfileScreen> {
 
       setState(() {
         _profileData = profile;
-        // Short user-facing vet code (e.g. SOKHA-4827). The backend ensures
-        // every veterinarian has one; fall back to the legacy share code.
         _vetCode = (profile['vet_code'] ?? profile['share_code'])?.toString();
         _isLoadingProfile = false;
       });
@@ -115,7 +106,7 @@ class _VetProfileScreenState extends State<VetProfileScreen> {
         text: isKhmer
             ? 'ភ្ជាប់ជាមួយខ្ញុំនៅក្នុង VacTracker។\n\nកូដវេជ្ជបណ្ឌិត: $code'
             : 'Connect with me on VacTracker.\n\nVet Code: $code',
-        sharePositionOrigin: Rect.fromLTWH(0, 0, 0, 0),
+        sharePositionOrigin: const Rect.fromLTWH(0, 0, 0, 0),
       ),
     );
   }
@@ -224,10 +215,8 @@ class _VetProfileScreenState extends State<VetProfileScreen> {
                                 await authService.updateProfile(updatedData);
 
                                 if (mounted) {
-                                  // ignore: use_build_context_synchronously
                                   Navigator.pop(context);
                                   _loadProfileData();
-                                  // ignore: use_build_context_synchronously
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     SnackBar(
                                       content: Text(
@@ -241,7 +230,6 @@ class _VetProfileScreenState extends State<VetProfileScreen> {
                                 }
                               } catch (e) {
                                 setModalState(() => isSaving = false);
-                                // ignore: use_build_context_synchronously
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
                                     content: Text('Error: ${e.toString()}'),
@@ -328,82 +316,56 @@ class _VetProfileScreenState extends State<VetProfileScreen> {
   Widget build(BuildContext context) {
     final bool isKhmer = _selectedLanguage == 'km';
 
-    return Scaffold(
-      backgroundColor: backgroundLight,
-      appBar: AppBar(
-        backgroundColor: backgroundLight,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        automaticallyImplyLeading: false,
-        title: const Text(
-          'VacTracker',
-          style: TextStyle(
-            color: primaryGreen,
-            fontSize: 22,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        actions: [
-          NotificationHeaderButton(
-            languageCode: _selectedLanguage,
-            color: primaryGreen,
-            notificationsRoute: '/vet-notifications',
-          ),
-          const SizedBox(width: 6),
-        ],
-      ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          physics: const BouncingScrollPhysics(),
-          padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 12.0),
-          child: Column(
-            children: [
-              _buildDoctorProfileCard(isKhmer),
-              const SizedBox(height: 20),
-              _buildUserInfoCard(isKhmer),
-              const SizedBox(height: 16),
-              _buildLanguageCard(isKhmer),
-              const SizedBox(height: 16),
-              _buildNotificationsCard(isKhmer),
-              const SizedBox(height: 16),
-              _buildConnectWithFarmersCard(isKhmer),
-              const SizedBox(height: 16),
-              _buildAppInfoCard(isKhmer),
-              const SizedBox(height: 24),
-
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: _logout,
-                  icon: const Icon(
-                    Icons.logout_rounded,
+    return Container(
+      color: backgroundLight,
+      child: SingleChildScrollView(
+        physics: const BouncingScrollPhysics(),
+        padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 16.0),
+        child: Column(
+          children: [
+            _buildDoctorProfileCard(isKhmer),
+            const SizedBox(height: 20),
+            _buildUserInfoCard(isKhmer),
+            const SizedBox(height: 16),
+            _buildLanguageCard(isKhmer),
+            const SizedBox(height: 16),
+            _buildNotificationsCard(isKhmer),
+            const SizedBox(height: 16),
+            _buildConnectWithFarmersCard(isKhmer),
+            const SizedBox(height: 16),
+            _buildAppInfoCard(isKhmer),
+            const SizedBox(height: 24),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: _logout,
+                icon: const Icon(
+                  Icons.logout_rounded,
+                  color: logoutText,
+                  size: 20,
+                ),
+                label: Text(
+                  isKhmer ? 'ចាកចេញ' : 'Log Out',
+                  style: const TextStyle(
                     color: logoutText,
-                    size: 20,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
                   ),
-                  label: Text(
-                    isKhmer ? 'ចាកចេញ' : 'Log Out',
-                    style: const TextStyle(
-                      color: logoutText,
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: logoutBg,
-                    elevation: 0,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
-                    ),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: logoutBg,
+                  elevation: 0,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
                   ),
                 ),
               ),
-              const SizedBox(height: 24),
-            ],
-          ),
+            ),
+            const SizedBox(height: 24),
+          ],
         ),
       ),
-      bottomNavigationBar: _buildBottomNavigationBar(),
     );
   }
 
@@ -512,7 +474,6 @@ class _VetProfileScreenState extends State<VetProfileScreen> {
         mainAxisAlignment: MainAxisAlignment.center,
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          // Centered Profile Image / Avatar
           if (profileImageUrl != null && profileImageUrl.isNotEmpty)
             Container(
               width: 80,
@@ -545,8 +506,6 @@ class _VetProfileScreenState extends State<VetProfileScreen> {
               ),
             ),
           const SizedBox(height: 16),
-
-          // Centered Name
           Text(
             name,
             style: const TextStyle(
@@ -557,8 +516,6 @@ class _VetProfileScreenState extends State<VetProfileScreen> {
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 4),
-
-          // Centered Specialization
           Text(
             specialization,
             style: const TextStyle(
@@ -569,8 +526,6 @@ class _VetProfileScreenState extends State<VetProfileScreen> {
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 12),
-
-          // Centered Verified Badge
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
             decoration: BoxDecoration(
@@ -588,8 +543,6 @@ class _VetProfileScreenState extends State<VetProfileScreen> {
             ),
           ),
           const SizedBox(height: 16),
-
-          // Centered Edit Profile Button
           OutlinedButton.icon(
             onPressed: () => _showEditProfileDialog(isKhmer),
             icon: const Icon(
@@ -619,7 +572,6 @@ class _VetProfileScreenState extends State<VetProfileScreen> {
   }
 
   Widget _buildUserInfoCard(bool isKhmer) {
-    // final email = _profileData?['email'] ?? 'Not provided';
     final phone =
         _profileData?['phone'] ?? _profileData?['phone_number'] ?? 'N/A';
     final role = _profileData?['role'] ?? 'Veterinary Specialist';
@@ -641,12 +593,6 @@ class _VetProfileScreenState extends State<VetProfileScreen> {
       ),
       child: Column(
         children: [
-          // _buildInfoTile(
-          //   icon: Icons.email_outlined,
-          //   title: isKhmer ? 'អ៊ីមែល' : 'Email',
-          //   value: email,
-          // ),
-          // Divider(height: 1, color: Colors.grey[200]),
           _buildInfoTile(
             icon: Icons.phone_outlined,
             title: isKhmer ? 'លេខទូរស័ព្ទ' : 'Phone',
@@ -1047,48 +993,6 @@ class _VetProfileScreenState extends State<VetProfileScreen> {
           child,
         ],
       ),
-    );
-  }
-
-  Widget _buildBottomNavigationBar() {
-    return BottomNavigationBar(
-      type: BottomNavigationBarType.fixed,
-      backgroundColor: Colors.white,
-      selectedItemColor: primaryGreen,
-      unselectedItemColor: Colors.grey[500],
-      currentIndex: 3,
-      onTap: (index) {
-        if (index == 0) {
-          context.go('/vet-dashboard?lang=$_selectedLanguage');
-          return;
-        } else if (index == 1) {
-          context.go('/vet-reports?lang=$_selectedLanguage');
-          return;
-        } else if (index == 2) {
-          context.go('/my-farmers/$_selectedLanguage');
-          return;
-        }
-      },
-      showSelectedLabels: false,
-      showUnselectedLabels: false,
-      items: const [
-        BottomNavigationBarItem(
-          icon: Icon(Icons.home_outlined, size: 24),
-          label: 'Home',
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.assignment_outlined, size: 24),
-          label: 'Reports',
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.people_outline_rounded, size: 24),
-          label: 'Farmers',
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.person_outline_rounded, size: 24),
-          label: 'Profile',
-        ),
-      ],
     );
   }
 }

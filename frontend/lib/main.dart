@@ -30,6 +30,7 @@ import 'package:frontend/screens/vet/vet_notification_screen.dart';
 import 'package:frontend/screens/vet/vet_profile_page.dart';
 import 'package:frontend/screens/vet/vet_register_page.dart';
 import 'package:frontend/screens/vet/vet_response_sent_screen.dart';
+import 'package:frontend/screens/vet/vet_shell_screen.dart';
 import 'package:frontend/screens/welcome_page.dart';
 import 'package:frontend/widgets/farmer_bottom_navigation.dart';
 import 'package:frontend/widgets/notification_header_button.dart';
@@ -38,6 +39,8 @@ import 'package:go_router/go_router.dart';
 final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>();
 final GlobalKey<NavigatorState> _farmerShellNavigatorKey =
     GlobalKey<NavigatorState>();
+final GlobalKey<NavigatorState> _vetShellNavigatorKey =
+    GlobalKey<NavigatorState>();
 
 /// Shared Shell wrapper that keeps Header and Footer persistent for ALL Farmer features
 class FarmerShellLayout extends StatelessWidget {
@@ -45,7 +48,6 @@ class FarmerShellLayout extends StatelessWidget {
 
   const FarmerShellLayout({super.key, required this.child});
 
-  /// Keeps the relevant footer tab active even when inside deep sub-features
   int _calculateSelectedIndex(BuildContext context) {
     final String location = GoRouterState.of(context).uri.path;
 
@@ -139,7 +141,7 @@ class FarmerShellLayout extends StatelessWidget {
           const SizedBox(width: 8),
         ],
       ),
-      body: child, // Swaps content dynamically
+      body: child,
       bottomNavigationBar: FarmerBottomNavigation(
         currentIndex: currentIndex,
         languageCode: languageCode,
@@ -222,7 +224,6 @@ final GoRouter _router = GoRouter(
         return FarmerShellLayout(child: child);
       },
       routes: [
-        // Tab 2: Dashboard
         GoRoute(
           path: '/farmer-dashboard',
           builder: (context, state) {
@@ -234,8 +235,6 @@ final GoRouter _router = GoRouter(
             );
           },
         ),
-
-        // Notifications
         GoRoute(
           path: '/notifications/:lang',
           builder: (context, state) {
@@ -243,8 +242,6 @@ final GoRouter _router = GoRouter(
             return NotificationScreen(languageCode: language);
           },
         ),
-
-        // Tab 0: Sick Reports & Sick Report Flows
         GoRoute(
           path: '/my-sick-reports',
           builder: (context, state) => MySickReportsScreen(
@@ -265,8 +262,6 @@ final GoRouter _router = GoRouter(
             languageCode: state.uri.queryParameters['lang'] ?? 'en',
           ),
         ),
-
-        // Tab 1: Log Vaccine Steps
         GoRoute(
           path: '/log-vaccination-step1/:lang',
           builder: (context, state) {
@@ -313,8 +308,6 @@ final GoRouter _router = GoRouter(
             );
           },
         ),
-
-        // Tab 3: Vaccine Library & Details
         GoRoute(
           path: '/vaccine-library/:lang',
           builder: (context, state) {
@@ -333,8 +326,6 @@ final GoRouter _router = GoRouter(
             );
           },
         ),
-
-        // Tab 4: Profile & Subscriptions
         GoRoute(
           path: '/farmer-profile/:lang',
           builder: (context, state) {
@@ -349,8 +340,6 @@ final GoRouter _router = GoRouter(
             return SubscriptionPage(languageCode: language);
           },
         ),
-
-        // Flock Management Routes
         GoRoute(
           path: '/add-flock/:lang',
           builder: (context, state) {
@@ -390,72 +379,80 @@ final GoRouter _router = GoRouter(
     ),
 
     // =========================================================================
-    // VET ROUTES (Independent of Farmer Shell)
+    // ALL VET FEATURES (Persistent Header & Persistent Footer Shell)
     // =========================================================================
-    GoRoute(
-      path: '/vet-dashboard',
-      builder: (context, state) {
-        final language = state.uri.queryParameters['lang'] ?? 'en';
-        return VetDashboardPage(languageCode: language);
+    ShellRoute(
+      navigatorKey: _vetShellNavigatorKey,
+      builder: (context, state, child) {
+        return VetShellScreen(child: child);
       },
-    ),
-    GoRoute(
-      path: '/vet-reports',
-      builder: (context, state) {
-        final language = state.uri.queryParameters['lang'] ?? 'en';
-        return VetSickReportsScreen(languageCode: language);
-      },
-    ),
-    GoRoute(
-      path: '/vet-reports/:reportId',
-      builder: (context, state) {
-        final reportId = state.pathParameters['reportId'] ?? '';
-        final language = state.uri.queryParameters['lang'] ?? 'en';
-        return VetSickReportDetailScreen(
-          reportId: reportId,
-          languageCode: language,
-        );
-      },
-    ),
-    GoRoute(
-      path: '/vet-response-sent/:reportId',
-      builder: (context, state) {
-        final reportId = state.pathParameters['reportId'] ?? '';
-        final language = state.uri.queryParameters['lang'] ?? 'en';
-        return VetResponseSentScreen(
-          reportId: reportId,
-          languageCode: language,
-        );
-      },
-    ),
-    GoRoute(
-      path: '/my-farmers/:lang',
-      builder: (context, state) {
-        final language = state.pathParameters['lang'] ?? 'en';
-        return MyFarmersPage(languageCode: language);
-      },
-    ),
-    GoRoute(
-      path: '/farmer-detail/:farmerId/:lang',
-      builder: (context, state) {
-        final farmerId = int.parse(state.pathParameters['farmerId'] ?? '0');
-        final language = state.pathParameters['lang'] ?? 'en';
-        return FarmerDetailPage(farmerId: farmerId, languageCode: language);
-      },
-    ),
-    GoRoute(
-      path: '/vet-profile/:lang',
-      builder: (context, state) {
-        final language = state.pathParameters['lang'] ?? 'en';
-        return VetProfileScreen(currentLanguage: language);
-      },
-    ),
-    GoRoute(
-      path: '/vet-notifications/:lang',
-      builder: (context, state) {
-        final language = state.pathParameters['lang'] ?? 'en';
-        return VetNotificationScreen(languageCode: language);
-      },
+      routes: [
+        GoRoute(
+          path: '/vet-dashboard',
+          builder: (context, state) {
+            final language = state.uri.queryParameters['lang'] ?? 'en';
+            return VetDashboardPage(languageCode: language);
+          },
+        ),
+        GoRoute(
+          path: '/vet-notifications/:lang',
+          builder: (context, state) {
+            final language = state.pathParameters['lang'] ?? 'en';
+            return VetNotificationScreen(languageCode: language);
+          },
+        ),
+        GoRoute(
+          path: '/vet-reports',
+          builder: (context, state) {
+            final language = state.uri.queryParameters['lang'] ?? 'en';
+            return VetSickReportsScreen(languageCode: language);
+          },
+        ),
+        GoRoute(
+          path: '/vet-reports/:reportId',
+          builder: (context, state) {
+            final reportId = state.pathParameters['reportId'] ?? '';
+            final language = state.uri.queryParameters['lang'] ?? 'en';
+            return VetSickReportDetailScreen(
+              reportId: reportId,
+              languageCode: language,
+            );
+          },
+        ),
+        GoRoute(
+          path: '/vet-response-sent/:reportId',
+          builder: (context, state) {
+            final reportId = state.pathParameters['reportId'] ?? '';
+            final language = state.uri.queryParameters['lang'] ?? 'en';
+            return VetResponseSentScreen(
+              reportId: reportId,
+              languageCode: language,
+            );
+          },
+        ),
+        GoRoute(
+          path: '/my-farmers/:lang',
+          builder: (context, state) {
+            final language = state.pathParameters['lang'] ?? 'en';
+            return MyFarmersPage(languageCode: language);
+          },
+        ),
+        GoRoute(
+          path: '/farmer-detail/:farmerId/:lang',
+          builder: (context, state) {
+            final farmerId = int.parse(state.pathParameters['farmerId'] ?? '0');
+            final language = state.pathParameters['lang'] ?? 'en';
+            return FarmerDetailPage(farmerId: farmerId, languageCode: language);
+          },
+        ),
+        GoRoute(
+          path: '/vet-profile/:lang',
+          builder: (context, state) {
+            final language = state.pathParameters['lang'] ?? 'en';
+            return VetProfileScreen(currentLanguage: language);
+          },
+        ),
+      ],
     ),
   ],
 );

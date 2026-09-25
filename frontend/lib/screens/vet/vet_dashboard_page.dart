@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../services/auth_service.dart';
 import '../../services/vet_dashboard_service.dart';
-import '../../widgets/notification_header_button.dart';
 
 class VetDashboardPage extends StatefulWidget {
   final String languageCode;
@@ -19,8 +18,6 @@ class VetDashboardPage extends StatefulWidget {
 }
 
 class _VetDashboardPageState extends State<VetDashboardPage> {
-  int _currentIndex = 0;
-
   // Modern Color Palette
   static const Color primaryGreen = Color(0xFF0F5132);
   static const Color accentGreen = Color(0xFF10B981);
@@ -59,10 +56,6 @@ class _VetDashboardPageState extends State<VetDashboardPage> {
       'metric_resolved_reports': 'Resolved Reports',
       'unit_flocks': 'Flocks',
       'unit_birds': 'Birds',
-      'nav_home': 'Home',
-      'nav_reports': 'Reports',
-      'nav_farmers': 'Farmers',
-      'nav_profile': 'Profile',
       'error_title': 'Unable to load dashboard',
       'retry': 'Retry',
       'empty_farmers_title': 'No assigned farmers yet',
@@ -87,10 +80,6 @@ class _VetDashboardPageState extends State<VetDashboardPage> {
       'metric_resolved_reports': 'បានដោះស្រាយ',
       'unit_flocks': 'ហ្វូង',
       'unit_birds': 'ក្បាល',
-      'nav_home': 'ទំព័រដើម',
-      'nav_reports': 'របាយការណ៍',
-      'nav_farmers': 'កសិករ',
-      'nav_profile': 'ប្រវត្តិរូប',
       'error_title': 'មិនអាចផ្ទុកផ្ទាំងព័ត៌មានបានទេ',
       'retry': 'ព្យាយាមម្តងទៀត',
       'empty_farmers_title': 'មិនមានកសិករដែលបានកំណត់នៅឡើយទេ',
@@ -107,9 +96,6 @@ class _VetDashboardPageState extends State<VetDashboardPage> {
         _localizedValues['en']![key]!;
   }
 
-  /// Localized per-farmer status badge label.
-  /// English keeps the backend-provided `statusText` (e.g. "2 SICK REPORTS");
-  /// Khmer maps from the status enum because backend text is English only.
   String _farmerStatusText(FarmerData farmer) {
     if (widget.languageCode != 'km') return farmer.statusText;
     switch (farmer.status) {
@@ -129,7 +115,6 @@ class _VetDashboardPageState extends State<VetDashboardPage> {
   bool _isLoading = true;
   String? _errorMessage;
   String _vetName = 'Dr. Sokha';
-  String _vetInitials = 'S';
 
   final VetDashboardService _vetDashboardService = VetDashboardService();
   final AuthService _authService = AuthService();
@@ -155,14 +140,6 @@ class _VetDashboardPageState extends State<VetDashboardPage> {
       final name = profile['name']?.toString() ?? 'Dr. Sokha';
       setState(() {
         _vetName = name;
-        if (name.isNotEmpty) {
-          final nameParts = name.trim().split(' ');
-          if (nameParts.length >= 2) {
-            _vetInitials = '${nameParts[0][0]}${nameParts[1][0]}'.toUpperCase();
-          } else if (nameParts.isNotEmpty && nameParts[0].isNotEmpty) {
-            _vetInitials = nameParts[0][0].toUpperCase();
-          }
-        }
       });
     } catch (_) {}
   }
@@ -191,140 +168,52 @@ class _VetDashboardPageState extends State<VetDashboardPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: backgroundSurface,
-      appBar: _buildAppBar(),
-      body: SafeArea(
-        child: RefreshIndicator(
-          color: primaryGreen,
-          backgroundColor: Colors.white,
-          onRefresh: () async {
-            await _fetchVetProfile();
-            await _fetchDashboardStats();
-          },
-          child: CustomScrollView(
-            physics: const BouncingScrollPhysics(
-              parent: AlwaysScrollableScrollPhysics(),
-            ),
-            slivers: [
-              SliverPadding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 16,
-                ),
-                sliver: SliverList(
-                  delegate: SliverChildListDelegate([
-                    _buildHeaderBanner(),
-                    const SizedBox(height: 24),
-                    if (_isLoading)
-                      _buildLoadingView()
-                    else if (_errorMessage != null)
-                      _buildErrorView()
-                    else ...[
-                      _buildSectionHeader(_getText('section_overview')),
-                      const SizedBox(height: 12),
-                      _buildMetricsGrid(),
-                      const SizedBox(height: 28),
-                      _buildSectionHeader(
-                        _getText('section_my_farmers'),
-                        actionText: _getText('action_view_all'),
-                        onActionTap: () =>
-                            context.push('/my-farmers/${widget.languageCode}'),
-                      ),
-                      const SizedBox(height: 12),
-                      if (_dashboardStats?.farmers.isEmpty ?? true)
-                        _buildEmptyFarmersState()
-                      else
-                        ..._dashboardStats!.farmers.map(_buildFarmerCard),
-                    ],
-                  ]),
-                ),
-              ),
-            ],
+    return Container(
+      color: backgroundSurface,
+      child: RefreshIndicator(
+        color: primaryGreen,
+        backgroundColor: Colors.white,
+        onRefresh: () async {
+          await _fetchVetProfile();
+          await _fetchDashboardStats();
+        },
+        child: CustomScrollView(
+          physics: const BouncingScrollPhysics(
+            parent: AlwaysScrollableScrollPhysics(),
           ),
+          slivers: [
+            SliverPadding(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+              sliver: SliverList(
+                delegate: SliverChildListDelegate([
+                  _buildHeaderBanner(),
+                  const SizedBox(height: 24),
+                  if (_isLoading)
+                    _buildLoadingView()
+                  else if (_errorMessage != null)
+                    _buildErrorView()
+                  else ...[
+                    _buildSectionHeader(_getText('section_overview')),
+                    const SizedBox(height: 12),
+                    _buildMetricsGrid(),
+                    const SizedBox(height: 28),
+                    _buildSectionHeader(
+                      _getText('section_my_farmers'),
+                      actionText: _getText('action_view_all'),
+                      onActionTap: () =>
+                          context.push('/my-farmers/${widget.languageCode}'),
+                    ),
+                    const SizedBox(height: 12),
+                    if (_dashboardStats?.farmers.isEmpty ?? true)
+                      _buildEmptyFarmersState()
+                    else
+                      ..._dashboardStats!.farmers.map(_buildFarmerCard),
+                  ],
+                ]),
+              ),
+            ),
+          ],
         ),
-      ),
-      bottomNavigationBar: _buildBottomNavigationBar(),
-    );
-  }
-
-  PreferredSizeWidget _buildAppBar() {
-    return AppBar(
-      backgroundColor: cardSurface,
-      elevation: 0,
-      scrolledUnderElevation: 0.5,
-      titleSpacing: 20,
-      centerTitle: false,
-      actions: [
-        NotificationHeaderButton(
-          languageCode: widget.languageCode,
-          color: textPrimary,
-          // showCount: true,
-          notificationsRoute: '/vet-notifications',
-        ),
-        const SizedBox(width: 6),
-      ],
-      bottom: PreferredSize(
-        preferredSize: const Size.fromHeight(1),
-        child: Container(color: borderSubtle, height: 1),
-      ),
-      title: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(2),
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(
-                color: primaryGreen.withValues(alpha: 0.2),
-                width: 1.5,
-              ),
-            ),
-            child: CircleAvatar(
-              radius: 17,
-              backgroundColor: lightGreenBg,
-              backgroundImage:
-                  widget.profileImageUrl != null &&
-                      widget.profileImageUrl!.isNotEmpty
-                  ? NetworkImage(widget.profileImageUrl!)
-                  : null,
-              child:
-                  widget.profileImageUrl == null ||
-                      widget.profileImageUrl!.isEmpty
-                  ? Text(
-                      _vetInitials,
-                      style: const TextStyle(
-                        color: primaryGreen,
-                        fontSize: 13,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    )
-                  : null,
-            ),
-          ),
-          const SizedBox(width: 12),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                "VacTracker",
-                style: TextStyle(
-                  color: textPrimary,
-                  fontSize: 18,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: -0.3,
-                ),
-              ),
-              Text(
-                _getText('veterinary_portal'),
-                style: const TextStyle(
-                  color: textSecondary,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ],
-          ),
-        ],
       ),
     );
   }
@@ -677,7 +566,6 @@ class _VetDashboardPageState extends State<VetDashboardPage> {
                         ),
                       ),
                       const SizedBox(height: 4),
-                      // FIXED: Inner Row with Flexible wraps to prevent overflow
                       Row(
                         children: [
                           const Icon(
@@ -757,65 +645,6 @@ class _VetDashboardPageState extends State<VetDashboardPage> {
             ),
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _buildBottomNavigationBar() {
-    return Container(
-      decoration: const BoxDecoration(
-        color: cardSurface,
-        border: Border(top: BorderSide(color: borderSubtle, width: 1)),
-      ),
-      child: BottomNavigationBar(
-        currentIndex: _currentIndex,
-        onTap: (index) {
-          setState(() => _currentIndex = index);
-          switch (index) {
-            case 0:
-              context.go('/vet-dashboard?lang=${widget.languageCode}');
-              break;
-            case 1:
-              context.go('/vet-reports?lang=${widget.languageCode}');
-              break;
-            case 2:
-              context.go('/my-farmers/${widget.languageCode}');
-              break;
-            case 3:
-              context.go('/vet-profile/${widget.languageCode}');
-              break;
-          }
-        },
-        type: BottomNavigationBarType.fixed,
-        backgroundColor: cardSurface,
-        selectedItemColor: primaryGreen,
-        unselectedItemColor: textMuted,
-        showSelectedLabels: false,
-        showUnselectedLabels: false,
-        selectedFontSize: 11,
-        unselectedFontSize: 11,
-        items: [
-          BottomNavigationBarItem(
-            icon: const Icon(Icons.home_outlined, size: 24),
-            activeIcon: const Icon(Icons.home_rounded, size: 24),
-            label: _getText('nav_home'),
-          ),
-          BottomNavigationBarItem(
-            icon: const Icon(Icons.assignment_outlined, size: 24),
-            activeIcon: const Icon(Icons.assignment_rounded, size: 24),
-            label: _getText('nav_reports'),
-          ),
-          BottomNavigationBarItem(
-            icon: const Icon(Icons.people_outline_rounded, size: 24),
-            activeIcon: const Icon(Icons.people_rounded, size: 24),
-            label: _getText('nav_farmers'),
-          ),
-          BottomNavigationBarItem(
-            icon: const Icon(Icons.person_outline_rounded, size: 24),
-            activeIcon: const Icon(Icons.person_rounded, size: 24),
-            label: _getText('nav_profile'),
-          ),
-        ],
       ),
     );
   }

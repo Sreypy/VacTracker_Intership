@@ -1,11 +1,9 @@
 import 'dart:convert';
-
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:http/http.dart' as http;
 import 'package:frontend/config/api_config.dart';
 import 'package:frontend/services/storage_service.dart';
-import 'package:frontend/widgets/notification_header_button.dart';
 
 class VetSickReportsScreen extends StatefulWidget {
   final String languageCode;
@@ -17,7 +15,6 @@ class VetSickReportsScreen extends StatefulWidget {
 }
 
 class _VetSickReportsScreenState extends State<VetSickReportsScreen> {
-  // Theme Colors
   static const Color primaryGreen = Color(0xFF034418);
   static const Color backgroundLight = Color(0xFFF8FAFC);
   static const Color cardBg = Colors.white;
@@ -25,22 +22,19 @@ class _VetSickReportsScreenState extends State<VetSickReportsScreen> {
   static const Color textMuted = Color(0xFF64748B);
   static const Color inputBorder = Color(0xFFCBD5E1);
 
-  // Status Colors
-  static const Color statusNew = Color(0xFFDC2626); // Red
-  static const Color statusReviewing = Color(0xFFF59E0B); // Amber
-  static const Color statusResolved = Color(0xFF10B981); // Green
+  static const Color statusNew = Color(0xFFDC2626);
+  static const Color statusReviewing = Color(0xFFF59E0B);
+  static const Color statusResolved = Color(0xFF10B981);
 
   static const Color statusNewBg = Color(0xFFFEE2E2);
   static const Color statusReviewingBg = Color(0xFFFEF3C7);
   static const Color statusResolvedBg = Color(0xFFD1FAE5);
 
-  // State
   bool _isLoading = true;
   String? _errorMessage;
   List<Map<String, dynamic>> _reports = [];
   String? _selectedFilter;
 
-  // Localization
   static const Map<String, Map<String, String>> _localizedValues = {
     'en': {
       'title': 'Sick Reports',
@@ -230,98 +224,70 @@ class _VetSickReportsScreenState extends State<VetSickReportsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: backgroundLight,
-      appBar: AppBar(
-        backgroundColor: backgroundLight,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: primaryGreen),
-          onPressed: () {
-            if (context.canPop()) {
-              context.pop();
-            } else {
-              context.go('/vet-dashboard?lang=${widget.languageCode}');
-            }
-          },
-        ),
-        title: Text(
-          _getText('title'),
-          style: const TextStyle(
-            color: primaryGreen,
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        actions: [
-          NotificationHeaderButton(
-            languageCode: widget.languageCode,
-            color: primaryGreen,
-            notificationsRoute: '/vet-notifications',
-          ),
-          const SizedBox(width: 6),
-        ],
-      ),
-      body: _isLoading
-          ? Center(child: Text(_getText('loading')))
-          : _errorMessage != null
-          ? _buildErrorState()
-          : RefreshIndicator(
-              onRefresh: _loadReports,
-              color: primaryGreen,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+    if (_isLoading) {
+      return const Center(
+        child: CircularProgressIndicator(color: primaryGreen),
+      );
+    }
+    if (_errorMessage != null) {
+      return _buildErrorState();
+    }
+
+    return Container(
+      color: backgroundLight,
+      child: RefreshIndicator(
+        onRefresh: _loadReports,
+        color: primaryGreen,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+              child: Text(
+                _getText('title'),
+                style: const TextStyle(
+                  color: textDark,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 28,
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 4, 20, 20),
+              child: Text(
+                _getText('subtitle'),
+                style: const TextStyle(color: textMuted, fontSize: 16),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Row(
                 children: [
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
-                    child: Text(
-                      _getText('title'),
-                      style: const TextStyle(
-                        color: textDark,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 28,
-                      ),
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 4, 20, 20),
-                    child: Text(
-                      _getText('subtitle'),
-                      style: const TextStyle(color: textMuted, fontSize: 16),
-                    ),
-                  ),
-                  // Filter Tabs
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    child: Row(
-                      children: [
-                        _buildFilterChip(_getText('filter_all')),
-                        const SizedBox(width: 8),
-                        _buildFilterChip(_getText('filter_new')),
-                        const SizedBox(width: 8),
-                        _buildFilterChip(_getText('filter_reviewing')),
-                        const SizedBox(width: 8),
-                        _buildFilterChip(_getText('filter_resolved')),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  Expanded(
-                    child: _getFilteredReports().isEmpty
-                        ? _buildEmptyState()
-                        : ListView(
-                            physics: const AlwaysScrollableScrollPhysics(),
-                            padding: const EdgeInsets.fromLTRB(20, 0, 20, 32),
-                            children: _getFilteredReports()
-                                .map((report) => _buildReportCard(report))
-                                .toList(),
-                          ),
-                  ),
+                  _buildFilterChip(_getText('filter_all')),
+                  const SizedBox(width: 8),
+                  _buildFilterChip(_getText('filter_new')),
+                  const SizedBox(width: 8),
+                  _buildFilterChip(_getText('filter_reviewing')),
+                  const SizedBox(width: 8),
+                  _buildFilterChip(_getText('filter_resolved')),
                 ],
               ),
             ),
-      bottomNavigationBar: _buildBottomNav(),
+            const SizedBox(height: 20),
+            Expanded(
+              child: _getFilteredReports().isEmpty
+                  ? _buildEmptyState()
+                  : ListView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      padding: const EdgeInsets.fromLTRB(20, 0, 20, 32),
+                      children: _getFilteredReports()
+                          .map((report) => _buildReportCard(report))
+                          .toList(),
+                    ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -394,7 +360,11 @@ class _VetSickReportsScreenState extends State<VetSickReportsScreen> {
       child: Column(
         children: [
           const SizedBox(height: 60),
-          Icon(Icons.health_and_safety_outlined, size: 64, color: textMuted),
+          const Icon(
+            Icons.health_and_safety_outlined,
+            size: 64,
+            color: textMuted,
+          ),
           const SizedBox(height: 14),
           Text(
             _getText('no_reports'),
@@ -431,12 +401,10 @@ class _VetSickReportsScreenState extends State<VetSickReportsScreen> {
     final reportDate = report['reportDate']?.toString() ?? '';
     final symptoms = report['symptoms']?.toString() ?? '';
 
-    // Parse symptoms
     final symptomList = symptoms.split(',').map((s) => s.trim()).toList();
     final symptomsText = symptomList.take(3).join(', ');
     final hasMoreSymptoms = symptomList.length > 3;
 
-    // Format date
     String formattedDate = reportDate;
     if (reportDate.isNotEmpty) {
       try {
@@ -474,7 +442,6 @@ class _VetSickReportsScreenState extends State<VetSickReportsScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Header with status badge
               Row(
                 children: [
                   Container(
@@ -498,7 +465,6 @@ class _VetSickReportsScreenState extends State<VetSickReportsScreen> {
                 ],
               ),
               const SizedBox(height: 12),
-              // Flock info
               Row(
                 children: [
                   const Icon(
@@ -520,7 +486,6 @@ class _VetSickReportsScreenState extends State<VetSickReportsScreen> {
                 ],
               ),
               const SizedBox(height: 12),
-              // Report type and affected count
               Row(
                 children: [
                   Container(
@@ -544,12 +509,11 @@ class _VetSickReportsScreenState extends State<VetSickReportsScreen> {
                   const SizedBox(width: 8),
                   Text(
                     '$affectedCount ${_getText('label_chickens')} ${_getText('label_affected')}',
-                    style: TextStyle(color: textMuted, fontSize: 13),
+                    style: const TextStyle(color: textMuted, fontSize: 13),
                   ),
                 ],
               ),
               const SizedBox(height: 12),
-              // Date
               Row(
                 children: [
                   const Icon(
@@ -560,12 +524,11 @@ class _VetSickReportsScreenState extends State<VetSickReportsScreen> {
                   const SizedBox(width: 8),
                   Text(
                     formattedDate,
-                    style: TextStyle(color: textMuted, fontSize: 13),
+                    style: const TextStyle(color: textMuted, fontSize: 13),
                   ),
                 ],
               ),
               const SizedBox(height: 12),
-              // Symptoms
               if (symptoms.isNotEmpty) ...[
                 Text(
                   '${_getText('label_symptoms')}:',
@@ -578,11 +541,10 @@ class _VetSickReportsScreenState extends State<VetSickReportsScreen> {
                 const SizedBox(height: 4),
                 Text(
                   '$symptomsText${hasMoreSymptoms ? "..." : ""}',
-                  style: TextStyle(color: textMuted, fontSize: 14),
+                  style: const TextStyle(color: textMuted, fontSize: 14),
                 ),
                 const SizedBox(height: 16),
               ],
-              // Action button
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
@@ -632,53 +594,5 @@ class _VetSickReportsScreenState extends State<VetSickReportsScreen> {
       'Dec',
     ];
     return months[month - 1];
-  }
-
-  Widget _buildBottomNav() {
-    int currentIndex = 1; // Reports tab is active
-
-    return Container(
-      decoration: BoxDecoration(
-        border: Border(top: BorderSide(color: inputBorder, width: 1)),
-      ),
-      child: BottomNavigationBar(
-        currentIndex: currentIndex,
-        onTap: (index) {
-          if (index == 0) {
-            context.go('/vet-dashboard?lang=${widget.languageCode}');
-          } else if (index == 1) {
-            // Already on reports screen
-          } else if (index == 2) {
-            context.go('/my-farmers/${widget.languageCode}');
-          } else if (index == 3) {
-            context.go('/vet-profile/${widget.languageCode}');
-          }
-        },
-        type: BottomNavigationBarType.fixed,
-        backgroundColor: Colors.white,
-        selectedItemColor: primaryGreen,
-        unselectedItemColor: textMuted,
-        showSelectedLabels: false,
-        showUnselectedLabels: false,
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home_outlined, size: 24),
-            label: 'Home',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.assignment_outlined, size: 24),
-            label: 'Reports',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.people_outline_rounded, size: 24),
-            label: 'Farmers',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person_outline_rounded, size: 24),
-            label: 'Profile',
-          ),
-        ],
-      ),
-    );
   }
 }

@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import '../../services/auth_service.dart';
 import '../../services/farmer_detail_service.dart';
-import '../../widgets/notification_header_button.dart';
 
 class FarmerDetailPage extends StatefulWidget {
   final int farmerId;
@@ -20,7 +18,6 @@ class FarmerDetailPage extends StatefulWidget {
 
 class _FarmerDetailPageState extends State<FarmerDetailPage>
     with SingleTickerProviderStateMixin {
-  // Theme Color System
   static const Color primaryGreen = Color(0xFF025920);
   static const Color primaryLight = Color(0xFFE8F5E9);
   static const Color surfaceBg = Color(0xFFF4F6F8);
@@ -35,7 +32,6 @@ class _FarmerDetailPageState extends State<FarmerDetailPage>
   static const Color successGreen = Color(0xFF16A34A);
   static const Color successGreenBg = Color(0xFFF0FDF4);
 
-  // Localization (English + Khmer)
   static const Map<String, Map<String, String>> _localizedValues = {
     'en': {
       'tab_overview': 'Overview',
@@ -47,9 +43,7 @@ class _FarmerDetailPageState extends State<FarmerDetailPage>
       'metric_total_chickens': 'Total Chickens',
       'metric_total_flocks': 'Total Flocks',
       'metric_sick_reports': 'Sick Reports',
-      'metric_vaccines_due': 'Vaccines Due',
       'metric_vaccines_completed': 'Vaccines Completed',
-
       'total_chickens': 'Total Chickens',
       'total_active_flocks': 'Total Active Flocks',
       'active_sick_reports': 'Active Sick Reports',
@@ -79,7 +73,6 @@ class _FarmerDetailPageState extends State<FarmerDetailPage>
       'metric_total_chickens': 'បក្សីសរុប',
       'metric_total_flocks': 'ចំនួនហ្វូងសរុប',
       'metric_sick_reports': 'របាយការណ៍សត្វឈឺ',
-      'metric_vaccines_due': 'ការចាក់វ៉ាក់សាំង',
       'metric_vaccines_completed': 'វ៉ាក់សាំងបានចាក់',
       'total_chickens': 'បក្សីសរុប',
       'total_active_flocks': 'ហ្វូងសកម្មសរុប',
@@ -111,16 +104,13 @@ class _FarmerDetailPageState extends State<FarmerDetailPage>
   FarmerDetail? _farmerDetail;
   bool _isLoading = true;
   String? _errorMessage;
-  String _vetInitials = 'S';
 
   final FarmerDetailService _farmerDetailService = FarmerDetailService();
-  final AuthService _authService = AuthService();
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 4, vsync: this);
-    _fetchVetProfile();
     _fetchFarmerDetail();
   }
 
@@ -128,24 +118,6 @@ class _FarmerDetailPageState extends State<FarmerDetailPage>
   void dispose() {
     _tabController.dispose();
     super.dispose();
-  }
-
-  Future<void> _fetchVetProfile() async {
-    try {
-      final profile = await _authService.getProfile();
-      if (!mounted) return;
-      final name = profile['name']?.toString() ?? 'Dr. Sokha';
-      setState(() {
-        if (name.isNotEmpty) {
-          final parts = name.trim().split(' ');
-          if (parts.length >= 2) {
-            _vetInitials = '${parts[0][0]}${parts[1][0]}'.toUpperCase();
-          } else if (parts.isNotEmpty) {
-            _vetInitials = parts[0][0].toUpperCase();
-          }
-        }
-      });
-    } catch (_) {}
   }
 
   Future<void> _fetchFarmerDetail() async {
@@ -174,115 +146,74 @@ class _FarmerDetailPageState extends State<FarmerDetailPage>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: surfaceBg,
-      appBar: _buildAppBar(),
-      body: SafeArea(
-        child: _isLoading
-            ? const Center(
-                child: CircularProgressIndicator(color: primaryGreen),
-              )
-            : _errorMessage != null
-            ? _buildErrorView()
-            : DefaultTabController(
-                length: 4,
-                child: NestedScrollView(
-                  headerSliverBuilder: (context, innerBoxIsScrolled) => [
-                    SliverToBoxAdapter(
-                      child: Padding(
-                        padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-                        child: Column(
-                          children: [
-                            _buildFarmHeroCard(),
-                            const SizedBox(height: 16),
-                            _buildMetricsSection(),
-                            const SizedBox(height: 16),
-                          ],
-                        ),
-                      ),
-                    ),
-                    SliverPersistentHeader(
-                      pinned: true,
-                      delegate: _SliverTabBarDelegate(
-                        TabBar(
-                          controller: _tabController,
-                          labelColor: primaryGreen,
-                          unselectedLabelColor: textMuted,
-                          indicatorColor: primaryGreen,
-                          indicatorWeight: 3,
-                          labelStyle: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 13,
-                            letterSpacing: 0.2,
-                          ),
-                          labelPadding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 10,
-                          ),
-                          tabs: [
-                            Tab(text: _getText('tab_overview')),
-                            Tab(text: _getText('tab_flocks')),
-                            Tab(text: _getText('tab_vaccines')),
-                            Tab(text: _getText('tab_reports')),
-                          ],
-                        ),
-                      ),
-                    ),
+    if (_isLoading) {
+      return const Center(
+        child: CircularProgressIndicator(color: primaryGreen),
+      );
+    }
+
+    if (_errorMessage != null) {
+      return _buildErrorView();
+    }
+
+    return Container(
+      color: surfaceBg,
+      child: DefaultTabController(
+        length: 4,
+        child: NestedScrollView(
+          headerSliverBuilder: (context, innerBoxIsScrolled) => [
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                child: Column(
+                  children: [
+                    _buildFarmHeroCard(),
+                    const SizedBox(height: 16),
+                    _buildMetricsSection(),
+                    const SizedBox(height: 16),
                   ],
-                  body: TabBarView(
-                    controller: _tabController,
-                    children: [
-                      _buildOverviewTab(),
-                      _buildFlocksTab(),
-                      _buildVaccinationsTab(),
-                      _buildSickReportsTab(),
-                    ],
-                  ),
                 ),
               ),
-      ),
-      bottomNavigationBar: _buildBottomNav(),
-    );
-  }
-
-  PreferredSizeWidget _buildAppBar() {
-    return AppBar(
-      elevation: 0,
-      backgroundColor: Colors.white,
-      titleSpacing: 16,
-      title: Row(
-        children: [
-          CircleAvatar(
-            radius: 18,
-            backgroundColor: primaryLight,
-            child: Text(
-              _vetInitials,
-              style: const TextStyle(
-                color: primaryGreen,
-                fontWeight: FontWeight.bold,
-                fontSize: 14,
+            ),
+            SliverPersistentHeader(
+              pinned: true,
+              delegate: _SliverTabBarDelegate(
+                TabBar(
+                  controller: _tabController,
+                  labelColor: primaryGreen,
+                  unselectedLabelColor: textMuted,
+                  indicatorColor: primaryGreen,
+                  indicatorWeight: 3,
+                  labelStyle: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                    letterSpacing: 0.2,
+                  ),
+                  labelPadding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 10,
+                  ),
+                  tabs: [
+                    Tab(text: _getText('tab_overview')),
+                    Tab(text: _getText('tab_flocks')),
+                    Tab(text: _getText('tab_vaccines')),
+                    Tab(text: _getText('tab_reports')),
+                  ],
+                ),
               ),
             ),
+          ],
+          body: TabBarView(
+            controller: _tabController,
+            children: [
+              _buildOverviewTab(),
+              _buildFlocksTab(),
+              _buildVaccinationsTab(),
+              _buildSickReportsTab(),
+            ],
           ),
-          const SizedBox(width: 12),
-          const Text(
-            'VacTracker',
-            style: TextStyle(
-              color: textMain,
-              fontWeight: FontWeight.bold,
-              fontSize: 18,
-            ),
-          ),
-        ],
-      ),
-      actions: [
-        NotificationHeaderButton(
-          languageCode: widget.languageCode,
-          color: textMain,
-          notificationsRoute: '/vet-notifications',
         ),
-        const SizedBox(width: 6),
-      ],
+      ),
     );
   }
 
@@ -616,7 +547,6 @@ class _FarmerDetailPageState extends State<FarmerDetailPage>
                 '${flock.birdCount} ${_getText('chickens')} • ${flock.breed}',
                 style: const TextStyle(color: textMuted),
               ),
-              // trailing: const Icon(Icons.chevron_right, color: textMuted),
               onTap: () => context.push(
                 '/flock-detail/${flock.flockId}/${widget.languageCode}',
               ),
@@ -674,7 +604,7 @@ class _FarmerDetailPageState extends State<FarmerDetailPage>
                         CircleAvatar(
                           radius: 20,
                           backgroundColor: primaryLight,
-                          child: Icon(
+                          child: const Icon(
                             Icons.vaccines_outlined,
                             color: primaryGreen,
                             size: 18,
@@ -953,50 +883,6 @@ class _FarmerDetailPageState extends State<FarmerDetailPage>
       'Dec',
     ];
     return months[month - 1];
-  }
-
-  Widget _buildBottomNav() {
-    return Container(
-      decoration: const BoxDecoration(
-        border: Border(top: BorderSide(color: cardBorder)),
-      ),
-      child: BottomNavigationBar(
-        currentIndex: 2,
-        onTap: (index) {
-          final routes = [
-            '/vet-dashboard?lang=${widget.languageCode}',
-            '/vet-reports?lang=${widget.languageCode}',
-            '/my-farmers/${widget.languageCode}',
-            '/vet-profile/${widget.languageCode}',
-          ];
-          context.go(routes[index]);
-        },
-        type: BottomNavigationBarType.fixed,
-        backgroundColor: Colors.white,
-        selectedItemColor: primaryGreen,
-        unselectedItemColor: textMuted,
-        showSelectedLabels: false,
-        showUnselectedLabels: false,
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home_outlined, size: 24),
-            label: 'Home',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.assignment_outlined, size: 24),
-            label: 'Reports',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.people_outline_rounded, size: 24),
-            label: 'Farmers',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person_outline_rounded, size: 24),
-            label: 'Profile',
-          ),
-        ],
-      ),
-    );
   }
 }
 

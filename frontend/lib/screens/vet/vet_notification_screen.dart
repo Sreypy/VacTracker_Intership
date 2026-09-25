@@ -13,20 +13,13 @@ class VetNotificationScreen extends StatefulWidget {
 }
 
 class _VetNotificationScreenState extends State<VetNotificationScreen> {
-  // Design tokens (matching the vet screens)
   static const Color backgroundLight = Color(0xFFF8FAFC);
   static const Color surfaceWhite = Colors.white;
   static const Color textMain = Color(0xFF0F172A);
   static const Color textMuted = Color(0xFF64748B);
-  // static const Color borderLight = Color(0xFFE2E8F0);
   static const Color primaryGreen = Color(0xFF0D6E28);
-
-  // Status colors: 🟢 connected / 🟠 pending / 🔴 urgent-rejected / 🔵 info
   static const Color urgentRed = Color(0xFFDC2626);
-  // static const Color urgentRedBg = Color(0xFFFEF2F2);
-  // static const Color pendingAmberBg = Color(0xFFFFFBEB);
   static const Color infoBlue = Color(0xFF2563EB);
-  // static const Color infoBlueBg = Color(0xFFEFF6FF);
 
   final NotificationService _notificationService = NotificationService();
   final VetDashboardService _vetDashboardService = VetDashboardService();
@@ -58,9 +51,6 @@ class _VetNotificationScreenState extends State<VetNotificationScreen> {
       'one_chicken_affected': '1 chicken affected',
       'accept': 'Accept',
       'reject': 'Reject',
-      'pending': 'Pending',
-      'connected': 'Connected',
-      'rejected': 'Rejected',
       'handled': 'Handled',
       'request_accepted': 'Farmer connected!',
       'request_rejected': 'Request rejected',
@@ -89,9 +79,6 @@ class _VetNotificationScreenState extends State<VetNotificationScreen> {
       'one_chicken_affected': '១ ក្បាលបានរងផលប៉ះពាល់',
       'accept': 'ទទួលយក',
       'reject': 'បដិសេធ',
-      'pending': 'រង់ចាំ',
-      'connected': 'បានភ្ជាប់',
-      'rejected': 'បានបដិសេធ',
       'handled': 'បានដោះស្រាយ',
       'request_accepted': 'កសិករត្រូវបានភ្ជាប់ជោគជ័យ!',
       'request_rejected': 'បានបដិសេធសំណើ',
@@ -144,8 +131,6 @@ class _VetNotificationScreenState extends State<VetNotificationScreen> {
     await _loadNotifications();
   }
 
-  /// Opens the related sick report using the existing vet report detail
-  /// screen (reuse of the existing functionality – no new report system).
   Future<void> _openSickReport(Map<String, dynamic> notification) async {
     final notificationId =
         (notification['notification_id'] as num?)?.toInt() ?? 0;
@@ -163,8 +148,6 @@ class _VetNotificationScreenState extends State<VetNotificationScreen> {
     if (mounted) await _loadNotifications();
   }
 
-  /// Accepts or rejects a farmer connection request directly from the
-  /// notification. Marks the notification as read/handled afterwards.
   Future<void> _respondToConnection(
     Map<String, dynamic> notification,
     bool accept,
@@ -223,42 +206,41 @@ class _VetNotificationScreenState extends State<VetNotificationScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: backgroundLight,
-
-      appBar: AppBar(
-        backgroundColor: surfaceWhite,
-        elevation: 0,
-        scrolledUnderElevation: 0.5,
-        centerTitle: false,
-        title: Text(
-          _getText('title'),
-          style: const TextStyle(
-            color: textMain,
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: _markAllRead,
-            child: Text(
-              _getText('mark_all_read'),
-              style: const TextStyle(
-                color: primaryGreen,
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-              ),
+    return Container(
+      color: backgroundLight,
+      child: Column(
+        children: [
+          Container(
+            color: surfaceWhite,
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  _getText('title'),
+                  style: const TextStyle(
+                    color: textMain,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                TextButton(
+                  onPressed: _markAllRead,
+                  child: Text(
+                    _getText('mark_all_read'),
+                    style: const TextStyle(
+                      color: primaryGreen,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
-          const SizedBox(width: 4),
+          Expanded(child: _buildBody()),
         ],
       ),
-
-      body: _buildBody(),
-
-      // Bottom navigation
-      bottomNavigationBar: _buildBottomNavigationBar(),
     );
   }
 
@@ -333,7 +315,6 @@ class _VetNotificationScreenState extends State<VetNotificationScreen> {
       );
     }
 
-    // Group into TODAY / EARLIER sections.
     final todayItems = <Map<String, dynamic>>[];
     final earlierItems = <Map<String, dynamic>>[];
     for (final notification in _notifications) {
@@ -385,7 +366,6 @@ class _VetNotificationScreenState extends State<VetNotificationScreen> {
     );
   }
 
-  /// Builds a single notification card based on its type.
   Widget _buildNotificationCard(Map<String, dynamic> notification) {
     final type = notification['type']?.toString();
     final isRead = notification['is_read'] == true;
@@ -401,7 +381,6 @@ class _VetNotificationScreenState extends State<VetNotificationScreen> {
     return _buildGenericCard(notification, isRead);
   }
 
-  /// 🔵 Farmer Disconnected — informational card for the vet.
   Widget _buildFarmerDisconnectedCard(
     Map<String, dynamic> notification,
     bool isRead,
@@ -410,16 +389,13 @@ class _VetNotificationScreenState extends State<VetNotificationScreen> {
         ? Map<String, dynamic>.from(notification['data'] as Map)
         : <String, dynamic>{};
     final farmerName = (data['farmer_name'] ?? '').toString();
-
     final created =
         DateTime.tryParse(notification['created_at']?.toString() ?? '') ??
         DateTime.now();
 
     return _buildCardShell(
       accentColor: isRead ? textMuted : const Color(0xFF2563EB),
-      backgroundColor: isRead
-          ? surfaceWhite
-          : const Color.fromARGB(255, 255, 255, 255),
+      backgroundColor: surfaceWhite,
       isUnread: !isRead,
       onTap: null,
       child: Column(
@@ -482,7 +458,6 @@ class _VetNotificationScreenState extends State<VetNotificationScreen> {
     );
   }
 
-  /// 🐔 New Sick Report — tap opens the existing vet sick report detail.
   Widget _buildSickReportCard(Map<String, dynamic> notification, bool isRead) {
     final data = notification['data'] is Map
         ? Map<String, dynamic>.from(notification['data'] as Map)
@@ -491,16 +466,13 @@ class _VetNotificationScreenState extends State<VetNotificationScreen> {
         .toString();
     final flockName = (data['flock_name'] ?? '').toString();
     final affectedCount = (data['affected_count'] as num?)?.toInt() ?? 0;
-
     final created =
         DateTime.tryParse(notification['created_at']?.toString() ?? '') ??
         DateTime.now();
 
     return _buildCardShell(
       accentColor: isRead ? textMuted : const Color(0xFFDC2626),
-      backgroundColor: isRead
-          ? surfaceWhite
-          : const Color.fromARGB(255, 255, 255, 255),
+      backgroundColor: surfaceWhite,
       isUnread: !isRead,
       onTap: () => _openSickReport(notification),
       child: Column(
@@ -609,7 +581,6 @@ class _VetNotificationScreenState extends State<VetNotificationScreen> {
     );
   }
 
-  /// Fallback for unknown/system notification types.
   Widget _buildGenericCard(Map<String, dynamic> notification, bool isRead) {
     final created =
         DateTime.tryParse(notification['created_at']?.toString() ?? '') ??
@@ -649,7 +620,6 @@ class _VetNotificationScreenState extends State<VetNotificationScreen> {
     );
   }
 
-  /// 👨‍🌾 New Farmer Request — inline Accept / Reject actions while pending.
   Widget _buildConnectionRequestCard(
     Map<String, dynamic> notification,
     bool isRead,
@@ -664,16 +634,13 @@ class _VetNotificationScreenState extends State<VetNotificationScreen> {
         (notification['referenceId'] as num?)?.toInt();
     final isResponding =
         connectionId != null && _respondingConnectionIds.contains(connectionId);
-
     final created =
         DateTime.tryParse(notification['created_at']?.toString() ?? '') ??
         DateTime.now();
 
     return _buildCardShell(
       accentColor: isRead ? infoBlue : const Color(0xFFD97706),
-      backgroundColor: isRead
-          ? surfaceWhite
-          : const Color.fromARGB(255, 255, 255, 255),
+      backgroundColor: surfaceWhite,
       isUnread: !isRead,
       onTap: null,
       child: Column(
@@ -793,12 +760,7 @@ class _VetNotificationScreenState extends State<VetNotificationScreen> {
               child: _buildStatusChip(
                 label: _getText('handled'),
                 color: infoBlue,
-                background: const Color.fromARGB(
-                  255,
-                  255,
-                  255,
-                  255,
-                ).withValues(alpha: 0.05),
+                background: const Color(0xFFEFF6FF),
               ),
             ),
           const SizedBox(height: 8),
@@ -826,9 +788,6 @@ class _VetNotificationScreenState extends State<VetNotificationScreen> {
       decoration: BoxDecoration(
         color: backgroundColor,
         borderRadius: BorderRadius.circular(14),
-        // border: Border.all(
-        //   color: isUnread ? accentColor.withValues(alpha: 0.35) : borderLight,
-        // ),
         boxShadow: [
           BoxShadow(
             color: const Color(0xFF0F172A).withValues(alpha: 0.03),
@@ -887,88 +846,6 @@ class _VetNotificationScreenState extends State<VetNotificationScreen> {
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildNavItem({
-    required IconData icon,
-    required IconData activeIcon,
-    required String route,
-    required bool isSelected,
-  }) {
-    final color = isSelected ? primaryGreen : textMuted;
-
-    return Expanded(
-      child: InkWell(
-        onTap: () {
-          if (GoRouterState.of(context).uri.path != route) {
-            context.go(route);
-          }
-        },
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(isSelected ? activeIcon : icon, size: 24, color: color),
-            const SizedBox(height: 4),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildBottomNavigationBar() {
-    return SafeArea(
-      top: false,
-
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          border: const Border(
-            top: BorderSide(color: Color(0xFFE2E8F0), width: 1),
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
-              blurRadius: 8,
-              offset: const Offset(0, -2),
-            ),
-          ],
-        ),
-        child: SizedBox(
-          height: 68,
-          child: Row(
-            children: [
-              _buildNavItem(
-                icon: Icons.home_outlined,
-                activeIcon: Icons.home,
-                route: '/vet-dashboard?${widget.languageCode}',
-                isSelected: false,
-              ),
-
-              _buildNavItem(
-                icon: Icons.assignment_outlined,
-                activeIcon: Icons.assignment,
-                route: '/vet-reports?${widget.languageCode}',
-                isSelected: false,
-              ),
-
-              _buildNavItem(
-                icon: Icons.people_outline,
-                activeIcon: Icons.people,
-                route: '/my-farmers/${widget.languageCode}',
-                isSelected: false,
-              ),
-
-              _buildNavItem(
-                icon: Icons.person_outline,
-                activeIcon: Icons.person,
-                route: '/vet-profile/${widget.languageCode}',
-                isSelected: false,
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }
