@@ -7,8 +7,8 @@ import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:frontend/services/storage_service.dart';
 import 'package:frontend/config/api_config.dart';
-import 'package:frontend/widgets/notification_header_button.dart';
-import 'package:frontend/widgets/farmer_bottom_navigation.dart';
+// import 'package:frontend/widgets/notification_header_button.dart';
+// import 'package:frontend/widgets/farmer_bottom_navigation.dart';
 
 class FarmerProfileModel {
   final int? userId;
@@ -744,45 +744,12 @@ class _FarmerProfilePageState extends State<FarmerProfilePage> {
 
   @override
   Widget build(BuildContext context) {
-    final profileName = _profile?.name.trim().isNotEmpty == true
-        ? _profile!.name
-        : 'User';
+    // final profileName = _profile?.name.trim().isNotEmpty == true
+        // ? _profile!.name
+        // : 'User';
 
     return Scaffold(
       backgroundColor: backgroundLight,
-      appBar: AppBar(
-        backgroundColor: backgroundLight,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        titleSpacing: 16,
-        title: const Text(
-          'VacTracker',
-          style: TextStyle(
-            color: brandDarkGreen,
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        actions: [
-          NotificationHeaderButton(
-            languageCode: widget.languageCode,
-            color: brandDarkGreen,
-          ),
-          IconButton(
-            tooltip: 'Profile',
-            onPressed: () =>
-                context.push('/farmer-profile/${widget.languageCode}'),
-            icon: _buildHeaderAvatar(
-              avatarUrl: _profile?.profileImageUrl,
-              displayName: profileName,
-              radius: 18,
-              backgroundColor: textGreyLight,
-              foregroundColor: brandDarkGreen,
-            ),
-          ),
-          const SizedBox(width: 8),
-        ],
-      ),
       body: SafeArea(
         child: SingleChildScrollView(
           physics: const BouncingScrollPhysics(),
@@ -1583,7 +1550,7 @@ class _FarmerProfilePageState extends State<FarmerProfilePage> {
           ),
         ),
       ),
-      bottomNavigationBar: _buildBottomNav(),
+      // bottomNavigationBar: _buildBottomNav(),
     );
   }
 
@@ -2361,7 +2328,4 @@ class _FarmerProfilePageState extends State<FarmerProfilePage> {
     );
   }
 
-  Widget _buildBottomNav() {
-    return FarmerBottomNavigation(currentIndex: 4, languageCode: _currentLang);
-  }
 }

@@ -6,8 +6,6 @@ import 'package:frontend/services/sick_report_service.dart';
 import 'package:frontend/services/vaccination_service.dart';
 import 'package:frontend/services/vaccination_schedule_service.dart';
 import 'package:frontend/services/storage_service.dart';
-import 'package:frontend/widgets/notification_header_button.dart';
-import 'package:frontend/widgets/farmer_bottom_navigation.dart';
 import 'package:go_router/go_router.dart';
 
 class FarmerDashboardPage extends StatefulWidget {
@@ -35,7 +33,7 @@ class _FarmerDashboardPageState extends State<FarmerDashboardPage>
   String? _errorMessage;
   List<Flock> _flocks = [];
   String _userName = '';
-  String _profileImageUrl = '';
+  // String _profileImageUrl = '';
   // Dashboard metrics
   int _totalFlocks = 0;
   int _totalBirds = 0;
@@ -183,11 +181,11 @@ class _FarmerDashboardPageState extends State<FarmerDashboardPage>
 
   Future<void> _loadUserName() async {
     final userName = await StorageService.getName();
-    final profileImageUrl = await StorageService.getProfileImageUrl();
+    // final profileImageUrl = await StorageService.getProfileImageUrl();
     if (!mounted) return;
     setState(() {
       _userName = userName?.trim() ?? '';
-      _profileImageUrl = profileImageUrl?.trim() ?? '';
+      // _profileImageUrl = profileImageUrl?.trim() ?? '';
     });
   }
 
@@ -367,64 +365,10 @@ class _FarmerDashboardPageState extends State<FarmerDashboardPage>
         _localizedValues['en']![key]!;
   }
 
-  // Dynamic Avatar Loader Helper
-  Widget _buildUserAvatar(String? avatarUrl, String displayName) {
-    final hasAvatar = avatarUrl != null && avatarUrl.isNotEmpty;
-    return CircleAvatar(
-      radius: 18,
-      backgroundColor: hasAvatar
-          ? Colors.transparent
-          : brandHeaderGreen.withValues(alpha: 0.15),
-      backgroundImage: hasAvatar ? NetworkImage(avatarUrl) : null,
-      child: hasAvatar
-          ? null
-          : Text(
-              displayName.isNotEmpty ? displayName[0].toUpperCase() : "U",
-              style: const TextStyle(
-                color: brandDarkGreen,
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: backgroundLight,
-      appBar: AppBar(
-        backgroundColor: backgroundLight,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        titleSpacing: 16,
-        title: const Text(
-          'VacTracker',
-          style: TextStyle(
-            color: brandDarkGreen,
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        actions: [
-          NotificationHeaderButton(
-            languageCode: widget.languageCode,
-            color: brandDarkGreen,
-          ),
-          IconButton(
-            tooltip: 'Profile',
-            onPressed: () =>
-                context.push('/farmer-profile/${widget.languageCode}'),
-            icon: _buildUserAvatar(
-              _profileImageUrl.isNotEmpty
-                  ? _profileImageUrl
-                  : widget.profileImageUrl,
-              _userName.isNotEmpty ? _userName : 'U',
-            ),
-          ),
-          const SizedBox(width: 8),
-        ],
-      ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
           context.push('/add-flock/${widget.languageCode}');
@@ -523,10 +467,10 @@ class _FarmerDashboardPageState extends State<FarmerDashboardPage>
           ),
         ),
       ),
-      bottomNavigationBar: FarmerBottomNavigation(
-        currentIndex: 2,
-        languageCode: widget.languageCode,
-      ),
+      // bottomNavigationBar: FarmerBottomNavigation(
+      //   currentIndex: 2,
+      //   languageCode: widget.languageCode,
+      // ),
     );
   }
 

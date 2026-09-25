@@ -1,12 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:frontend/widgets/farmer_bottom_navigation.dart';
 import 'package:frontend/widgets/notification_header_button.dart';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
-import 'package:frontend/config/api_config.dart';
 import 'package:frontend/services/notification_service.dart';
-import 'package:frontend/services/storage_service.dart';
 import 'package:frontend/services/vaccination_service.dart';
 import 'package:frontend/services/vaccination_schedule_service.dart';
 
@@ -27,8 +22,8 @@ class _NotificationScreenState extends State<NotificationScreen>
   static const Color colorMuted = Color(0xFF6B7280);
   static const Color colorApp = Color(0xFF228B22); // Forest Green
   static const Color colorSurface = Color(0xFFFFFFFF);
-  static const Color backgroundLight = Color(0xFFF8FAFC);
-  static const Color brandDarkGreen = Color(0xFF034418);
+  // static const Color backgroundLight = Color(0xFFF8FAFC);
+  // static const Color brandDarkGreen = Color(0xFF034418);
 
   // Status colors
   static const Color colorOverdue = Color(0xFFDC2626); // Alert Red
@@ -47,8 +42,8 @@ class _NotificationScreenState extends State<NotificationScreen>
   int _overdueCount = 0;
   int _dueTodayCount = 0;
   // int _dueSoonCount = 0;
-  String _profileName = 'User';
-  String _profileImageUrl = '';
+  // String _profileName = 'User';
+  // String _profileImageUrl = '';
 
   static const Map<String, Map<String, String>> _texts = {
     'en': {
@@ -131,7 +126,7 @@ class _NotificationScreenState extends State<NotificationScreen>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _loadProfile();
+    // _loadProfile();
     _loadNotifications();
   }
 
@@ -146,86 +141,6 @@ class _NotificationScreenState extends State<NotificationScreen>
     if (state == AppLifecycleState.resumed && mounted) {
       _loadNotifications();
     }
-  }
-
-  Future<void> _loadProfile() async {
-    final storedName = await StorageService.getName();
-    final storedImageUrl = await StorageService.getProfileImageUrl();
-    if (!mounted) return;
-    setState(() {
-      if (storedName?.trim().isNotEmpty == true) {
-        _profileName = storedName!.trim();
-      }
-      if (storedImageUrl?.trim().isNotEmpty == true) {
-        _profileImageUrl = storedImageUrl!.trim();
-      }
-    });
-
-    try {
-      final token = await StorageService.getToken();
-      if (token == null || token.isEmpty) return;
-      final response = await http.get(
-        Uri.parse('${ApiConfig.baseUrl}/users/profile'),
-        headers: {'Authorization': 'Bearer $token'},
-      );
-      if (response.statusCode != 200 || !mounted) return;
-      final profile = jsonDecode(response.body) as Map<String, dynamic>;
-      final name = (profile['name'] ?? '').toString().trim();
-      final imageUrl =
-          (profile['profile_image_url'] ??
-                  profile['avatar_url'] ??
-                  profile['profile_image'] ??
-                  profile['image_url'] ??
-                  profile['photo_url'] ??
-                  '')
-              .toString()
-              .trim();
-      setState(() {
-        if (name.isNotEmpty) _profileName = name;
-        if (imageUrl.isNotEmpty) _profileImageUrl = imageUrl;
-      });
-      await StorageService.saveUser(profile);
-    } catch (_) {
-      // Stored profile data or initials remain available as a fallback.
-    }
-  }
-
-  Widget _buildProfileAvatar() {
-    final initial = _profileName.trim().isNotEmpty
-        ? _profileName.trim()[0].toUpperCase()
-        : 'U';
-    return Container(
-      width: 36,
-      height: 36,
-      decoration: BoxDecoration(
-        color: colorMuted.withValues(alpha: 0.1),
-        shape: BoxShape.circle,
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: _profileImageUrl.isNotEmpty
-          ? Image.network(
-              _profileImageUrl,
-              fit: BoxFit.cover,
-              errorBuilder: (_, _, _) => Center(
-                child: Text(
-                  initial,
-                  style: const TextStyle(
-                    color: colorApp,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            )
-          : Center(
-              child: Text(
-                initial,
-                style: const TextStyle(
-                  color: colorApp,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-    );
   }
 
   Future<void> _loadNotifications() async {
@@ -473,33 +388,6 @@ class _NotificationScreenState extends State<NotificationScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: colorBackground,
-      appBar: AppBar(
-        backgroundColor: backgroundLight,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        titleSpacing: 16,
-        title: const Text(
-          'VacTracker',
-          style: TextStyle(
-            color: brandDarkGreen,
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        actions: [
-          NotificationHeaderButton(
-            languageCode: widget.languageCode,
-            color: brandDarkGreen,
-          ),
-          IconButton(
-            tooltip: 'Profile',
-            onPressed: () =>
-                context.push('/farmer-profile/${widget.languageCode}'),
-            icon: _buildProfileAvatar(),
-          ),
-          const SizedBox(width: 8),
-        ],
-      ),
       body: RefreshIndicator(
         onRefresh: _loadNotifications,
         color: colorApp,
@@ -549,10 +437,10 @@ class _NotificationScreenState extends State<NotificationScreen>
           ],
         ),
       ),
-      bottomNavigationBar: FarmerBottomNavigation(
-        currentIndex: 0,
-        languageCode: widget.languageCode,
-      ),
+      // bottomNavigationBar: FarmerBottomNavigation(
+      //   currentIndex: 0,
+      //   languageCode: widget.languageCode,
+      // ),
     );
   }
 

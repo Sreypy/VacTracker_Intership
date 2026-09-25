@@ -1,12 +1,6 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
-import 'package:frontend/config/api_config.dart';
-import 'package:frontend/services/storage_service.dart';
 import 'package:go_router/go_router.dart';
 import 'package:frontend/services/flock_service.dart';
-import 'package:frontend/widgets/notification_header_button.dart';
-import 'package:frontend/widgets/farmer_bottom_navigation.dart';
 // ignore: library_prefixes
 import 'package:frontend/models/flock.dart' as Fm;
 
@@ -48,8 +42,8 @@ class LogVaccinationStep1Page extends StatefulWidget {
 
 class _LogVaccinationStep1PageState extends State<LogVaccinationStep1Page> {
   late String _currentLang;
-  String _profileName = '';
-  String _profileImageUrl = '';
+  // String _profileName = '';
+  // String _profileImageUrl = '';
 
   // Backend Data State
   List<FlockBatchModel> _allFlocks = [];
@@ -99,93 +93,10 @@ class _LogVaccinationStep1PageState extends State<LogVaccinationStep1Page> {
     },
   };
 
-  Future<void> _loadProfile() async {
-    final storedName = await StorageService.getName();
-    final storedImageUrl = await StorageService.getProfileImageUrl();
-    if (!mounted) return;
-    setState(() {
-      if (storedName?.trim().isNotEmpty == true) {
-        _profileName = storedName!.trim();
-      }
-      if (storedImageUrl?.trim().isNotEmpty == true) {
-        _profileImageUrl = storedImageUrl!.trim();
-      }
-    });
-
-    try {
-      final token = await StorageService.getToken();
-      if (token == null || token.isEmpty) return;
-      final response = await http.get(
-        Uri.parse('${ApiConfig.baseUrl}/users/profile'),
-        headers: {'Authorization': 'Bearer $token'},
-      );
-      if (response.statusCode != 200 || !mounted) return;
-      final profile = jsonDecode(response.body) as Map<String, dynamic>;
-      final name = (profile['name'] ?? '').toString().trim();
-      final imageUrl =
-          (profile['profile_image_url'] ??
-                  profile['avatar_url'] ??
-                  profile['profile_image'] ??
-                  profile['image_url'] ??
-                  profile['photo_url'] ??
-                  '')
-              .toString()
-              .trim();
-      setState(() {
-        if (name.isNotEmpty) _profileName = name;
-        if (imageUrl.isNotEmpty) _profileImageUrl = imageUrl;
-      });
-      await StorageService.saveUser(profile);
-    } catch (_) {
-      // Stored profile data or initials remain available as a fallback.
-    }
-  }
-
-  Widget _buildProfileAvatar() {
-    final initial = _profileName.trim().isNotEmpty
-        ? _profileName.trim()[0].toUpperCase()
-        : 'U';
-    final bool hasImage = _profileImageUrl.isNotEmpty;
-    return Container(
-      width: 34,
-      height: 34,
-      decoration: BoxDecoration(
-        color: brandDarkGreen.withValues(alpha: 0.1),
-        shape: BoxShape.circle,
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: hasImage
-          ? Image.network(
-              _profileImageUrl,
-              fit: BoxFit.cover,
-              errorBuilder: (_, _, _) => Center(
-                child: Text(
-                  initial,
-                  style: const TextStyle(
-                    color: brandDarkGreen,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
-                  ),
-                ),
-              ),
-            )
-          : Center(
-              child: Text(
-                initial,
-                style: const TextStyle(
-                  color: brandDarkGreen,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 14,
-                ),
-              ),
-            ),
-    );
-  }
-
   @override
   void initState() {
     super.initState();
-    _loadProfile();
+    // _loadProfile();
     _currentLang = widget.languageCode;
     _fetchFlocksFromBackend();
   }
@@ -268,36 +179,6 @@ class _LogVaccinationStep1PageState extends State<LogVaccinationStep1Page> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: backgroundLight,
-      appBar: AppBar(
-        backgroundColor: backgroundLight,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: brandDarkGreen),
-          onPressed: () => context.pop(),
-        ),
-        titleSpacing: 16,
-        title: const Text(
-          'VacTracker',
-          style: TextStyle(
-            color: brandDarkGreen,
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        actions: [
-          NotificationHeaderButton(
-            languageCode: _currentLang,
-            color: brandDarkGreen,
-          ),
-          IconButton(
-            tooltip: 'Profile',
-            onPressed: () => context.push('/farmer-profile/$_currentLang'),
-            icon: _buildProfileAvatar(),
-          ),
-          const SizedBox(width: 8),
-        ],
-      ),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 8.0),
@@ -447,7 +328,7 @@ class _LogVaccinationStep1PageState extends State<LogVaccinationStep1Page> {
           ),
         ),
       ),
-      bottomNavigationBar: _buildBottomNav(),
+      // bottomNavigationBar: _buildBottomNav(),
     );
   }
 
@@ -581,7 +462,4 @@ class _LogVaccinationStep1PageState extends State<LogVaccinationStep1Page> {
     );
   }
 
-  Widget _buildBottomNav() {
-    return FarmerBottomNavigation(currentIndex: 1, languageCode: _currentLang);
-  }
 }
