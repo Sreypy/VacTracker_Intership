@@ -37,7 +37,7 @@ class _FarmerDashboardPageState extends State<FarmerDashboardPage>
   // Dashboard metrics
   int _totalFlocks = 0;
   int _totalBirds = 0;
-  int _flockHealthPercentage = 0;
+  // int _flockHealthPercentage = 0;
   int _dueTodayVaccinations = 0;
   int _upcomingVaccinations = 0;
   int _overdueVaccinations = 0;
@@ -58,7 +58,7 @@ class _FarmerDashboardPageState extends State<FarmerDashboardPage>
 
   // --- Slate design tokens (UI refresh) ---
   static const Color cardBorder = Color(0xFFE2E8F0);
-  static const Color textPrimary = Color(0xFF0F172A);
+  // static const Color textPrimary = Color(0xFF0F172A);
   static const Color textSecondary = Color(0xFF64748B);
 
   final Map<String, Map<String, String>> _localizedValues = const {
@@ -234,16 +234,16 @@ class _FarmerDashboardPageState extends State<FarmerDashboardPage>
         }
       }
 
-      var affectedBirds = 0;
-      for (final flock in flocks) {
-        final latestReport = latestReportByFlock[flock.flockId];
-        final reportedAffected = latestReport?.affectedCount ?? 0;
-        affectedBirds += reportedAffected.clamp(0, flock.birdCount);
-      }
-      final healthyBirds = (totalBirds - affectedBirds).clamp(0, totalBirds);
-      final flockHealthPercentage = totalBirds == 0
-          ? 0
-          : ((healthyBirds / totalBirds) * 100).round();
+      // var affectedBirds = 0;
+      // for (final flock in flocks) {
+      //   final latestReport = latestReportByFlock[flock.flockId];
+      //   final reportedAffected = latestReport?.affectedCount ?? 0;
+      //   affectedBirds += reportedAffected.clamp(0, flock.birdCount);
+      // }
+      // final healthyBirds = (totalBirds - affectedBirds).clamp(0, totalBirds);
+      // final flockHealthPercentage = totalBirds == 0
+      //     ? 0
+      //     : ((healthyBirds / totalBirds) * 100).round();
 
       // Use one calendar-date/status calculation for every vaccination screen.
       final vaccinationSchedule = VaccinationScheduleSummary.fromRecords(
@@ -263,7 +263,7 @@ class _FarmerDashboardPageState extends State<FarmerDashboardPage>
         _errorMessage = null;
         _totalFlocks = totalFlocks;
         _totalBirds = totalBirds;
-        _flockHealthPercentage = flockHealthPercentage;
+        // _flockHealthPercentage = flockHealthPercentage;
         _upcomingVaccinations =
             vaccinationSchedule.dueSoonCount +
             vaccinationSchedule.upcomingCount;
@@ -478,7 +478,7 @@ class _FarmerDashboardPageState extends State<FarmerDashboardPage>
     return Column(
       children: [
         // Hero: full-width flock health ring card
-        _buildFlockHealthCard(),
+        // _buildFlockHealthCard(),
         const SizedBox(height: 12),
         // Row 1: Total Birds and Total Flocks
         Row(
@@ -543,166 +543,166 @@ class _FarmerDashboardPageState extends State<FarmerDashboardPage>
     );
   }
 
-  Widget _buildFlockHealthCard() {
-    final healthColor = _flockHealthPercentage >= 90
-        ? statusGreen
-        : _flockHealthPercentage >= 70
-        ? statusYellow
-        : statusRed;
-    final healthBackground = _flockHealthPercentage >= 90
-        ? statusGreenBg
-        : _flockHealthPercentage >= 70
-        ? statusYellowBg
-        : statusRedBg;
-    final status = _flockHealthPercentage >= 90
-        ? 'Healthy'
-        : _flockHealthPercentage >= 70
-        ? 'Needs Attention'
-        : 'Critical';
-    final ringValue = (_flockHealthPercentage / 100).clamp(0.0, 1.0);
+  // Widget _buildFlockHealthCard() {
+  //   final healthColor = _flockHealthPercentage >= 90
+  //       ? statusGreen
+  //       : _flockHealthPercentage >= 70
+  //       ? statusYellow
+  //       : statusRed;
+  //   final healthBackground = _flockHealthPercentage >= 90
+  //       ? statusGreenBg
+  //       : _flockHealthPercentage >= 70
+  //       ? statusYellowBg
+  //       : statusRedBg;
+  //   final status = _flockHealthPercentage >= 90
+  //       ? 'Healthy'
+  //       : _flockHealthPercentage >= 70
+  //       ? 'Needs Attention'
+  //       : 'Critical';
+  //   final ringValue = (_flockHealthPercentage / 100).clamp(0.0, 1.0);
 
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: cardBorder),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.02),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Title + semantic status chip
-          Row(
-            children: [
-              const Icon(
-                Icons.health_and_safety_outlined,
-                color: brandDarkGreen,
-                size: 22,
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  _getText('flock_health'),
-                  style: const TextStyle(
-                    color: textPrimary,
-                    fontSize: 15,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 5,
-                ),
-                decoration: BoxDecoration(
-                  color: healthBackground,
-                  borderRadius: BorderRadius.circular(100),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      width: 7,
-                      height: 7,
-                      decoration: BoxDecoration(
-                        color: healthColor,
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                    const SizedBox(width: 5),
-                    Text(
-                      status,
-                      style: TextStyle(
-                        color: healthColor,
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
-          // Circular progress ring + summary side by side
-          Row(
-            children: [
-              SizedBox(
-                width: 96,
-                height: 96,
-                child: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    CircularProgressIndicator(
-                      value: ringValue,
-                      strokeWidth: 10,
-                      strokeCap: StrokeCap.round,
-                      backgroundColor: healthBackground,
-                      valueColor: AlwaysStoppedAnimation<Color>(healthColor),
-                    ),
-                    Center(
-                      child: Text(
-                        '$_flockHealthPercentage%',
-                        style: TextStyle(
-                          color: healthColor,
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                          height: 1.0,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 20),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      status,
-                      style: TextStyle(
-                        color: healthColor,
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      _getText('total_birds'),
-                      style: const TextStyle(
-                        color: textSecondary,
-                        fontSize: 12,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      '$_totalBirds',
-                      style: const TextStyle(
-                        color: textPrimary,
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                        height: 1.0,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
+  //   return Container(
+  //     width: double.infinity,
+  //     padding: const EdgeInsets.all(20),
+  //     decoration: BoxDecoration(
+  //       color: Colors.white,
+  //       borderRadius: BorderRadius.circular(20),
+  //       border: Border.all(color: cardBorder),
+  //       boxShadow: [
+  //         BoxShadow(
+  //           color: Colors.black.withValues(alpha: 0.02),
+  //           blurRadius: 12,
+  //           offset: const Offset(0, 4),
+  //         ),
+  //       ],
+  //     ),
+  //     child: Column(
+  //       crossAxisAlignment: CrossAxisAlignment.start,
+  //       children: [
+  //         // Title + semantic status chip
+  //         Row(
+  //           children: [
+  //             const Icon(
+  //               Icons.health_and_safety_outlined,
+  //               color: brandDarkGreen,
+  //               size: 22,
+  //             ),
+  //             const SizedBox(width: 8),
+  //             Expanded(
+  //               child: Text(
+  //                 _getText('flock_health'),
+  //                 style: const TextStyle(
+  //                   color: textPrimary,
+  //                   fontSize: 15,
+  //                   fontWeight: FontWeight.bold,
+  //                 ),
+  //               ),
+  //             ),
+  //             Container(
+  //               padding: const EdgeInsets.symmetric(
+  //                 horizontal: 10,
+  //                 vertical: 5,
+  //               ),
+  //               decoration: BoxDecoration(
+  //                 color: healthBackground,
+  //                 borderRadius: BorderRadius.circular(100),
+  //               ),
+  //               child: Row(
+  //                 mainAxisSize: MainAxisSize.min,
+  //                 children: [
+  //                   Container(
+  //                     width: 7,
+  //                     height: 7,
+  //                     decoration: BoxDecoration(
+  //                       color: healthColor,
+  //                       shape: BoxShape.circle,
+  //                     ),
+  //                   ),
+  //                   const SizedBox(width: 5),
+  //                   Text(
+  //                     status,
+  //                     style: TextStyle(
+  //                       color: healthColor,
+  //                       fontSize: 11,
+  //                       fontWeight: FontWeight.bold,
+  //                     ),
+  //                   ),
+  //                 ],
+  //               ),
+  //             ),
+  //           ],
+  //         ),
+  //         const SizedBox(height: 20),
+  //         // Circular progress ring + summary side by side
+  //         Row(
+  //           children: [
+  //             SizedBox(
+  //               width: 96,
+  //               height: 96,
+  //               child: Stack(
+  //                 fit: StackFit.expand,
+  //                 children: [
+  //                   CircularProgressIndicator(
+  //                     value: ringValue,
+  //                     strokeWidth: 10,
+  //                     strokeCap: StrokeCap.round,
+  //                     backgroundColor: healthBackground,
+  //                     valueColor: AlwaysStoppedAnimation<Color>(healthColor),
+  //                   ),
+  //                   Center(
+  //                     child: Text(
+  //                       '$_flockHealthPercentage%',
+  //                       style: TextStyle(
+  //                         color: healthColor,
+  //                         fontSize: 24,
+  //                         fontWeight: FontWeight.bold,
+  //                         height: 1.0,
+  //                       ),
+  //                     ),
+  //                   ),
+  //                 ],
+  //               ),
+  //             ),
+  //             const SizedBox(width: 20),
+  //             Expanded(
+  //               child: Column(
+  //                 crossAxisAlignment: CrossAxisAlignment.start,
+  //                 children: [
+  //                   Text(
+  //                     status,
+  //                     style: TextStyle(
+  //                       color: healthColor,
+  //                       fontSize: 16,
+  //                       fontWeight: FontWeight.bold,
+  //                     ),
+  //                   ),
+  //                   const SizedBox(height: 8),
+  //                   Text(
+  //                     _getText('total_birds'),
+  //                     style: const TextStyle(
+  //                       color: textSecondary,
+  //                       fontSize: 12,
+  //                     ),
+  //                   ),
+  //                   const SizedBox(height: 2),
+  //                   Text(
+  //                     '$_totalBirds',
+  //                     style: const TextStyle(
+  //                       color: textPrimary,
+  //                       fontSize: 22,
+  //                       fontWeight: FontWeight.bold,
+  //                       height: 1.0,
+  //                     ),
+  //                   ),
+  //                 ],
+  //               ),
+  //             ),
+  //           ],
+  //         ),
+  //       ],
+  //     ),
+  //   );
+  // }
 
   Widget _buildMetricCard({
     required String title,
